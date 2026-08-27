@@ -20,6 +20,7 @@ export interface ArchivedSession {
   totalCostSavedUsd: number;
   eventsCount: number;
   modelName: string;
+  events: ChatSavingsEvent[];
 }
 
 class ChatSavingsTracker {
@@ -139,6 +140,7 @@ class ChatSavingsTracker {
       totalCostSavedUsd: this.totalCostSavedUsd,
       eventsCount: this.events.length,
       modelName: activeModel.name,
+      events: [...this.events],
     };
 
     this.pastSessions.unshift(archived);

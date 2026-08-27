@@ -427,38 +427,62 @@ export class DashboardPanel {
       }).join('\n');
     }
 
-    // Build Past Sessions Table
+    // Build Past Sessions Table with Expandable Event Ledgers
     let pastSessionsHtml = '';
     if (pastSessions.length > 0) {
-      const rows = pastSessions.map(s => `
-        <tr>
-          <td><strong>Session #${s.sessionNumber}</strong></td>
-          <td>${s.startedAt.toLocaleTimeString()} - ${s.endedAt.toLocaleTimeString()}</td>
-          <td><span class="tool-badge">${s.modelName}</span></td>
-          <td style="color:var(--green); font-weight:700;">+${s.totalTokensSaved.toLocaleString()} tok</td>
-          <td style="color:var(--accent); font-weight:700;">$${s.totalCostSavedUsd.toFixed(4)}</td>
-          <td>${s.eventsCount} events</td>
-        </tr>
-      `).join('');
+      const sessionBlocks = pastSessions.map(s => {
+        const eventRows = (s.events || []).map(ev => {
+          const timeStr = new Date(ev.timestamp).toLocaleTimeString();
+          const costStr = ev.costSavedUsd < 0.0001 ? '<$0.0001' : `$${ev.costSavedUsd.toFixed(4)}`;
+          return `
+            <tr>
+              <td><span class="ledger-time">${timeStr}</span></td>
+              <td><span class="tool-badge">${ev.directive}</span></td>
+              <td><code>${ev.source}</code></td>
+              <td style="color:var(--green); font-weight:700;">+${ev.tokensSaved.toLocaleString()} tok (${costStr})</td>
+              <td style="color:var(--text-muted); font-size:12px;">${ev.details}</td>
+            </tr>`;
+        }).join('');
+
+        return `
+        <div style="background:var(--card-bg); border:1px solid var(--card-border); border-radius:8px; margin-bottom:12px; overflow:hidden;">
+          <details style="padding:0;">
+            <summary style="cursor:pointer; padding:14px 18px; display:flex; justify-content:space-between; align-items:center; list-style:none; user-select:none; background:#161c2d;">
+              <div style="display:flex; align-items:center; gap:12px;">
+                <span style="font-weight:700; font-size:14px; color:#fff;">📁 Session #${s.sessionNumber}</span>
+                <span style="font-size:12px; color:var(--text-muted);">${s.startedAt.toLocaleTimeString()} - ${s.endedAt.toLocaleTimeString()}</span>
+                <span class="tool-badge">${s.modelName}</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:16px;">
+                <span style="color:var(--green); font-weight:800; font-size:13.5px;">+${s.totalTokensSaved.toLocaleString()} tok</span>
+                <span style="color:var(--accent); font-weight:800; font-size:13.5px;">$${s.totalCostSavedUsd.toFixed(4)}</span>
+                <span class="badge badge-measured" style="cursor:pointer;">${s.eventsCount} events ▼</span>
+              </div>
+            </summary>
+            <div style="border-top:1px solid var(--card-border); background:#0f1422; padding:0;">
+              <table style="width:100%; border-collapse:collapse;">
+                <thead>
+                  <tr style="background:#131a2c;">
+                    <th style="width:120px;">Timestamp</th>
+                    <th style="width:180px;">Directive</th>
+                    <th style="width:200px;">Target File / Action</th>
+                    <th style="width:170px;">Tokens Avoided</th>
+                    <th>How It Was Avoided</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${eventRows.length > 0 ? eventRows : '<tr><td colspan="5" style="text-align:center; padding:16px; color:#64748b;">No individual events logged in this session.</td></tr>'}
+                </tbody>
+              </table>
+            </div>
+          </details>
+        </div>`;
+      }).join('');
 
       pastSessionsHtml = `
-      <h2>📜 Historical Archived Sessions</h2>
-      <div class="ledger-container">
-        <table>
-          <thead>
-            <tr>
-              <th>Session</th>
-              <th>Timeframe</th>
-              <th>AI Assistant</th>
-              <th>Tokens Avoided</th>
-              <th>Cost Avoided (USD)</th>
-              <th>Events</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows}
-          </tbody>
-        </table>
+      <h2>📜 Historical Archived Sessions (Click Any Session to View Breakdown)</h2>
+      <div style="margin-bottom:32px;">
+        ${sessionBlocks}
       </div>`;
     }
 
