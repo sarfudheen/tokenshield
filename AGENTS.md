@@ -35,4 +35,19 @@
 ### Model Routing (CAP-10)
 - Leverage fast Flash/Haiku models for simple non-reasoning steps.
 
+### Git Diff-Scoped Context (CAP-11)
+- Scope code reviews, refactors, and test writing to `rtk git diff` and 1-hop AST callers/callees.
+
+### Deterministic KV-Cache Alignment (CAP-12)
+- Preserve byte-identical prompt prefixes across conversational turns to maximize cloud KV-cache hits.
+
+### Zero-Loss Comment & Header Stripping (CAP-13)
+- Strip copyright headers, license preambles, and filler comments on file ingestion.
+
+### Test Log Failure Isolation (CAP-14)
+- Filter test runner logs to capture only failed assertion lines, expected vs actual diffs, and target file lines.
+
+### Windowed Range Slicing (CAP-15)
+- Restrict large-file exploration to targeted 100-line slice windows around symbols.
+
 <!-- TOKENSHIELD:END -->

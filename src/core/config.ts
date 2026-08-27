@@ -15,6 +15,11 @@ export interface StrategyState {
   diffOnlyOutput: boolean;
   agentGuardrails: boolean;
   smartModelRouting: boolean;
+  gitDiffContext: boolean;
+  kvCacheAlignment: boolean;
+  commentStripper: boolean;
+  testFailureIsolator: boolean;
+  rangeSlicing: boolean;
 }
 
 export interface ModelPricing {
@@ -65,7 +70,7 @@ export const DEFAULT_PRICING: PricingTable = {
   lightweight: { inputPerMillion: 0.15, outputPerMillion: 0.60 },
 };
 
-export const TOTAL_STRATEGIES = 10;
+export const TOTAL_STRATEGIES = 15;
 
 export const PROFILE_STRATEGIES: Record<Profile, StrategyState> = {
   full: {
@@ -73,30 +78,40 @@ export const PROFILE_STRATEGIES: Record<Profile, StrategyState> = {
     sessionManagement: true, semanticCache: true,
     astSkeleton: true, contextExclusion: true, diffOnlyOutput: true,
     agentGuardrails: true, smartModelRouting: true,
+    gitDiffContext: true, kvCacheAlignment: true, commentStripper: true,
+    testFailureIsolator: true, rangeSlicing: true,
   },
   debug: {
     codeGraph: true, outputCompression: false, verbosityControl: true,
     sessionManagement: true, semanticCache: true,
     astSkeleton: true, contextExclusion: true, diffOnlyOutput: false,
     agentGuardrails: true, smartModelRouting: true,
+    gitDiffContext: true, kvCacheAlignment: true, commentStripper: false,
+    testFailureIsolator: true, rangeSlicing: true,
   },
   planning: {
     codeGraph: true, outputCompression: true, verbosityControl: false,
     sessionManagement: true, semanticCache: true,
     astSkeleton: true, contextExclusion: true, diffOnlyOutput: true,
     agentGuardrails: false, smartModelRouting: true,
+    gitDiffContext: true, kvCacheAlignment: true, commentStripper: true,
+    testFailureIsolator: false, rangeSlicing: true,
   },
   review: {
     codeGraph: true, outputCompression: true, verbosityControl: true,
     sessionManagement: false, semanticCache: true,
     astSkeleton: true, contextExclusion: true, diffOnlyOutput: true,
     agentGuardrails: true, smartModelRouting: true,
+    gitDiffContext: true, kvCacheAlignment: true, commentStripper: true,
+    testFailureIsolator: true, rangeSlicing: true,
   },
   custom: {
     codeGraph: true, outputCompression: true, verbosityControl: true,
     sessionManagement: true, semanticCache: true,
     astSkeleton: true, contextExclusion: true, diffOnlyOutput: true,
     agentGuardrails: true, smartModelRouting: true,
+    gitDiffContext: true, kvCacheAlignment: true, commentStripper: true,
+    testFailureIsolator: true, rangeSlicing: true,
   },
 };
 

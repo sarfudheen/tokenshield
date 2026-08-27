@@ -404,6 +404,56 @@ export class DashboardPanel {
         recentEvents,
         sessionNum
       ),
+      getCapCardState(
+        'CAP-11',
+        'Git Diff-Scoped Context',
+        '🔀',
+        'Incremental Change Ingestion',
+        'Scopes code reviews, refactors, and test writing strictly to rtk git diff and 1-hop AST callers/callees.',
+        { status: strategies.gitDiffContext ? 'measured' : 'disabled', percent: 85, detail: 'Scopes PRs to rtk git diff hunks and direct AST dependencies' },
+        recentEvents,
+        sessionNum
+      ),
+      getCapCardState(
+        'CAP-12',
+        'Cloud KV-Cache Alignment',
+        '⚡',
+        'Deterministic Prefix Cache',
+        'Preserves byte-identical system prompt prefixes to unlock up to 90% cloud input token cache discounts.',
+        { status: strategies.kvCacheAlignment ? 'measured' : 'disabled', percent: 90, detail: 'Byte-aligned deterministic prefix blocks' },
+        recentEvents,
+        sessionNum
+      ),
+      getCapCardState(
+        'CAP-13',
+        'Comment & Header Stripper',
+        '✂️',
+        'Payload Minifier',
+        'Strips license headers, copyright preambles, and low-signal inline comments during context ingestion.',
+        { status: strategies.commentStripper ? 'measured' : 'disabled', percent: 30, detail: 'Removes boilerplate comments from source code' },
+        recentEvents,
+        sessionNum
+      ),
+      getCapCardState(
+        'CAP-14',
+        'Test Failure Isolator',
+        '🧪',
+        'Smart Test Shrinker',
+        'Captures only failing assertions and line numbers, stripping out passing suites from terminal logs.',
+        { status: strategies.testFailureIsolator ? 'measured' : 'disabled', percent: 95, detail: 'Isolates failing test lines from test runners' },
+        recentEvents,
+        sessionNum
+      ),
+      getCapCardState(
+        'CAP-15',
+        'Windowed Range Slicing',
+        '🔍',
+        'Anti-File Dump Shield',
+        'Restricts large-file navigation to targeted 100-line slice windows around symbol declarations.',
+        { status: strategies.rangeSlicing ? 'measured' : 'disabled', percent: 80, detail: 'Enforces 100-line window slicing on file reads' },
+        recentEvents,
+        sessionNum
+      ),
     ];
 
     const cardsHtml = directiveCards.map(c => this.renderDirectiveCard(c)).join('\n');

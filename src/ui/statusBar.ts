@@ -122,6 +122,11 @@ async function buildMasterHubMarkdownTooltip(
     { key: strategies.diffOnlyOutput, cap: 'CAP-8', name: 'Unified Diff Output' },
     { key: strategies.agentGuardrails, cap: 'CAP-9', name: 'Loop Guardrails' },
     { key: strategies.smartModelRouting, cap: 'CAP-10', name: 'Smart Model Routing' },
+    { key: strategies.gitDiffContext, cap: 'CAP-11', name: 'Git Diff Context' },
+    { key: strategies.kvCacheAlignment, cap: 'CAP-12', name: 'KV-Cache Alignment' },
+    { key: strategies.commentStripper, cap: 'CAP-13', name: 'Comment Stripper' },
+    { key: strategies.testFailureIsolator, cap: 'CAP-14', name: 'Test Failure Isolator' },
+    { key: strategies.rangeSlicing, cap: 'CAP-15', name: 'Windowed Range Slicing' },
   ];
 
   for (const r of rows) {

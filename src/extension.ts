@@ -8,7 +8,7 @@ import { createStatusBar, updateStatusBar, disposeStatusBar } from './ui/statusB
 import { createEditorTokenBadge } from './ui/editorTokenBadge';
 import { createSessionSavingsWidget } from './ui/sessionSavingsWidget';
 import { chatSavingsTracker } from './telemetry/chatSavingsTracker';
-import { pruneContext } from './strategies/adaptivePruner';
+import { pruneContext, compressGitDiff } from './strategies/adaptivePruner';
 import { showProfilePicker } from './ui/quickPick';
 import { DashboardPanel } from './ui/dashboard';
 import { exportTelemetryCommand } from './ui/exportTelemetry';
@@ -81,6 +81,34 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       vscode.window.showInformationMessage(
         `🛡️ TokenShield: Started new Session #${chatSavingsTracker.getSessionNumber()}! Session #${archived.sessionNumber} archived (${archived.totalTokensSaved.toLocaleString()} tok, $${archived.totalCostSavedUsd.toFixed(4)} saved).`
       );
+    }),
+    vscode.commands.registerCommand('aiTokenOptimizer.pruneGitDiff', async () => {
+      try {
+        const { execSync } = require('child_process');
+        const wsPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || process.cwd();
+        let diffRaw = '';
+        try {
+          diffRaw = execSync('rtk git diff HEAD', { cwd: wsPath, encoding: 'utf-8', timeout: 5000 });
+        } catch {
+          diffRaw = execSync('git diff HEAD', { cwd: wsPath, encoding: 'utf-8', timeout: 5000 });
+        }
+        if (!diffRaw || diffRaw.trim().length === 0) {
+          vscode.window.showInformationMessage('TokenShield: No git changes detected (working directory clean).');
+          return;
+        }
+        const result = compressGitDiff(diffRaw);
+        await vscode.env.clipboard.writeText(result.prunedText);
+        const tokensSaved = Math.max(0, result.originalTokensEst - result.prunedTokensEst);
+        chatSavingsTracker.recordEvent(
+          'CAP-11: Git Diff Context',
+          'rtk git diff HEAD',
+          tokensSaved,
+          `Compressed git diff (-${result.reductionPercent}% tokens saved: ${result.originalTokensEst} → ${result.prunedTokensEst} tok)`,
+          true
+        );
+      } catch (err) {
+        vscode.window.showErrorMessage(`TokenShield: Failed to extract git diff: ${err instanceof Error ? err.message : String(err)}`);
+      }
     }),
   );
 

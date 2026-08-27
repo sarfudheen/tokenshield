@@ -42,6 +42,36 @@ A local `token-cache` MCP server caches answers on disk — cache hits cost zero
 - Use `scope: "durable"` for answers independent of current code state.
 - Do NOT cache answers about uncommitted or actively changing code.
 
+### AST Skeleton Pruning (CAP-6: skeleton_view MCP)
+- Call `skeleton_view` before reading complete file contents to load signatures only.
+
+### Context Exclusions (CAP-7: Noise Blocking)
+- Exclude build bundles (dist/, build/), package lockfiles, and minified assets from AI prompt context.
+
+### Unified Diff Output (CAP-8: Targeted Patches)
+- Format code modifications as targeted unified diff chunks instead of whole-file rewrites.
+
+### Autonomous Guardrails (CAP-9: Retry Interceptor)
+- Abort runaway agent retry loops after 3 consecutive failures.
+
+### Smart Model Routing (CAP-10: Cost Tiering)
+- Direct routine non-reasoning tasks to lightweight fast model tiers.
+
+### Git Diff-Scoped Context (CAP-11: Incremental Ingestion)
+- When reviewing changes or writing feature tests, scope prompt context strictly to `git diff` and 1-hop AST callers/callees.
+
+### Cloud KV-Cache Alignment (CAP-12: Deterministic Prefix Caching)
+- Maintain deterministic, byte-identical prompt prefix blocks across turns to maximize cloud prompt caching discounts.
+
+### Comment & Header Stripper (CAP-13: Payload Minifier)
+- Strip copyright headers, license preambles, and low-signal inline comments during context ingestion.
+
+### Test Log Failure Isolation (CAP-14: Test Shrinker)
+- Filter test suite logs to isolate failing assertions and line numbers, stripping out passing suites.
+
+### Windowed Range Slicing (CAP-15: Anti-Dump Shield)
+- Restrict file navigation to targeted 100-line slice windows around symbols.
+
 ## Task-Specific Guidelines
 
 ### For Debugging Tasks
