@@ -93,6 +93,10 @@
         "title": "TokenShield: Compress & Copy Pruned Context to Clipboard"
       },
       {
+        "command": "aiTokenOptimizer.showSessionBreakdown",
+        "title": "TokenShield: Show Live Per-Chat Savings Breakdown"
+      },
+      {
         "command": "aiTokenOptimizer.exportToRepo",
         "title": "TokenShield: Export Instructions to Repository"
       }

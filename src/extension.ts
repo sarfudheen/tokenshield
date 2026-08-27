@@ -6,6 +6,8 @@ import { installAllTools } from './installer';
 import { configureMcpServers } from './mcp';
 import { createStatusBar, updateStatusBar, disposeStatusBar } from './ui/statusBar';
 import { createEditorTokenBadge } from './ui/editorTokenBadge';
+import { createSessionSavingsWidget } from './ui/sessionSavingsWidget';
+import { chatSavingsTracker } from './telemetry/chatSavingsTracker';
 import { pruneContext } from './strategies/adaptivePruner';
 import { showProfilePicker } from './ui/quickPick';
 import { DashboardPanel } from './ui/dashboard';
@@ -54,9 +56,19 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       const text = editor.selection.isEmpty ? editor.document.getText() : editor.document.getText(editor.selection);
       const result = pruneContext(text, { aggressive: true });
       await vscode.env.clipboard.writeText(result.prunedText);
-      vscode.window.showInformationMessage(
-        `TokenShield: Pruned context copied to clipboard! (-${result.reductionPercent}% tokens saved: ${result.originalTokensEst} → ${result.prunedTokensEst} tok)`
-      );
+      const tokensSaved = Math.max(0, result.originalTokensEst - result.prunedTokensEst);
+      const fileName = editor.document.fileName ? vscode.workspace.asRelativePath(editor.document.fileName) : 'Selection';
+      if (tokensSaved > 0) {
+        chatSavingsTracker.recordEvent(
+          'Adaptive Pruner',
+          fileName,
+          tokensSaved,
+          `Pruned context (-${result.reductionPercent}% tokens saved: ${result.originalTokensEst} → ${result.prunedTokensEst} tok)`,
+          true
+        );
+      } else {
+        vscode.window.showInformationMessage(`TokenShield: Context copied to clipboard.`);
+      }
     }),
     vscode.commands.registerCommand('aiTokenOptimizer.exportToRepo', async () => {
       const results = await exportInstructionsToRepo(getConfig());
@@ -64,10 +76,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }),
   );
 
-  // Create main status bar & editor token counter badge
+  // Create main status bar, editor token counter badge, and live session savings widget
   const statusBar = createStatusBar();
   const tokenBadge = createEditorTokenBadge(context);
-  context.subscriptions.push(statusBar, tokenBadge);
+  const savingsWidget = createSessionSavingsWidget(context);
+  context.subscriptions.push(statusBar, tokenBadge, savingsWidget);
 
   // Listen for config changes — hot-swap strategies without restart
   context.subscriptions.push(
