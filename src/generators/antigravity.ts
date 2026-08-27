@@ -2,7 +2,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { TargetTool, StrategyState, ExtensionConfig } from '../core/config';
 import { MARKER_START, MARKER_END, MARKER_COMMENT, ANTIGRAVITY_INSTRUCTIONS_PATH } from '../core/constants';
-import { BaseInstructionGenerator, GenerationResult } from './engine';
+import { BaseInstructionGenerator, GenerationResult } from './base';
 
 export class AntigravityGenerator extends BaseInstructionGenerator {
   readonly target: TargetTool = 'antigravity';
@@ -11,7 +11,6 @@ export class AntigravityGenerator extends BaseInstructionGenerator {
   override async generate(workspacePath: string, config: ExtensionConfig): Promise<GenerationResult> {
     const mainResult = await super.generate(workspacePath, config);
 
-    // Also write to .agents/rules/tokenshield.md for deep Antigravity integration
     try {
       const agentsRulesDir = path.join(workspacePath, '.agents', 'rules');
       if (!fs.existsSync(agentsRulesDir)) {

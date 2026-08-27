@@ -1,6 +1,6 @@
 import { TargetTool, StrategyState, ExtensionConfig } from '../core/config';
 import { MARKER_START, MARKER_END, MARKER_COMMENT, CODEX_INSTRUCTIONS_PATH } from '../core/constants';
-import { BaseInstructionGenerator } from './engine';
+import { BaseInstructionGenerator } from './base';
 
 export class CodexGenerator extends BaseInstructionGenerator {
   readonly target: TargetTool = 'codex';
@@ -10,59 +10,46 @@ export class CodexGenerator extends BaseInstructionGenerator {
     const sections: string[] = [];
 
     if (strategies.codeGraph) {
-      sections.push(`### Search First (CAP-1)
-- Query existing implementations by path before synthesizing new code.`);
+      sections.push(`### CodeGraph Search
+- Search symbol graphs before reading files.`);
     }
 
     if (strategies.outputCompression) {
-      sections.push(`### Output Compression (CAP-2)
-- Summarize command output to errors and counts only.`);
+      sections.push(`### RTK Compression
+- Use compressed terminal output.`);
     }
 
     if (strategies.verbosityControl) {
-      sections.push(`### Response Conciseness (CAP-3)
-- Deliver concise code changes with minimal conversational framing.`);
-    }
-
-    if (strategies.sessionManagement) {
-      sections.push(`### Context Management (CAP-4)
-- Keep active memory clean and trim stale conversation turns.`);
+      sections.push(`### Precision Output
+- Return code only with minimal prose.`);
     }
 
     if (strategies.semanticCache) {
-      sections.push(`### Semantic Cache (CAP-5)
-- Leverage local cache MCP tools to serve repeated queries without model cost.`);
+      sections.push(`### Local Cache
+- Query semantic cache MCP before regenerating answers.`);
     }
 
     if (strategies.astSkeleton) {
-      sections.push(`### AST Skeleton Pruning (CAP-6)
-- Review signature skeletons before reading whole file bodies.`);
-    }
-
-    if (strategies.contextExclusion) {
-      sections.push(`### Context Exclusion (CAP-7)
-- Do not read lock files, build artifacts, or minified assets.`);
+      sections.push(`### AST Skeletons
+- Use \`skeleton_view\` to inspect type definitions and structure.`);
     }
 
     if (strategies.diffOnlyOutput) {
-      sections.push(`### Diff-Only Changes (CAP-8)
-- Generate target diff blocks rather than full-file code replacements.`);
+      sections.push(`### Diff Edits
+- Propose edits strictly as diffs.`);
     }
 
     if (strategies.agentGuardrails) {
-      sections.push(`### Execution Limits (CAP-9)
-- Cease execution after ${config.guardrails.maxRetries} consecutive failures.`);
+      sections.push(`### Guardrails
+- Limit consecutive retries to ${config.guardrails.maxRetries}.`);
     }
 
-    if (strategies.smartModelRouting) {
-      sections.push(`### Model Efficiency (CAP-10)
-- Favor fast lightweight models for minor edits.`);
-    }
-
-    return `# OpenAI Codex Efficiency Guidelines
+    return `# OpenAI Codex Guidelines
 
 ${MARKER_START}
 ${MARKER_COMMENT}
+
+## Active Directives
 
 ${sections.join('\n\n')}
 

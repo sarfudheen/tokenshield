@@ -30,7 +30,7 @@
     "context-pruning"
   ],
   "activationEvents": [
-    "onStartupFinished"
+    "*"
   ],
   "main": "./dist/extension.js",
   "icon": "images/icon.png",

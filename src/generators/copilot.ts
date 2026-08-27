@@ -1,6 +1,6 @@
 import { TargetTool, StrategyState, ExtensionConfig } from '../core/config';
 import { MARKER_START, MARKER_END, MARKER_COMMENT, COPILOT_INSTRUCTIONS_PATH } from '../core/constants';
-import { BaseInstructionGenerator } from './engine';
+import { BaseInstructionGenerator } from './base';
 
 export class CopilotGenerator extends BaseInstructionGenerator {
   readonly target: TargetTool = 'copilot';

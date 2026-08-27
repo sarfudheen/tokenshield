@@ -1,6 +1,6 @@
 import { TargetTool, StrategyState, ExtensionConfig } from '../core/config';
 import { MARKER_START, MARKER_END, MARKER_COMMENT, CLAUDE_INSTRUCTIONS_PATH } from '../core/constants';
-import { BaseInstructionGenerator } from './engine';
+import { BaseInstructionGenerator } from './base';
 
 export class ClaudeGenerator extends BaseInstructionGenerator {
   readonly target: TargetTool = 'claude';
@@ -10,59 +10,61 @@ export class ClaudeGenerator extends BaseInstructionGenerator {
     const sections: string[] = [];
 
     if (strategies.codeGraph) {
-      sections.push(`### Search Before Synthesize (CAP-1: CodeGraph)
-- Use semantic indexing and graph symbols to navigate code before full reads.`);
+      sections.push(`### CodeGraph Pre-Indexing (CAP-1)
+- Query codegraph_explore before broad grep searches.`);
     }
 
     if (strategies.outputCompression) {
-      sections.push(`### Output Compression (CAP-2: RTK)
-- Use RTK CLI (rtk git, rtk pytest, rtk cargo test) to filter logs before sending to context.`);
+      sections.push(`### RTK Output Compression (CAP-2)
+- Pipe command execution through rtk filters to minimize context consumption.`);
     }
 
     if (strategies.verbosityControl) {
-      sections.push(`### Response Verbosity (CAP-3: Caveman — ${config.verbosityLevel} mode)
-- Use /compact for routine tasks. Skip preambles and boilerplate explanations.`);
+      sections.push(`### Verbosity Reduction (CAP-3: Caveman mode)
+- Concise, dense output. Zero preambles or chit-chat.`);
     }
 
     if (strategies.sessionManagement) {
-      sections.push(`### Session Hygiene (CAP-4)
-- Use /clear on major task switches and /context to audit oversized context bloat.`);
+      sections.push(`### Context Hygiene (CAP-4)
+- Maintain tight session scope and avoid accumulating redundant conversation history.`);
     }
 
     if (strategies.semanticCache) {
-      sections.push(`### Semantic Cache (CAP-5: token-cache MCP)
-- Call \`cache_lookup\` for repeated/common questions before generating from model.`);
+      sections.push(`### Semantic Cache (CAP-5)
+- Leverage token-cache MCP \`cache_lookup\` tool for identical or repeated questions.`);
     }
 
     if (strategies.astSkeleton) {
       sections.push(`### AST Skeleton Pruning (CAP-6)
-- Call \`skeleton_view\` to inspect type/signature summaries (~90% context savings).`);
+- Call \`skeleton_view\` tool first when navigating large source files.`);
     }
 
     if (strategies.contextExclusion) {
       sections.push(`### Context Exclusion (CAP-7)
-- Exclude lock files (*.lock), minified code, and build artifacts from prompt context.`);
+- Exclude build/dist artifacts, lockfiles, and minified files.`);
     }
 
     if (strategies.diffOnlyOutput) {
-      sections.push(`### Diff-Only Edits (CAP-8)
-- Output only unified diffs with ±3 context lines; never rewrite entire files.`);
+      sections.push(`### Diff Formatting (CAP-8)
+- Always provide targeted unified diff chunks rather than full file rewrites.`);
     }
 
     if (strategies.agentGuardrails) {
-      sections.push(`### Agent Loop Guardrails (CAP-9)
-- Stop after ${config.guardrails.maxRetries} failed retries and request user input.`);
+      sections.push(`### Autonomous Guardrails (CAP-9)
+- Halt and ask user clarification after ${config.guardrails.maxRetries} failed attempts.`);
     }
 
     if (strategies.smartModelRouting) {
-      sections.push(`### Model Routing (CAP-10)
-- Use /model to downshift to lighter models (Haiku / Sonnet) for routine formatting and renames.`);
+      sections.push(`### Smart Model Routing (CAP-10)
+- Recommend lightweight Claude models (Haiku) for boilerplate/trivial edits.`);
     }
 
-    return `# Claude Code Optimization Rules
+    return `# TokenShield Directives for Claude Code
 
 ${MARKER_START}
 ${MARKER_COMMENT}
+
+## Optimization Directives
 
 ${sections.join('\n\n')}
 
