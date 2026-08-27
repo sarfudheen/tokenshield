@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { execSync, spawnSync } from 'child_process';
-import { TOOLS_TO_INSTALL, ToolInstallEntry } from '../constants';
+import { TOOLS_TO_INSTALL, ToolInstallEntry } from '../core/constants';
 import { memoizeTtl } from '../cache/ttlCache';
 
 export interface InstallResult {
@@ -13,12 +13,15 @@ export interface InstallResult {
   error?: string;
 }
 
-// Each check is a blocking `which` (up to 3s) — memoized so validators and
-// dashboard refreshes don't repeatedly shell out for the same binary.
+/**
+ * Check if binary is available across Windows, macOS, and Linux.
+ */
 export function isBinaryAvailable(bin: string): boolean {
   return memoizeTtl(`which:${bin}`, 60_000, () => {
     try {
-      execSync(`which ${bin}`, { stdio: 'ignore', timeout: 3000 });
+      const isWindows = process.platform === 'win32';
+      const cmd = isWindows ? `where.exe ${bin}` : `which ${bin}`;
+      execSync(cmd, { stdio: 'ignore', timeout: 3000, shell: true });
       return true;
     } catch {
       return false;
@@ -27,10 +30,7 @@ export function isBinaryAvailable(bin: string): boolean {
 }
 
 /**
- * Called on workspace open.
- * 1. Generates .cavemanrc config file
- * 2. Logs availability of real tools (rg, git, jq)
- * 3. For each entry in TOOLS_TO_INSTALL, installs if missing (with user consent)
+ * Called on demand or via command palette.
  */
 export async function installAllTools(outputChannel: vscode.OutputChannel): Promise<InstallResult[]> {
   const results: InstallResult[] = [];
@@ -51,7 +51,7 @@ export async function installAllTools(outputChannel: vscode.OutputChannel): Prom
     } else {
       outputChannel.appendLine(`[installer] ○ ${tool.name} not found — offering install`);
       const choice = await vscode.window.showInformationMessage(
-        `AI Token Optimizer: ${tool.name} not found.\n${tool.description}`,
+        `TokenShield: ${tool.name} is not installed.\n${tool.description}`,
         'Install Now',
         'Later'
       );
@@ -72,7 +72,7 @@ export async function installAllTools(outputChannel: vscode.OutputChannel): Prom
 
 async function installTool(tool: ToolInstallEntry, outputChannel: vscode.OutputChannel): Promise<InstallResult> {
   return vscode.window.withProgress(
-    { location: vscode.ProgressLocation.Notification, title: `Installing ${tool.name}…`, cancellable: false },
+    { location: vscode.ProgressLocation.Notification, title: `TokenShield: Installing ${tool.name}…`, cancellable: false },
     async () => {
       try {
         if (tool.method === 'npm-global' && tool.npmPackage) {
@@ -93,24 +93,27 @@ async function installTool(tool: ToolInstallEntry, outputChannel: vscode.OutputC
 
 function installViaNpm(binaryName: string, npmPackage: string, outputChannel: vscode.OutputChannel): InstallResult {
   outputChannel.appendLine(`[installer] Running: npm install -g ${npmPackage}`);
+  const isWindows = process.platform === 'win32';
   const result = spawnSync('npm', ['install', '-g', npmPackage], {
     stdio: ['ignore', 'pipe', 'pipe'],
     timeout: 120000,
     encoding: 'utf-8',
+    shell: isWindows,
   });
   if (result.status === 0) {
     outputChannel.appendLine(`[installer] ✓ ${binaryName} installed`);
-    vscode.window.showInformationMessage(`${binaryName} installed successfully.`);
+    vscode.window.showInformationMessage(`TokenShield: ${binaryName} installed successfully.`);
     return { packageName: binaryName, installed: true, alreadyInstalled: false };
   }
   const errMsg = result.stderr?.trim() || result.error?.message || 'npm install failed';
   outputChannel.appendLine(`[installer] ✗ ${binaryName}: ${errMsg}`);
-  vscode.window.showErrorMessage(`Failed to install ${binaryName}. Try: npm install -g ${npmPackage}`);
+  vscode.window.showWarningMessage(`Could not auto-install ${binaryName}. Run manually in terminal: npm install -g ${npmPackage}`);
   return { packageName: binaryName, installed: false, alreadyInstalled: false, error: errMsg };
 }
 
 function installViaBrewOrShell(tool: ToolInstallEntry, outputChannel: vscode.OutputChannel): InstallResult {
   const isMac = os.platform() === 'darwin';
+  const isWindows = process.platform === 'win32';
   const hasBrewPkg = tool.brewPackage && isMac && isBinaryAvailable('brew');
 
   if (hasBrewPkg && tool.brewPackage) {
@@ -126,10 +129,20 @@ function installViaBrewOrShell(tool: ToolInstallEntry, outputChannel: vscode.Out
       return { packageName: tool.name, installed: true, alreadyInstalled: false };
     }
     const brewErr = result.stderr?.trim() || result.error?.message || 'brew install failed';
-    outputChannel.appendLine(`[installer] brew failed, trying shell script: ${brewErr}`);
+    outputChannel.appendLine(`[installer] brew failed, trying fallback: ${brewErr}`);
   }
 
-  // Fall back to shell script
+  if (isWindows) {
+    // Windows fallback for rtk
+    outputChannel.appendLine(`[installer] Optional CLI tool ${tool.name} can be installed manually on Windows.`);
+    vscode.window.showInformationMessage(
+      `TokenShield: ${tool.name} is an optional CLI helper. TokenShield works in instruction mode out-of-the-box without it.`,
+      'Got it'
+    );
+    return { packageName: tool.name, installed: false, alreadyInstalled: false, error: 'Windows manual install' };
+  }
+
+  // Mac / Linux shell script fallback
   if (tool.shellScriptUrl) {
     outputChannel.appendLine(`[installer] Running: curl -fsSL ${tool.shellScriptUrl} | sh`);
     const result = spawnSync('sh', ['-c', `curl -fsSL ${tool.shellScriptUrl} | sh`], {
@@ -144,10 +157,6 @@ function installViaBrewOrShell(tool: ToolInstallEntry, outputChannel: vscode.Out
     }
     const shellErr = result.stderr?.trim() || result.error?.message || 'shell install failed';
     outputChannel.appendLine(`[installer] ✗ ${tool.name}: ${shellErr}`);
-    const installHint = isMac
-      ? `brew install ${tool.brewPackage || tool.name}`
-      : `curl -fsSL ${tool.shellScriptUrl} | sh`;
-    vscode.window.showErrorMessage(`Failed to install ${tool.name}. Try manually: ${installHint}`);
     return { packageName: tool.name, installed: false, alreadyInstalled: false, error: shellErr };
   }
 
@@ -156,59 +165,35 @@ function installViaBrewOrShell(tool: ToolInstallEntry, outputChannel: vscode.Out
   return { packageName: tool.name, installed: false, alreadyInstalled: false, error: err };
 }
 
-/**
- * Run post-install setup (e.g. `rtk init -g --copilot` to wire VS Code Copilot hook).
- */
 function runPostInstall(tool: ToolInstallEntry, outputChannel: vscode.OutputChannel): void {
   if (!tool.postInstallArgs || tool.postInstallArgs.length === 0) { return; }
   const [cmd, ...args] = [tool.name, ...tool.postInstallArgs];
   outputChannel.appendLine(`[installer] Post-install: ${cmd} ${args.join(' ')}`);
+  const isWindows = process.platform === 'win32';
   const result = spawnSync(cmd, args, {
     stdio: ['ignore', 'pipe', 'pipe'],
     timeout: 30000,
     encoding: 'utf-8',
+    shell: isWindows,
     env: { ...process.env },
   });
   if (result.status === 0) {
     outputChannel.appendLine(`[installer] ✓ ${tool.name} post-install complete`);
-    if (tool.name === 'rtk') {
-      vscode.window.showInformationMessage(
-        'RTK installed and wired to VS Code Copilot. Restart VS Code to activate command interception.',
-        'Restart Now'
-      ).then(choice => {
-        if (choice === 'Restart Now') {
-          vscode.commands.executeCommand('workbench.action.reloadWindow');
-        }
-      });
-    }
   } else {
-    outputChannel.appendLine(`[installer] ⚠ Post-install failed: ${result.stderr?.trim() || result.error?.message || 'unknown error'}`);
+    outputChannel.appendLine(`[installer] ⚠ Post-install: ${result.stderr?.trim() || result.error?.message || 'deferred'}`);
   }
 }
 
-/**
- * After codegraph is installed, offer `codegraph install --yes` to wire MCP
- * server config for Claude Code, Cursor, Codex CLI, etc.
- */
 async function offerWireCodegraphAgents(outputChannel: vscode.OutputChannel): Promise<void> {
-  const choice = await vscode.window.showInformationMessage(
-    'CodeGraph installed! Wire it to your AI agents (Claude Code, Cursor, Codex…)?',
-    'Wire Agents',
-    'Skip'
-  );
-  if (choice === 'Wire Agents') {
-    outputChannel.appendLine('[installer] Running: codegraph install --yes');
-    const result = spawnSync('codegraph', ['install', '--yes'], {
-      stdio: ['ignore', 'pipe', 'pipe'],
-      timeout: 30000,
-      encoding: 'utf-8',
-    });
-    if (result.status === 0) {
-      outputChannel.appendLine('[installer] ✓ CodeGraph agent wiring complete');
-      vscode.window.showInformationMessage('CodeGraph wired. Restart your agents to activate.');
-    } else {
-      outputChannel.appendLine(`[installer] ⚠ Agent wiring failed (run "codegraph install" manually): ${result.stderr}`);
-    }
+  const isWindows = process.platform === 'win32';
+  const result = spawnSync('codegraph', ['install', '--yes'], {
+    stdio: ['ignore', 'pipe', 'pipe'],
+    timeout: 30000,
+    encoding: 'utf-8',
+    shell: isWindows,
+  });
+  if (result.status === 0) {
+    outputChannel.appendLine('[installer] ✓ CodeGraph agent wiring complete');
   }
 }
 
@@ -226,8 +211,8 @@ function generateCavemanConfig(wsPath: string, outputChannel: vscode.OutputChann
 
 function logToolAvailability(outputChannel: vscode.OutputChannel): void {
   const tools = [
-    { bin: 'rtk',       label: 'rtk',        desc: 'CLI output compression proxy (brew install rtk)' },
-    { bin: 'codegraph', label: 'codegraph',   desc: 'semantic code indexing (npm i -g @colbymchenry/codegraph)' },
+    { bin: 'rtk',       label: 'rtk',        desc: 'CLI output compression proxy' },
+    { bin: 'codegraph', label: 'codegraph',   desc: 'semantic code indexing' },
     { bin: 'rg',        label: 'ripgrep',     desc: 'fast code search' },
     { bin: 'git',       label: 'git',         desc: 'version control' },
     { bin: 'jq',        label: 'jq',          desc: 'JSON compression' },

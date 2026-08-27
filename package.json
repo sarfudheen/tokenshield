@@ -216,7 +216,7 @@
         },
         "aiTokenOptimizer.autoInstallTools": {
           "type": "boolean",
-          "default": true,
+          "default": false,
           "description": "Automatically check and install supporting CLI tools."
         },
         "aiTokenOptimizer.configureMcpOnActivation": {

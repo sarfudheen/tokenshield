@@ -110,7 +110,7 @@ export function getConfig(): ExtensionConfig {
     activeStrategies: config.get<StrategyState>('activeStrategies', PROFILE_STRATEGIES.full),
     verbosityLevel: config.get<VerbosityLevel>('verbosityLevel', 'full'),
     preserveExistingInstructions: config.get<boolean>('preserveExistingInstructions', true),
-    autoInstallTools: config.get<boolean>('autoInstallTools', true),
+    autoInstallTools: config.get<boolean>('autoInstallTools', false),
     configureMcpOnActivation: config.get<boolean>('configureMcpOnActivation', true),
     codeGraphProjects: config.get<CodeGraphProject[]>('codeGraphProjects', []),
     telemetryEnabled: config.get<boolean>('telemetry.enabled', true),
