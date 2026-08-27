@@ -76,27 +76,31 @@ export async function updateTokenBadge(editor: vscode.TextEditor | undefined): P
     ? '<$0.0001'
     : `$${cost.toFixed(4)}`;
 
+  const md = new vscode.MarkdownString();
+  md.isTrusted = true;
+  md.supportThemeIcons = true;
+
   if (hasSelection) {
     tokenStatusBarItem.text = `$(symbol-variable) Sel: ${formattedTokens} tok (${formattedCost})`;
-    tokenStatusBarItem.tooltip = [
-      `TokenShield Selection Analysis:`,
-      `• Selected Tokens: ~${tokenCount.toLocaleString()}`,
-      `• Estimated Cost: ${formattedCost} (${activeModel.name})`,
-      `• Pricing Rate: $${pricing.inputPerMillion}/1M input tokens`,
-      `Click to open TokenShield ROI Dashboard`,
-    ].join('\n');
+    md.appendMarkdown(`### 🔍 TokenShield Selection Analysis\n`);
+    md.appendMarkdown(`- **Selected Tokens**: ~\`${tokenCount.toLocaleString()}\` tokens\n`);
+    md.appendMarkdown(`- **Estimated Inference Cost**: \`${formattedCost}\`\n`);
+    md.appendMarkdown(`- **Active Engine**: \`${activeModel.name}\` ($${pricing.inputPerMillion}/1M input tokens)\n\n`);
+    md.appendMarkdown(`---\n\n`);
+    md.appendMarkdown(`[⚡ Prune & Copy to Clipboard](command:aiTokenOptimizer.pruneSelection) &nbsp;|&nbsp; [📊 Open ROI Dashboard](command:aiTokenOptimizer.showDashboard)`);
   } else {
     tokenStatusBarItem.text = `$(file-code) ${formattedTokens} tok · ${formattedCost}`;
-    tokenStatusBarItem.tooltip = [
-      `TokenShield File Analysis:`,
-      `• File: ${editor.document.fileName}`,
-      `• Estimated Tokens: ~${tokenCount.toLocaleString()}`,
-      `• Estimated Prompt Cost: ${formattedCost} (${activeModel.name})`,
-      `• Lines: ${editor.document.lineCount.toLocaleString()}`,
-      `Click to open TokenShield ROI Dashboard`,
-    ].join('\n');
+    md.appendMarkdown(`### 📄 TokenShield File Analysis\n`);
+    md.appendMarkdown(`- **File**: \`${vscode.workspace.asRelativePath(editor.document.fileName)}\`\n`);
+    md.appendMarkdown(`- **Estimated Tokens**: ~\`${tokenCount.toLocaleString()}\` tokens\n`);
+    md.appendMarkdown(`- **Estimated Prompt Cost**: \`${formattedCost}\`\n`);
+    md.appendMarkdown(`- **Total Lines**: \`${editor.document.lineCount.toLocaleString()}\` lines\n`);
+    md.appendMarkdown(`- **Active Engine**: \`${activeModel.name}\` ($${pricing.inputPerMillion}/1M input tokens)\n\n`);
+    md.appendMarkdown(`---\n\n`);
+    md.appendMarkdown(`[⚡ Compress & Prune File](command:aiTokenOptimizer.pruneSelection) &nbsp;|&nbsp; [📊 Open ROI Dashboard](command:aiTokenOptimizer.showDashboard)`);
   }
 
+  tokenStatusBarItem.tooltip = md;
   tokenStatusBarItem.show();
 }
 
