@@ -94,6 +94,12 @@ export class DashboardPanel {
     await DashboardPanel.currentPanel.refresh();
   }
 
+  static async refreshCurrentPanel(): Promise<void> {
+    if (DashboardPanel.currentPanel) {
+      await DashboardPanel.currentPanel.refresh();
+    }
+  }
+
   private dispose(): void {
     DashboardPanel.currentPanel = undefined;
     this.panel.dispose();

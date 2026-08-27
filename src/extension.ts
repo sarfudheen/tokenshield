@@ -74,6 +74,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       const results = await exportInstructionsToRepo(getConfig());
       vscode.window.showInformationMessage(`TokenShield: Exported ${results.length} instruction files to repository.`);
     }),
+    vscode.commands.registerCommand('aiTokenOptimizer.resetSession', async () => {
+      const archived = await chatSavingsTracker.resetSession();
+      await updateStatusBar();
+      await DashboardPanel.refreshCurrentPanel();
+      vscode.window.showInformationMessage(
+        `🛡️ TokenShield: Started new Session #${chatSavingsTracker.getSessionNumber()}! Session #${archived.sessionNumber} archived (${archived.totalTokensSaved.toLocaleString()} tok, $${archived.totalCostSavedUsd.toFixed(4)} saved).`
+      );
+    }),
   );
 
   // Create unified TokenShield Master Hub and active editor token badge (clean 2-item layout)
