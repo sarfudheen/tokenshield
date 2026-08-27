@@ -1,0 +1,11 @@
+.vscode/**
+.vscode-test/**
+src/**
+test/**
+.git/**
+.gitignore
+tsconfig.json
+esbuild.js
+*.tsbuildinfo
+ARCHITECTURE.md
+ai-token-optimizer-telemetry.json

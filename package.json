@@ -1,0 +1,299 @@
+{
+  "name": "tokenshield",
+  "displayName": "TokenShield — AI Token & Cost Optimizer",
+  "description": "Universal AI token & cost optimizer for GitHub Copilot, Claude Code, OpenAI Codex, and Antigravity. Real-time context pruning, AST skeletons, semantic caching, CLI output compression, and provable ROI reporting.",
+  "version": "1.0.0",
+  "publisher": "tokenshield",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tokenshield/tokenshield.git"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Machine Learning",
+    "Other"
+  ],
+  "keywords": [
+    "tokenshield",
+    "token",
+    "optimization",
+    "cost",
+    "roi",
+    "copilot",
+    "claude",
+    "codex",
+    "antigravity",
+    "context-pruning"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "icon": "images/icon.png",
+  "contributes": {
+    "commands": [
+      {
+        "command": "aiTokenOptimizer.toggleAll",
+        "title": "TokenShield: Toggle All Strategies"
+      },
+      {
+        "command": "aiTokenOptimizer.selectProfile",
+        "title": "TokenShield: Select Optimization Profile"
+      },
+      {
+        "command": "aiTokenOptimizer.regenerateInstructions",
+        "title": "TokenShield: Regenerate Instruction Files"
+      },
+      {
+        "command": "aiTokenOptimizer.showDashboard",
+        "title": "TokenShield: Show ROI Savings Dashboard"
+      },
+      {
+        "command": "aiTokenOptimizer.reindex",
+        "title": "TokenShield: Reindex CodeGraph"
+      },
+      {
+        "command": "aiTokenOptimizer.installTools",
+        "title": "TokenShield: Install Optimization Tools"
+      },
+      {
+        "command": "aiTokenOptimizer.configureMcp",
+        "title": "TokenShield: Configure MCP Servers"
+      },
+      {
+        "command": "aiTokenOptimizer.validateAll",
+        "title": "TokenShield: Validate All 10 Strategies"
+      },
+      {
+        "command": "aiTokenOptimizer.clearCache",
+        "title": "TokenShield: Clear Semantic Cache"
+      },
+      {
+        "command": "aiTokenOptimizer.validateIndex",
+        "title": "TokenShield: Validate CodeGraph Index"
+      },
+      {
+        "command": "aiTokenOptimizer.manageProjects",
+        "title": "TokenShield: Manage CodeGraph Projects"
+      },
+      {
+        "command": "aiTokenOptimizer.exportTelemetry",
+        "title": "TokenShield: Export Executive Telemetry Report (CSV/JSON/MD)"
+      },
+      {
+        "command": "aiTokenOptimizer.configureExclusions",
+        "title": "TokenShield: Configure Context Exclusions (CAP-7)"
+      },
+      {
+        "command": "aiTokenOptimizer.exportToRepo",
+        "title": "TokenShield: Export Instructions to Repository"
+      }
+    ],
+    "configuration": {
+      "title": "TokenShield",
+      "properties": {
+        "aiTokenOptimizer.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable or disable all token optimizations."
+        },
+        "aiTokenOptimizer.autoApply": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically apply token optimization directives when opening a workspace."
+        },
+        "aiTokenOptimizer.targetTools": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "copilot",
+              "claude",
+              "codex",
+              "antigravity"
+            ]
+          },
+          "default": [
+            "copilot"
+          ],
+          "description": "Which AI tools to generate instruction files for."
+        },
+        "aiTokenOptimizer.profile": {
+          "type": "string",
+          "enum": [
+            "full",
+            "debug",
+            "planning",
+            "review",
+            "custom"
+          ],
+          "default": "full",
+          "description": "Active optimization profile. Profiles control which strategies are enabled.",
+          "enumDescriptions": [
+            "All 10 strategies active — maximum enterprise token & cost savings",
+            "Disables output compression and diff-only for full log & test diagnostics",
+            "Disables verbosity restrictions and guardrails for deep architectural reviews",
+            "Preserves full context history for thorough code reviews",
+            "Use custom strategy combination from activeStrategies setting"
+          ]
+        },
+        "aiTokenOptimizer.activeStrategies": {
+          "type": "object",
+          "default": {
+            "codeGraph": true,
+            "outputCompression": true,
+            "verbosityControl": true,
+            "sessionManagement": true,
+            "semanticCache": true,
+            "astSkeleton": true,
+            "contextExclusion": true,
+            "diffOnlyOutput": true,
+            "agentGuardrails": true,
+            "smartModelRouting": true
+          },
+          "properties": {
+            "codeGraph": {
+              "type": "boolean",
+              "description": "CAP-1: CodeGraph semantic pre-indexing"
+            },
+            "outputCompression": {
+              "type": "boolean",
+              "description": "CAP-2: RTK output compression for CLI & test commands"
+            },
+            "verbosityControl": {
+              "type": "boolean",
+              "description": "CAP-3: Caveman concise response control"
+            },
+            "sessionManagement": {
+              "type": "boolean",
+              "description": "CAP-4: Session & context hygiene"
+            },
+            "semanticCache": {
+              "type": "boolean",
+              "description": "CAP-5: Local semantic cache (zero model tokens for repeated questions)"
+            },
+            "astSkeleton": {
+              "type": "boolean",
+              "description": "CAP-6: AST structural skeleton extraction (~90% context reduction)"
+            },
+            "contextExclusion": {
+              "type": "boolean",
+              "description": "CAP-7: Smart context exclusion (auto-exclude lock files, dist/, minified code)"
+            },
+            "diffOnlyOutput": {
+              "type": "boolean",
+              "description": "CAP-8: Diff-only output format (~92% output token savings)"
+            },
+            "agentGuardrails": {
+              "type": "boolean",
+              "description": "CAP-9: Agent loop guardrails (prevents expensive runaway retry cycles)"
+            },
+            "smartModelRouting": {
+              "type": "boolean",
+              "description": "CAP-10: Smart model routing (suggests lighter models for routine edits)"
+            }
+          },
+          "description": "Toggle individual strategies (used when profile is 'custom')."
+        },
+        "aiTokenOptimizer.verbosityLevel": {
+          "type": "string",
+          "enum": [
+            "light",
+            "full",
+            "ultra"
+          ],
+          "default": "full",
+          "description": "Verbosity reduction level: Light (~20%), Full (~35%), Ultra (~50%)."
+        },
+        "aiTokenOptimizer.preserveExistingInstructions": {
+          "type": "boolean",
+          "default": true,
+          "description": "Preserve existing user content in instruction files when updating."
+        },
+        "aiTokenOptimizer.autoInstallTools": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically check and install supporting CLI tools."
+        },
+        "aiTokenOptimizer.configureMcpOnActivation": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically configure MCP servers (token-cache, Context7, CodeGraph) on activation."
+        },
+        "aiTokenOptimizer.pricing": {
+          "type": "object",
+          "default": {
+            "flagship": { "inputPerMillion": 15.0, "outputPerMillion": 75.0 },
+            "standard": { "inputPerMillion": 3.0, "outputPerMillion": 15.0 },
+            "lightweight": { "inputPerMillion": 0.15, "outputPerMillion": 0.60 }
+          },
+          "description": "Model pricing table in USD per 1M tokens (used for ROI dashboard calculations)."
+        },
+        "aiTokenOptimizer.guardrails": {
+          "type": "object",
+          "default": {
+            "maxRetries": 3,
+            "maxFilesPerTask": 10,
+            "maxFileReads": 2
+          },
+          "properties": {
+            "maxRetries": {
+              "type": "number",
+              "description": "CAP-9: Max retry attempts before pausing for user input",
+              "default": 3
+            },
+            "maxFilesPerTask": {
+              "type": "number",
+              "description": "CAP-9: Max files to modify in one task before asking confirmation",
+              "default": 10
+            },
+            "maxFileReads": {
+              "type": "number",
+              "description": "CAP-9: Max reads of the same file in a single conversation",
+              "default": 2
+            }
+          },
+          "description": "CAP-9: Agent Loop Guardrail limits."
+        },
+        "aiTokenOptimizer.useVscodeStorage": {
+          "type": "boolean",
+          "default": true,
+          "description": "Store instructions cleanly in .vscode/copilot-instructions.md instead of modifying public git tracking. Use 'Export to Repository' command when team-wide repo commit is desired."
+        },
+        "aiTokenOptimizer.telemetry.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable 100% on-device ROI and token savings tracking."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "node esbuild.js --production",
+    "watch": "node esbuild.js --watch",
+    "compile": "tsc -p ./",
+    "lint": "eslint src --ext ts",
+    "test": "node ./dist/test/runTest.js",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/glob": "^8.1.0",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "@vscode/test-electron": "^2.3.8",
+    "@vscode/vsce": "^2.22.0",
+    "esbuild": "^0.20.0",
+    "eslint": "^8.56.0",
+    "glob": "^13.0.6",
+    "mocha": "^11.7.6",
+    "typescript": "^5.3.0"
+  }
+}

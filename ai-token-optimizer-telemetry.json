@@ -1,0 +1,97 @@
+{
+  "generatedAt": "2026-07-11T02:59:42.270Z",
+  "note": "Repository metrics are read from the CodeGraph index (real). Savings estimates are modeled — this extension is not in the LLM request path.",
+  "repositories": [
+    {
+      "repositoryName": "ai-token-optimize-vscode",
+      "sourceBytes": 252596,
+      "totalFiles": 48,
+      "totalDirectories": 13,
+      "totalPackages": null,
+      "totalClasses": 9,
+      "totalInterfaces": 38,
+      "totalEnums": 0,
+      "totalMethods": 73,
+      "totalFunctions": 123,
+      "totalApis": null,
+      "totalDatabaseQueries": null,
+      "totalGraphNodes": 553,
+      "totalGraphRelationships": 1665,
+      "indexSizeBytes": 1478656,
+      "graphBuildTimeMs": null,
+      "languages": {
+        "javascript": 1,
+        "typescript": 47
+      },
+      "nodeKinds": {
+        "class": 9,
+        "constant": 61,
+        "file": 48,
+        "function": 123,
+        "import": 161,
+        "interface": 38,
+        "method": 73,
+        "property": 15,
+        "type_alias": 15,
+        "variable": 10
+      },
+      "edgeKinds": {
+        "calls": 514,
+        "contains": 505,
+        "extends": 3,
+        "imports": 331,
+        "instantiates": 38,
+        "references": 274
+      },
+      "source": "sqlite"
+    }
+  ],
+  "savingsEstimates": [
+    {
+      "modeled": true,
+      "assumptions": {
+        "avgFilesRetrievedPerQuery": 8,
+        "charsPerToken": 4,
+        "usdPer1kPromptTokens": 0.003,
+        "baseline": "whole-repository"
+      },
+      "estimatedFilesWithoutGraph": 48,
+      "estimatedFilesWithGraph": 8,
+      "estimatedPromptTokensWithoutGraph": 63149,
+      "estimatedPromptTokensWithGraph": 10525,
+      "estimatedContextKbWithoutGraph": 246.7,
+      "estimatedContextKbWithGraph": 41.1,
+      "filesReductionPercent": 83.3,
+      "tokenReductionPercent": 83.3,
+      "estimatedCostWithoutGraphUsd": 0.1894,
+      "estimatedCostWithGraphUsd": 0.0316,
+      "estimatedCostSavedUsd": 0.1579
+    }
+  ],
+  "history": [
+    {
+      "t": 1783726018776,
+      "repo": "ai-token-optimize-vscode",
+      "files": 44,
+      "nodes": 512,
+      "edges": 1512,
+      "classes": 9,
+      "interfaces": 34,
+      "methods": 71,
+      "functions": 111,
+      "indexBytes": 1318912
+    },
+    {
+      "t": 1783738780057,
+      "repo": "ai-token-optimize-vscode",
+      "files": 48,
+      "nodes": 553,
+      "edges": 1665,
+      "classes": 9,
+      "interfaces": 38,
+      "methods": 73,
+      "functions": 123,
+      "indexBytes": 1478656
+    }
+  ]
+}
