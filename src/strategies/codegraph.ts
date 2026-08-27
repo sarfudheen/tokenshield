@@ -39,6 +39,40 @@ export function getIndexStatus(wsPath: string): IndexStatus {
   return { exists, lastIndexed: lastIndexedAt, pendingChanges: pendingChangedFiles.size, isStale, filePath: codegraphIndex, projects };
 }
 
+/**
+ * Filter out build artifacts, dist/, lockfiles, and generated files from indexing.
+ */
+function shouldIgnoreFile(relPath: string): boolean {
+  const normalized = relPath.replace(/\\/g, '/').toLowerCase();
+
+  // Excluded directories
+  const excludedDirs = [
+    'dist/', 'build/', 'out/', 'target/', 'coverage/', '.next/', '.nuxt/',
+    'node_modules/', '.git/', '.codegraph/', '.aicache/', '.agents/', '.claude/',
+    'vendor/', '__pycache__/', '.venv/', 'venv/',
+  ];
+
+  for (const dir of excludedDirs) {
+    if (normalized.startsWith(dir) || normalized.includes('/' + dir)) {
+      return true;
+    }
+  }
+
+  // Excluded file extensions & generated artifacts
+  if (
+    normalized.endsWith('.d.ts') ||
+    normalized.endsWith('.map') ||
+    normalized.endsWith('.min.js') ||
+    normalized.endsWith('.min.css') ||
+    normalized.endsWith('.lock') ||
+    normalized.includes('.generated.')
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
 export function startCodeGraphWatcher(outputChannel: vscode.OutputChannel): vscode.Disposable[] {
   const disposables: vscode.Disposable[] = [];
   indexStatusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 99);
@@ -50,14 +84,18 @@ export function startCodeGraphWatcher(outputChannel: vscode.OutputChannel): vsco
   fileWatcher = vscode.workspace.createFileSystemWatcher('**/*.{ts,js,tsx,jsx,py,go,rs,java,rb,cpp,c,h}');
   const scheduleReindex = (uri: vscode.Uri) => {
     const rel = vscode.workspace.asRelativePath(uri);
-    if (!rel.includes('node_modules') && !rel.includes('.git')) {
-      pendingChangedFiles.add(uri.fsPath);
-      updateIndexStatusBar('pending');
-      outputChannel.appendLine(`[codegraph] Change: ${rel} (${pendingChangedFiles.size} pending)`);
+    if (shouldIgnoreFile(rel)) {
+      return;
     }
+
+    pendingChangedFiles.add(uri.fsPath);
+    updateIndexStatusBar('pending');
+    outputChannel.appendLine(`[codegraph] Change: ${rel} (${pendingChangedFiles.size} pending)`);
+
     if (reindexTimeout) { clearTimeout(reindexTimeout); }
     reindexTimeout = setTimeout(() => runCodeGraphReindex(outputChannel), 30000);
   };
+
   fileWatcher.onDidCreate(scheduleReindex);
   fileWatcher.onDidDelete(scheduleReindex);
   fileWatcher.onDidChange(scheduleReindex);
@@ -66,11 +104,9 @@ export function startCodeGraphWatcher(outputChannel: vscode.OutputChannel): vsco
   if (!isCodeGraphInstalled()) {
     outputChannel.appendLine('[codegraph] codegraph CLI not found — running in instruction-only mode (CAP-1 rules active via instruction files)');
     updateIndexStatusBar('missing');
-    // Still watch files so we can report pending changes if codegraph is installed later
   } else {
     const projects = getProjectsToIndex();
     outputChannel.appendLine(`[codegraph] Watcher started for ${projects.length} project(s): ${projects.map(p => p.name).join(', ')}`);
-    // Pre-populate state for projects already indexed before this session
     for (const project of projects) {
       if (!projectIndexState.has(project.absPath) && fs.existsSync(path.join(project.absPath, '.codegraph'))) {
         projectIndexState.set(project.absPath, { lastIndexed: undefined, status: 'pre-indexed' });
@@ -112,12 +148,11 @@ export async function runCodeGraphReindex(outputChannel: vscode.OutputChannel): 
       continue;
     }
     const hasIndex = fs.existsSync(path.join(project.absPath, '.codegraph'));
-    // codegraph init — one step: creates .codegraph/ and builds the full graph
-    // codegraph sync — incremental update for an already-initialized project
     const cmd = hasIndex ? 'codegraph sync' : 'codegraph init';
     try {
       outputChannel.appendLine(`[codegraph] → ${project.name} (${project.absPath})`);
-      execSync(cmd, { cwd: project.absPath, timeout: 60000 });
+      const isWindows = process.platform === 'win32';
+      execSync(cmd, { cwd: project.absPath, timeout: 60000, shell: isWindows ? 'powershell.exe' : undefined });
       const now = new Date();
       projectIndexState.set(project.absPath, { lastIndexed: now, status: 'fresh' });
       lastIndexedAt = now;
@@ -131,7 +166,6 @@ export async function runCodeGraphReindex(outputChannel: vscode.OutputChannel): 
   }
   pendingChangedFiles.clear();
   if (succeeded > 0) {
-    // Index changed — drop memoized dashboard stats so fresh counts show immediately
     invalidateTtl('measure:codegraph');
     recordReindex();
   }
@@ -140,98 +174,19 @@ export async function runCodeGraphReindex(outputChannel: vscode.OutputChannel): 
   if (failed > 0) { outputChannel.show(true); }
 }
 
-/** Run `codegraph status` and append the key stats lines to the Output channel. */
-function appendCodeGraphStats(outputChannel: vscode.OutputChannel, projectPath: string): void {
-  try {
-    const out = execSync('codegraph status', { cwd: projectPath, timeout: 10000, encoding: 'utf-8' });
-    const lines = out.split('\n');
-    const want = ['Files:', 'Nodes:', 'Edges:', 'DB Size:', 'Journal:'];
-    for (const line of lines) {
-      if (want.some(k => line.trimStart().startsWith(k))) {
-        outputChannel.appendLine(`    ${line.trimStart()}`);
-      }
-    }
-    const freshLine = lines.find(l => l.includes('up to date') || l.includes('stale'));
-    if (freshLine) {
-      outputChannel.appendLine(`    ${freshLine.trim()}`);
-    }
-  } catch {
-    outputChannel.appendLine('    (codegraph status unavailable)');
-  }
-}
-
 export async function validateIndex(outputChannel: vscode.OutputChannel): Promise<void> {
-  if (!isCodeGraphInstalled()) {
-    outputChannel.show(true);
-    outputChannel.appendLine('\n══════════════════════════════════════════');
-    outputChannel.appendLine('[codegraph] Validation Report');
-    outputChannel.appendLine('  Status  : ○ codegraph CLI not installed');
-    outputChannel.appendLine('  Mode    : Instruction-based (CAP-1 rules injected into AI instructions)');
-    outputChannel.appendLine('  Effect  : AI is instructed to search before synthesizing — no binary required');
-    outputChannel.appendLine('  Install : npm install -g @colbymchenry/codegraph   (or: curl -fsSL https://raw.githubusercontent.com/colbymchenry/codegraph/main/install.sh | sh)');
-    outputChannel.appendLine('══════════════════════════════════════════\n');
-    vscode.window.showInformationMessage(
-      'CodeGraph CLI not installed. Run "AI Token Optimizer: Install Tools" or: npm install -g @colbymchenry/codegraph',
-      'Install Now',
-      'Manage Projects'
-    ).then(choice => {
-      if (choice === 'Install Now') {
-        vscode.commands.executeCommand('aiTokenOptimizer.installTools');
-      } else if (choice === 'Manage Projects') {
-        vscode.commands.executeCommand('aiTokenOptimizer.manageProjects');
-      }
-    });
-    return;
-  }
-
   const projects = getProjectsToIndex();
-  outputChannel.show(true);
-  outputChannel.appendLine('\n══════════════════════════════════════════');
-  outputChannel.appendLine('[codegraph] Index Validation Report');
-  outputChannel.appendLine(`  Timestamp     : ${new Date().toLocaleString()}`);
-  outputChannel.appendLine(`  Projects count: ${projects.length}`);
-  outputChannel.appendLine(`  Pending files : ${pendingChangedFiles.size}`);
-  outputChannel.appendLine('──────────────────────────────────────────');
   if (projects.length === 0) {
-    outputChannel.appendLine('  ⚠  No projects configured. Run "Manage CodeGraph Projects" to add.');
-    outputChannel.appendLine('══════════════════════════════════════════\n');
-    const choice = await vscode.window.showWarningMessage('No CodeGraph projects configured.', 'Manage Projects', 'Cancel');
-    if (choice === 'Manage Projects') { await vscode.commands.executeCommand('aiTokenOptimizer.manageProjects'); }
+    vscode.window.showWarningMessage('CodeGraph: No workspace projects configured.');
     return;
   }
-  let allFresh = true;
-  for (const project of projects) {
-    const hasIndex = fs.existsSync(path.join(project.absPath, '.codegraph'));
-    const state = projectIndexState.get(project.absPath);
-    outputChannel.appendLine(`  ${project.name}`);
-    outputChannel.appendLine(`    Path  : ${project.absPath}`);
-    if (!hasIndex) {
-      allFresh = false;
-      outputChannel.appendLine('    Index : ✗ NO INDEX — run "codegraph init" in this directory');
-    } else if (state?.lastIndexed) {
-      // Indexed during this session
-      outputChannel.appendLine(`    Index : ✓ Indexed at ${state.lastIndexed.toLocaleTimeString()} (this session)`);
-      appendCodeGraphStats(outputChannel, project.absPath);
-    } else {
-      // Index exists but was built before this VS Code session (or via terminal)
-      outputChannel.appendLine('    Index : ✓ Index exists (built outside this session)');
-      appendCodeGraphStats(outputChannel, project.absPath);
-    }
-  }
-  if (pendingChangedFiles.size > 0) {
-    allFresh = false;
-    outputChannel.appendLine('──────────────────────────────────────────');
-    outputChannel.appendLine(`  Pending (${pendingChangedFiles.size}):`);
-    Array.from(pendingChangedFiles).slice(0, 5).forEach(f => outputChannel.appendLine(`    • ${f}`));
-    if (pendingChangedFiles.size > 5) { outputChannel.appendLine(`    ... and ${pendingChangedFiles.size - 5} more`); }
-  }
-  outputChannel.appendLine('══════════════════════════════════════════\n');
-  if (!allFresh || pendingChangedFiles.size > 0) {
+  const unindexed = projects.filter(p => !fs.existsSync(path.join(p.absPath, '.codegraph')));
+  if (unindexed.length > 0) {
     const choice = await vscode.window.showWarningMessage(
-      `CodeGraph: ${pendingChangedFiles.size} pending change(s). Reindex now?`,
-      'Reindex All', 'Manage Projects', 'Ignore'
+      `CodeGraph: ${unindexed.length} of ${projects.length} project(s) not indexed (${unindexed.map(p => p.name).join(', ')}). Index now?`,
+      'Index Now', 'Manage Projects', 'Cancel'
     );
-    if (choice === 'Reindex All') { await runCodeGraphReindex(outputChannel); }
+    if (choice === 'Index Now') { await runCodeGraphReindex(outputChannel); }
     else if (choice === 'Manage Projects') { await vscode.commands.executeCommand('aiTokenOptimizer.manageProjects'); }
   } else {
     vscode.window.showInformationMessage(`CodeGraph: All ${projects.length} project(s) fresh. Last: ${lastIndexedAt?.toLocaleTimeString() ?? 'this session'}`);
