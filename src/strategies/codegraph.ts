@@ -42,6 +42,9 @@ export function getIndexStatus(wsPath: string): IndexStatus {
 /**
  * Filter out build artifacts, dist/, lockfiles, and generated files from indexing.
  */
+/**
+ * Filter out build artifacts, dist/, lockfiles, and generated files from indexing.
+ */
 function shouldIgnoreFile(relPath: string): boolean {
   const normalized = relPath.replace(/\\/g, '/').toLowerCase();
 
@@ -49,7 +52,7 @@ function shouldIgnoreFile(relPath: string): boolean {
   const excludedDirs = [
     'dist/', 'build/', 'out/', 'target/', 'coverage/', '.next/', '.nuxt/',
     'node_modules/', '.git/', '.codegraph/', '.aicache/', '.agents/', '.claude/',
-    'vendor/', '__pycache__/', '.venv/', 'venv/',
+    'vendor/', '__pycache__/', '.venv/', 'venv/', 'tsoa-output/', 'generated/',
   ];
 
   for (const dir of excludedDirs) {
@@ -65,7 +68,9 @@ function shouldIgnoreFile(relPath: string): boolean {
     normalized.endsWith('.min.js') ||
     normalized.endsWith('.min.css') ||
     normalized.endsWith('.lock') ||
-    normalized.includes('.generated.')
+    normalized.includes('.generated.') ||
+    normalized.includes('tsoa-output') ||
+    normalized.endsWith('routes.ts')
   ) {
     return true;
   }
@@ -148,16 +153,34 @@ export async function runCodeGraphReindex(outputChannel: vscode.OutputChannel): 
       continue;
     }
     const hasIndex = fs.existsSync(path.join(project.absPath, '.codegraph'));
-    const cmd = hasIndex ? 'codegraph sync' : 'codegraph init';
+    const subCmd = hasIndex ? 'sync' : 'init';
     try {
       outputChannel.appendLine(`[codegraph] → ${project.name} (${project.absPath})`);
-      const isWindows = process.platform === 'win32';
-      execSync(cmd, { cwd: project.absPath, timeout: 60000, shell: isWindows ? 'powershell.exe' : undefined });
-      const now = new Date();
-      projectIndexState.set(project.absPath, { lastIndexed: now, status: 'fresh' });
-      lastIndexedAt = now;
-      succeeded++;
-      outputChannel.appendLine(`[codegraph] ✓ ${project.name} indexed at ${now.toLocaleTimeString()}`);
+      const { spawnSync } = require('child_process');
+      let res = spawnSync('codegraph', [subCmd], {
+        cwd: project.absPath,
+        timeout: 60000,
+        shell: true,
+        encoding: 'utf-8',
+      });
+
+      // If sync failed, try unlock and retry
+      if (res.status !== 0) {
+        outputChannel.appendLine(`[codegraph] Attempting lock recovery for ${project.name}...`);
+        spawnSync('codegraph', ['unlock'], { cwd: project.absPath, shell: true, timeout: 10000 });
+        res = spawnSync('codegraph', [subCmd], { cwd: project.absPath, timeout: 60000, shell: true, encoding: 'utf-8' });
+      }
+
+      if (res.status === 0) {
+        const now = new Date();
+        projectIndexState.set(project.absPath, { lastIndexed: now, status: 'fresh' });
+        lastIndexedAt = now;
+        succeeded++;
+        outputChannel.appendLine(`[codegraph] ✓ ${project.name} indexed at ${now.toLocaleTimeString()}`);
+      } else {
+        const errMsg = res.stderr || res.stdout || `Exit code ${res.status}`;
+        throw new Error(errMsg.trim().split('\n')[0]);
+      }
     } catch (err) {
       failed++;
       projectIndexState.set(project.absPath, { lastIndexed: undefined, status: 'error' });
