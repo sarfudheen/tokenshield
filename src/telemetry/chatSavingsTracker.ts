@@ -36,63 +36,10 @@ class ChatSavingsTracker {
   private syncTimer?: NodeJS.Timeout;
 
   constructor() {
-    const now = Date.now();
-    this.sessionStartedAt = new Date(now - 30 * 60 * 1000);
-    // Baseline real milestones
-    this.events = [
-      {
-        id: 'evt-1',
-        timestamp: new Date(now - 2 * 60 * 1000),
-        directive: 'CAP-5: Semantic Cache',
-        source: 'What settings are configured in our config file',
-        tokensSaved: 2000,
-        costSavedUsd: 0.0300,
-        details: 'Answer stored in .aicache/semantic-cache.json (reusable at $0.00 in <2ms)',
-      },
-      {
-        id: 'evt-2',
-        timestamp: new Date(now - 5 * 60 * 1000),
-        directive: 'CAP-6: AST Skeleton',
-        source: 'src/core/config.ts',
-        tokensSaved: 1061,
-        costSavedUsd: 0.0032,
-        details: 'Extracted interface signatures only (5,785 B ➔ 1,544 B, 73% tokens saved)',
-      },
-      {
-        id: 'evt-3',
-        timestamp: new Date(now - 12 * 60 * 1000),
-        directive: 'CAP-8: Unified Diff Output',
-        source: 'src/ui/dashboard.ts',
-        tokensSaved: 12500,
-        costSavedUsd: 0.0375,
-        details: '15 targeted diff hunks generated instead of rewriting full 500-line files',
-      },
-      {
-        id: 'evt-rtk',
-        timestamp: new Date(now - 18 * 60 * 1000),
-        directive: 'CAP-2: RTK Output Compression',
-        source: 'rtk git diff / git status',
-        tokensSaved: 4381,
-        costSavedUsd: 0.0131,
-        details: 'Filtered 26 CLI command outputs (32.2k ➔ 27.9k tokens, -13.5% saved)',
-      },
-      {
-        id: 'evt-4',
-        timestamp: new Date(now - 25 * 60 * 1000),
-        directive: 'CAP-7: Context Exclusions',
-        source: '.vscode/settings.json',
-        tokensSaved: 500000,
-        costSavedUsd: 1.5000,
-        details: 'Auto-blocked 127 files in dist/ (~1.9MB) and lockfiles from AI context',
-      },
-    ];
-
-    for (const ev of this.events) {
-      this.knownEventIds.add(ev.id);
-    }
-
-    this.totalTokensSaved = this.events.reduce((acc, ev) => acc + ev.tokensSaved, 0);
-    this.totalCostSavedUsd = this.events.reduce((acc, ev) => acc + ev.costSavedUsd, 0);
+    this.sessionStartedAt = new Date();
+    this.events = [];
+    this.totalTokensSaved = 0;
+    this.totalCostSavedUsd = 0;
 
     this.startDiskSync();
   }
@@ -114,8 +61,8 @@ class ChatSavingsTracker {
     for (const de of diskEvents) {
       if (!this.knownEventIds.has(de.id)) {
         const evTime = new Date(de.timestamp);
-        // Only ingest if it occurred during or after current session start
-        if (evTime.getTime() >= this.sessionStartedAt.getTime() - 2000) {
+        // Ingest events that belong to current session
+        if (evTime.getTime() >= this.sessionStartedAt.getTime() - 5000) {
           this.knownEventIds.add(de.id);
           const ev: ChatSavingsEvent = {
             id: de.id,

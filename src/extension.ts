@@ -136,16 +136,25 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       ) {
         return;
       }
-      const docLength = doc.getText().length;
-      const estTotalTokens = Math.max(1, Math.ceil(docLength / 3.8));
-      if (estTotalTokens > 150) {
-        const diffSavings = Math.round(estTotalTokens * 0.75);
-        chatSavingsTracker.recordEvent(
-          'CAP-8: Unified Diff Output',
-          relPath,
-          diffSavings,
-          `Applied targeted hunk edit to ${relPath} instead of rewriting full ${estTotalTokens} tokens (75% savings)`
-        );
+      try {
+        const { execSync } = require('child_process');
+        const wsPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || process.cwd();
+        const diffRaw = execSync(`git diff HEAD -- "${relPath}"`, { cwd: wsPath, encoding: 'utf-8', timeout: 3000 });
+        if (diffRaw && diffRaw.trim().length > 0) {
+          const fileTokens = Math.max(1, Math.ceil(doc.getText().length / 3.8));
+          const diffTokens = Math.max(1, Math.ceil(diffRaw.length / 3.8));
+          const savedTokens = Math.max(0, fileTokens - diffTokens);
+          if (savedTokens > 20) {
+            chatSavingsTracker.recordEvent(
+              'CAP-8: Unified Diff Output',
+              relPath,
+              savedTokens,
+              `Applied ${diffTokens} token diff hunk instead of rewriting full ${fileTokens} token file (${Math.round((savedTokens / fileTokens) * 100)}% tokens saved)`
+            );
+          }
+        }
+      } catch {
+        // Not a git repo or unmodified
       }
     })
   );

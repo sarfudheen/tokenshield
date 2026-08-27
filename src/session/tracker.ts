@@ -4,7 +4,7 @@
 import { CacheStats } from '../cache/store';
 import { CallLogCounts } from '../cache/callLog';
 
-const ZERO_CALL_COUNTS: CallLogCounts = { lookups: 0, hits: 0, misses: 0, staleHits: 0, stores: 0, skeletonViews: 0, prunes: 0 };
+const ZERO_CALL_COUNTS: CallLogCounts = { lookups: 0, hits: 0, misses: 0, staleHits: 0, stores: 0 };
 
 interface SessionState {
   startedAt: number;

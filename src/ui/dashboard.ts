@@ -126,7 +126,7 @@ function getCapCardState(
 }
 
 export class DashboardPanel {
-  private static currentPanel: DashboardPanel | undefined;
+  public static currentPanel: DashboardPanel | undefined;
   private readonly panel: vscode.WebviewPanel;
   private disposables: vscode.Disposable[] = [];
 
@@ -135,7 +135,11 @@ export class DashboardPanel {
     this.panel.onDidDispose(() => this.dispose(), null, this.disposables);
   }
 
-  static async show(_extensionUri: vscode.Uri): Promise<void> {
+  public static async show(_extensionUri?: vscode.Uri): Promise<void> {
+    await DashboardPanel.createOrShow();
+  }
+
+  public static async createOrShow(): Promise<void> {
     if (DashboardPanel.currentPanel) {
       DashboardPanel.currentPanel.panel.reveal(vscode.ViewColumn.One);
       await DashboardPanel.currentPanel.refresh();

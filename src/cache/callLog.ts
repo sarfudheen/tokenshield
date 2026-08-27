@@ -7,6 +7,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { CACHE_DIR } from './store';
+import { recordDiskEvent } from './eventLog';
 
 export const CALL_LOG_FILE = 'call-log.json';
 
@@ -16,19 +17,9 @@ export interface CallLogCounts {
   misses: number;
   staleHits: number;
   stores: number;
-  skeletonViews: number;
-  prunes: number;
 }
 
-const ZERO_COUNTS: CallLogCounts = {
-  lookups: 0,
-  hits: 0,
-  misses: 0,
-  staleHits: 0,
-  stores: 0,
-  skeletonViews: 0,
-  prunes: 0,
-};
+const ZERO_COUNTS: CallLogCounts = { lookups: 0, hits: 0, misses: 0, staleHits: 0, stores: 0 };
 
 interface CallLogFile {
   version: 1;
@@ -60,20 +51,6 @@ export class CallLogStore {
   recordStore(): CallLogCounts {
     const data = this.load();
     data.counts.stores++;
-    this.save(data);
-    return data.counts;
-  }
-
-  recordSkeleton(): CallLogCounts {
-    const data = this.load();
-    data.counts.skeletonViews++;
-    this.save(data);
-    return data.counts;
-  }
-
-  recordPrune(): CallLogCounts {
-    const data = this.load();
-    data.counts.prunes++;
     this.save(data);
     return data.counts;
   }
