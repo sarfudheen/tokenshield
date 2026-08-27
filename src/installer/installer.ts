@@ -14,14 +14,14 @@ export interface InstallResult {
 }
 
 /**
- * Check if binary is available across Windows, macOS, and Linux.
+ * Check if a binary is available across Windows, macOS, and Linux.
  */
 export function isBinaryAvailable(bin: string): boolean {
-  return memoizeTtl(`which:${bin}`, 60_000, () => {
+  return memoizeTtl(`which:${bin}`, 30_000, () => {
     try {
       const isWindows = process.platform === 'win32';
       const cmd = isWindows ? `where.exe ${bin}` : `which ${bin}`;
-      execSync(cmd, { stdio: 'ignore', timeout: 3000, shell: true });
+      execSync(cmd, { stdio: 'ignore', timeout: 3000, shell: isWindows });
       return true;
     } catch {
       return false;
@@ -30,9 +30,9 @@ export function isBinaryAvailable(bin: string): boolean {
 }
 
 /**
- * Called on demand or via command palette.
+ * Automatically check and install all supporting CLI tools.
  */
-export async function installAllTools(outputChannel: vscode.OutputChannel): Promise<InstallResult[]> {
+export async function installAllTools(outputChannel: vscode.OutputChannel, isInteractive = false): Promise<InstallResult[]> {
   const results: InstallResult[] = [];
   const workspaceFolders = vscode.workspace.workspaceFolders;
   if (!workspaceFolders) {
@@ -47,22 +47,13 @@ export async function installAllTools(outputChannel: vscode.OutputChannel): Prom
   for (const tool of TOOLS_TO_INSTALL) {
     if (isBinaryAvailable(tool.name)) {
       results.push({ packageName: tool.name, installed: false, alreadyInstalled: true });
-      outputChannel.appendLine(`[installer] ✓ ${tool.name} already installed`);
+      outputChannel.appendLine(`[installer] ✓ ${tool.name} available on system`);
     } else {
-      outputChannel.appendLine(`[installer] ○ ${tool.name} not found — offering install`);
-      const choice = await vscode.window.showInformationMessage(
-        `TokenShield: ${tool.name} is not installed.\n${tool.description}`,
-        'Install Now',
-        'Later'
-      );
-      if (choice === 'Install Now') {
-        const result = await installTool(tool, outputChannel);
-        results.push(result);
-        if (result.installed && tool.name === 'codegraph') {
-          await offerWireCodegraphAgents(outputChannel);
-        }
-      } else {
-        results.push({ packageName: tool.name, installed: false, alreadyInstalled: false, error: 'User deferred' });
+      outputChannel.appendLine(`[installer] ○ ${tool.name} missing — attempting automatic installation...`);
+      const result = await installTool(tool, outputChannel, isInteractive);
+      results.push(result);
+      if (result.installed && tool.name === 'codegraph') {
+        await offerWireCodegraphAgents(outputChannel);
       }
     }
   }
@@ -70,48 +61,65 @@ export async function installAllTools(outputChannel: vscode.OutputChannel): Prom
   return results;
 }
 
-async function installTool(tool: ToolInstallEntry, outputChannel: vscode.OutputChannel): Promise<InstallResult> {
-  return vscode.window.withProgress(
-    { location: vscode.ProgressLocation.Notification, title: `TokenShield: Installing ${tool.name}…`, cancellable: false },
-    async () => {
-      try {
-        if (tool.method === 'npm-global' && tool.npmPackage) {
-          return installViaNpm(tool.name, tool.npmPackage, outputChannel);
-        }
-        if (tool.method === 'brew' || tool.method === 'shell-script') {
-          return installViaBrewOrShell(tool, outputChannel);
-        }
-        throw new Error(`Unknown install method: ${tool.method}`);
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        outputChannel.appendLine(`[installer] ✗ ${tool.name} install error: ${msg}`);
-        return { packageName: tool.name, installed: false, alreadyInstalled: false, error: msg };
+async function installTool(tool: ToolInstallEntry, outputChannel: vscode.OutputChannel, isInteractive = false): Promise<InstallResult> {
+  const title = `TokenShield: Installing ${tool.name}…`;
+  
+  const doInstall = async () => {
+    try {
+      if (tool.method === 'npm-global' && tool.npmPackage) {
+        return installViaNpm(tool.name, tool.npmPackage, outputChannel, isInteractive);
       }
+      if (tool.method === 'brew' || tool.method === 'shell-script') {
+        return installViaBrewOrShell(tool, outputChannel, isInteractive);
+      }
+      throw new Error(`Unsupported install method: ${tool.method}`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      outputChannel.appendLine(`[installer] ✗ ${tool.name} install error: ${msg}`);
+      return { packageName: tool.name, installed: false, alreadyInstalled: false, error: msg };
     }
-  );
+  };
+
+  if (isInteractive) {
+    return vscode.window.withProgress(
+      { location: vscode.ProgressLocation.Notification, title, cancellable: false },
+      doInstall
+    );
+  }
+
+  return doInstall();
 }
 
-function installViaNpm(binaryName: string, npmPackage: string, outputChannel: vscode.OutputChannel): InstallResult {
+function installViaNpm(binaryName: string, npmPackage: string, outputChannel: vscode.OutputChannel, isInteractive: boolean): InstallResult {
   outputChannel.appendLine(`[installer] Running: npm install -g ${npmPackage}`);
   const isWindows = process.platform === 'win32';
-  const result = spawnSync('npm', ['install', '-g', npmPackage], {
-    stdio: ['ignore', 'pipe', 'pipe'],
-    timeout: 120000,
-    encoding: 'utf-8',
-    shell: isWindows,
-  });
-  if (result.status === 0) {
-    outputChannel.appendLine(`[installer] ✓ ${binaryName} installed`);
-    vscode.window.showInformationMessage(`TokenShield: ${binaryName} installed successfully.`);
-    return { packageName: binaryName, installed: true, alreadyInstalled: false };
+  try {
+    const result = spawnSync('npm', ['install', '-g', npmPackage], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      timeout: 120000,
+      encoding: 'utf-8',
+      shell: isWindows,
+    });
+    if (result.status === 0) {
+      outputChannel.appendLine(`[installer] ✓ ${binaryName} installed successfully`);
+      if (isInteractive) {
+        vscode.window.showInformationMessage(`TokenShield: ${binaryName} installed successfully.`);
+      }
+      return { packageName: binaryName, installed: true, alreadyInstalled: false };
+    }
+    const errMsg = result.stderr?.trim() || result.error?.message || 'npm install failed';
+    outputChannel.appendLine(`[installer] ✗ ${binaryName} installation failed: ${errMsg}`);
+    if (isInteractive) {
+      vscode.window.showWarningMessage(`Could not auto-install ${binaryName}. Run manually: npm install -g ${npmPackage}`);
+    }
+    return { packageName: binaryName, installed: false, alreadyInstalled: false, error: errMsg };
+  } catch (e: any) {
+    outputChannel.appendLine(`[installer] ✗ ${binaryName} spawn failed: ${e.message}`);
+    return { packageName: binaryName, installed: false, alreadyInstalled: false, error: e.message };
   }
-  const errMsg = result.stderr?.trim() || result.error?.message || 'npm install failed';
-  outputChannel.appendLine(`[installer] ✗ ${binaryName}: ${errMsg}`);
-  vscode.window.showWarningMessage(`Could not auto-install ${binaryName}. Run manually in terminal: npm install -g ${npmPackage}`);
-  return { packageName: binaryName, installed: false, alreadyInstalled: false, error: errMsg };
 }
 
-function installViaBrewOrShell(tool: ToolInstallEntry, outputChannel: vscode.OutputChannel): InstallResult {
+function installViaBrewOrShell(tool: ToolInstallEntry, outputChannel: vscode.OutputChannel, isInteractive: boolean): InstallResult {
   const isMac = os.platform() === 'darwin';
   const isWindows = process.platform === 'win32';
   const hasBrewPkg = tool.brewPackage && isMac && isBinaryAvailable('brew');
@@ -129,17 +137,12 @@ function installViaBrewOrShell(tool: ToolInstallEntry, outputChannel: vscode.Out
       return { packageName: tool.name, installed: true, alreadyInstalled: false };
     }
     const brewErr = result.stderr?.trim() || result.error?.message || 'brew install failed';
-    outputChannel.appendLine(`[installer] brew failed, trying fallback: ${brewErr}`);
+    outputChannel.appendLine(`[installer] brew failed: ${brewErr}`);
   }
 
   if (isWindows) {
-    // Windows fallback for rtk
-    outputChannel.appendLine(`[installer] Optional CLI tool ${tool.name} can be installed manually on Windows.`);
-    vscode.window.showInformationMessage(
-      `TokenShield: ${tool.name} is an optional CLI helper. TokenShield works in instruction mode out-of-the-box without it.`,
-      'Got it'
-    );
-    return { packageName: tool.name, installed: false, alreadyInstalled: false, error: 'Windows manual install' };
+    outputChannel.appendLine(`[installer] Note: ${tool.name} is a native POSIX binary. Running in instruction mode on Windows.`);
+    return { packageName: tool.name, installed: false, alreadyInstalled: false, error: 'Platform instruction mode' };
   }
 
   // Mac / Linux shell script fallback
