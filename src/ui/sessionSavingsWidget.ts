@@ -20,9 +20,15 @@ export function createSessionSavingsWidget(context: vscode.ExtensionContext): vs
     })
   );
 
-  // Register the interactive QuickPick command
+  // Register commands
   context.subscriptions.push(
-    vscode.commands.registerCommand('aiTokenOptimizer.showSessionBreakdown', showSessionBreakdownQuickPick)
+    vscode.commands.registerCommand('aiTokenOptimizer.showSessionBreakdown', showSessionBreakdownQuickPick),
+    vscode.commands.registerCommand('aiTokenOptimizer.resetSession', async () => {
+      const archived = await chatSavingsTracker.resetSession();
+      vscode.window.showInformationMessage(
+        `🛡️ TokenShield: Started new Session #${chatSavingsTracker.getSessionNumber()}! Session #${archived.sessionNumber} archived (${archived.totalTokensSaved.toLocaleString()} tok, $${archived.totalCostSavedUsd.toFixed(4)} saved).`
+      );
+    })
   );
 
   // Watch .aicache/call-log.json to capture live MCP calls from Antigravity/Claude
@@ -60,6 +66,8 @@ export async function updateSessionSavingsWidget(): Promise<void> {
   const tokensSaved = chatSavingsTracker.getTotalTokensSaved();
   const costSaved = chatSavingsTracker.getTotalCostSavedUsd();
   const activeModel = await getActiveModel();
+  const sessionNum = chatSavingsTracker.getSessionNumber();
+  const sessionStarted = chatSavingsTracker.getSessionStartedAt();
 
   const formattedTokens = tokensSaved >= 1000
     ? `${(tokensSaved / 1000).toFixed(1)}k`
@@ -69,15 +77,16 @@ export async function updateSessionSavingsWidget(): Promise<void> {
     ? '<$0.0001'
     : `$${costSaved.toFixed(4)}`;
 
-  savingsStatusBarItem.text = `$(sparkle) Saved: ${formattedTokens} tok (${formattedCost})`;
+  savingsStatusBarItem.text = `$(sparkle) S#${sessionNum}: ${formattedTokens} tok (${formattedCost})`;
 
   const md = new vscode.MarkdownString();
   md.isTrusted = true;
   md.supportThemeIcons = true;
 
-  md.appendMarkdown(`### 💎 TokenShield Live Session Savings\n`);
-  md.appendMarkdown(`- **Total Tokens Avoided**: ~\`${tokensSaved.toLocaleString()}\` tokens\n`);
-  md.appendMarkdown(`- **Total Cost Avoided**: \`${formattedCost}\` (Based on \`${activeModel.name}\`)\n\n`);
+  md.appendMarkdown(`### 💎 TokenShield Session #${sessionNum} Savings\n`);
+  md.appendMarkdown(`- **Started At**: \`${sessionStarted.toLocaleTimeString()}\`\n`);
+  md.appendMarkdown(`- **Session Tokens Avoided**: ~\`${tokensSaved.toLocaleString()}\` tokens\n`);
+  md.appendMarkdown(`- **Session Cost Avoided**: \`${formattedCost}\` (Rate: \`${activeModel.name}\`)\n\n`);
   md.appendMarkdown(`---\n\n`);
 
   const recent = chatSavingsTracker.getRecentEvents(4);
@@ -91,21 +100,29 @@ export async function updateSessionSavingsWidget(): Promise<void> {
     md.appendMarkdown(`\n---\n\n`);
   }
 
-  md.appendMarkdown(`[💬 View Per-Chat History](command:aiTokenOptimizer.showSessionBreakdown) &nbsp;|&nbsp; [📊 Open ROI Dashboard](command:aiTokenOptimizer.showDashboard)`);
+  md.appendMarkdown(`[🔄 Start New Session (Reset)](command:aiTokenOptimizer.resetSession) &nbsp;|&nbsp; [💬 Per-Chat History](command:aiTokenOptimizer.showSessionBreakdown) &nbsp;|&nbsp; [📊 ROI Dashboard](command:aiTokenOptimizer.showDashboard)`);
 
   savingsStatusBarItem.tooltip = md;
   savingsStatusBarItem.show();
 }
 
 async function showSessionBreakdownQuickPick(): Promise<void> {
-  const events = chatSavingsTracker.getRecentEvents(20);
+  const events = chatSavingsTracker.getRecentEvents(25);
   const totalTok = chatSavingsTracker.getTotalTokensSaved();
   const totalCost = chatSavingsTracker.getTotalCostSavedUsd();
+  const sessionNum = chatSavingsTracker.getSessionNumber();
+  const pastSessions = chatSavingsTracker.getPastSessions();
 
   const items: vscode.QuickPickItem[] = [];
 
   items.push({
-    label: `$(graph) Total Session Savings: ~${totalTok.toLocaleString()} tokens ($${totalCost.toFixed(4)})`,
+    label: `$(sync) Start New Session (Reset Current Counters to 0)`,
+    description: `Currently in Session #${sessionNum}`,
+    detail: 'Archives current session savings into history and starts counting fresh from 0 tokens.',
+  });
+
+  items.push({
+    label: `$(graph) Session #${sessionNum} Total: ~${totalTok.toLocaleString()} tokens ($${totalCost.toFixed(4)})`,
     description: 'Click to open full graphical ROI Dashboard',
     detail: 'Aggregated across AST skeletons, semantic cache, context exclusions, and diff modifications.',
   });
@@ -117,7 +134,7 @@ async function showSessionBreakdownQuickPick(): Promise<void> {
 
   if (events.length === 0) {
     items.push({
-      label: '$(info) No specific chat optimization events recorded yet',
+      label: '$(info) No optimization events in current session yet',
       detail: 'Chat with your AI assistant or prune a selection to see live per-query savings.',
     });
   } else {
@@ -132,12 +149,31 @@ async function showSessionBreakdownQuickPick(): Promise<void> {
     }
   }
 
+  if (pastSessions.length > 0) {
+    items.push({
+      label: 'Archived Past Sessions',
+      kind: vscode.QuickPickItemKind.Separator,
+    });
+
+    for (const s of pastSessions) {
+      items.push({
+        label: `$(history) Session #${s.sessionNumber}: ~${s.totalTokensSaved.toLocaleString()} tokens ($${s.totalCostSavedUsd.toFixed(4)})`,
+        description: `${s.startedAt.toLocaleTimeString()} - ${s.endedAt.toLocaleTimeString()}`,
+        detail: `${s.eventsCount} events recorded on ${s.modelName}`,
+      });
+    }
+  }
+
   const selected = await vscode.window.showQuickPick(items, {
-    placeHolder: 'TokenShield — Live Per-Chat Savings Breakdown',
-    title: `Session Token Avoidance: ~${totalTok.toLocaleString()} tokens ($${totalCost.toFixed(4)})`,
+    placeHolder: `TokenShield — Session #${sessionNum} Savings Breakdown & Management`,
+    title: `Session #${sessionNum} Avoidance: ~${totalTok.toLocaleString()} tokens ($${totalCost.toFixed(4)})`,
   });
 
-  if (selected && selected.description === 'Click to open full graphical ROI Dashboard') {
+  if (!selected) { return; }
+
+  if (selected.label.includes('Start New Session')) {
+    vscode.commands.executeCommand('aiTokenOptimizer.resetSession');
+  } else if (selected.description === 'Click to open full graphical ROI Dashboard') {
     vscode.commands.executeCommand('aiTokenOptimizer.showDashboard');
   }
 }

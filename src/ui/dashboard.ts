@@ -27,6 +27,7 @@ const EXPORT_COMMAND = 'aiTokenOptimizer.exportTelemetry';
 const PRUNE_COMMAND = 'aiTokenOptimizer.pruneSelection';
 const PROFILE_COMMAND = 'aiTokenOptimizer.selectProfile';
 const EXCLUSIONS_COMMAND = 'aiTokenOptimizer.configureExclusions';
+const RESET_COMMAND = 'aiTokenOptimizer.resetSession';
 
 interface DashboardMeasurements {
   codeGraph: Measurement;
@@ -84,6 +85,7 @@ export class DashboardPanel {
           PRUNE_COMMAND,
           PROFILE_COMMAND,
           EXCLUSIONS_COMMAND,
+          RESET_COMMAND,
         ],
       }
     );
@@ -222,6 +224,9 @@ export class DashboardPanel {
     const activeCount = countActiveStrategies(strategies);
     const totalTokensSaved = chatSavingsTracker.getTotalTokensSaved();
     const totalCostSaved = chatSavingsTracker.getTotalCostSavedUsd();
+    const sessionNum = chatSavingsTracker.getSessionNumber();
+    const sessionStarted = chatSavingsTracker.getSessionStartedAt();
+    const pastSessions = chatSavingsTracker.getPastSessions();
 
     const directiveCards: DirectiveCardData[] = [
       {
@@ -355,7 +360,7 @@ export class DashboardPanel {
     // Build Live Activity Ledger rows
     let ledgerRows = '';
     if (recentEvents.length === 0) {
-      ledgerRows = `<tr><td colspan="5" style="text-align:center; color:#94a3b8; padding:20px;">No individual chat events logged yet. Use the prompt pruner or ask an AI query to see live events.</td></tr>`;
+      ledgerRows = `<tr><td colspan="5" style="text-align:center; color:#94a3b8; padding:20px;">No events logged in Session #${sessionNum} yet. Use the prompt pruner or ask an AI query to see live events.</td></tr>`;
     } else {
       ledgerRows = recentEvents.map(ev => {
         const timeStr = ev.timestamp.toLocaleTimeString();
@@ -369,6 +374,41 @@ export class DashboardPanel {
           <td style="color:var(--text-muted); font-size:12px;">${ev.details}</td>
         </tr>`;
       }).join('\n');
+    }
+
+    // Build Past Sessions Table
+    let pastSessionsHtml = '';
+    if (pastSessions.length > 0) {
+      const rows = pastSessions.map(s => `
+        <tr>
+          <td><strong>Session #${s.sessionNumber}</strong></td>
+          <td>${s.startedAt.toLocaleTimeString()} - ${s.endedAt.toLocaleTimeString()}</td>
+          <td><span class="tool-badge">${s.modelName}</span></td>
+          <td style="color:var(--green); font-weight:700;">+${s.totalTokensSaved.toLocaleString()} tok</td>
+          <td style="color:var(--accent); font-weight:700;">$${s.totalCostSavedUsd.toFixed(4)}</td>
+          <td>${s.eventsCount} events</td>
+        </tr>
+      `).join('');
+
+      pastSessionsHtml = `
+      <h2>📜 Historical Archived Sessions</h2>
+      <div class="ledger-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Session</th>
+              <th>Timeframe</th>
+              <th>AI Assistant</th>
+              <th>Tokens Avoided</th>
+              <th>Cost Avoided (USD)</th>
+              <th>Events</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows}
+          </tbody>
+        </table>
+      </div>`;
     }
 
     return `<!DOCTYPE html>
@@ -580,6 +620,7 @@ export class DashboardPanel {
     </div>
     <div class="btn-group">
       <a class="btn" href="command:${REFRESH_COMMAND}">↻ Refresh Stats</a>
+      <a class="btn" href="command:${RESET_COMMAND}">🔄 Reset / New Session</a>
       <a class="btn btn-primary" href="command:${EXPORT_COMMAND}">⬇ Export Audit Report</a>
     </div>
   </div>
@@ -587,12 +628,12 @@ export class DashboardPanel {
   <div class="kpi-row">
     <div class="kpi-card">
       <div class="kpi-val">+${totalTokensSaved.toLocaleString()}</div>
-      <div class="kpi-title">Real Tokens Avoided This Session</div>
-      <div class="kpi-desc">Calculated live across AST skeleton inspection, context exclusions, semantic cache, and prompt pruning.</div>
+      <div class="kpi-title">Session #${sessionNum} Tokens Avoided</div>
+      <div class="kpi-desc">Active since <strong>${sessionStarted.toLocaleTimeString()}</strong> · Calculated across AST skeletons, exclusions, cache & diffs.</div>
     </div>
     <div class="kpi-card">
       <div class="kpi-val" style="color:var(--green);">$${totalCostSaved.toFixed(4)}</div>
-      <div class="kpi-title">Direct Cost Avoided (USD)</div>
+      <div class="kpi-title">Session #${sessionNum} Cost Avoided</div>
       <div class="kpi-desc">Calculated at $${config.pricing[activeModel.tier].inputPerMillion.toFixed(2)}/1M token rate for <strong>${activeModel.name}</strong>.</div>
     </div>
     <div class="kpi-card">
@@ -602,7 +643,7 @@ export class DashboardPanel {
     </div>
   </div>
 
-  <h2>🔴 Live Activity & Savings Ledger (Where & When You Gained)</h2>
+  <h2>🔴 Live Activity & Savings Ledger (Session #${sessionNum})</h2>
   <div class="ledger-container">
     <table>
       <thead>
@@ -619,6 +660,8 @@ export class DashboardPanel {
       </tbody>
     </table>
   </div>
+
+  ${pastSessionsHtml}
 
   <h2>🛡️ Live Strategy Directives & Measured Workspace Metrics (CAP-1 to CAP-10)</h2>
   <div class="grid">
