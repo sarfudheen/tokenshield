@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { getConfig } from '../core/config';
 import { getActiveModel } from '../models/modelDetector';
+import { readDiskEvents, recordDiskEvent, DiskSavingsEvent } from '../cache/eventLog';
 
 export interface ChatSavingsEvent {
   id: string;
@@ -31,6 +32,8 @@ class ChatSavingsTracker {
   private sessionStartedAt: Date = new Date();
   private pastSessions: ArchivedSession[] = [];
   private changeListeners: Array<() => void> = [];
+  private knownEventIds: Set<string> = new Set();
+  private syncTimer?: NodeJS.Timeout;
 
   constructor() {
     const now = Date.now();
@@ -84,8 +87,59 @@ class ChatSavingsTracker {
       },
     ];
 
+    for (const ev of this.events) {
+      this.knownEventIds.add(ev.id);
+    }
+
     this.totalTokensSaved = this.events.reduce((acc, ev) => acc + ev.tokensSaved, 0);
     this.totalCostSavedUsd = this.events.reduce((acc, ev) => acc + ev.costSavedUsd, 0);
+
+    this.startDiskSync();
+  }
+
+  private startDiskSync(): void {
+    // Poll disk events every 1.5s to capture tool calls from MCP server & background tasks
+    this.syncTimer = setInterval(() => {
+      this.syncFromDisk();
+    }, 1500);
+  }
+
+  public syncFromDisk(): void {
+    const wsPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    if (!wsPath) { return; }
+
+    const diskEvents = readDiskEvents(wsPath);
+    let newEventsAdded = false;
+
+    for (const de of diskEvents) {
+      if (!this.knownEventIds.has(de.id)) {
+        const evTime = new Date(de.timestamp);
+        // Only ingest if it occurred during or after current session start
+        if (evTime.getTime() >= this.sessionStartedAt.getTime() - 2000) {
+          this.knownEventIds.add(de.id);
+          const ev: ChatSavingsEvent = {
+            id: de.id,
+            timestamp: evTime,
+            directive: de.directive,
+            source: de.source,
+            tokensSaved: de.tokensSaved,
+            costSavedUsd: de.costSavedUsd,
+            details: de.details,
+          };
+          this.events.unshift(ev);
+          this.totalTokensSaved += ev.tokensSaved;
+          this.totalCostSavedUsd += ev.costSavedUsd;
+          newEventsAdded = true;
+        }
+      }
+    }
+
+    if (newEventsAdded) {
+      if (this.events.length > 100) {
+        this.events = this.events.slice(0, 100);
+      }
+      this.notifyListeners();
+    }
   }
 
   async recordEvent(
@@ -110,13 +164,27 @@ class ChatSavingsTracker {
       details,
     };
 
+    this.knownEventIds.add(event.id);
     this.events.unshift(event);
-    if (this.events.length > 50) {
+    if (this.events.length > 100) {
       this.events.pop();
     }
 
     this.totalTokensSaved += tokensSaved;
     this.totalCostSavedUsd += costSavedUsd;
+
+    // Persist to disk for MCP server coherence
+    const wsPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    if (wsPath) {
+      recordDiskEvent(wsPath, {
+        directive,
+        source,
+        tokensSaved,
+        costSavedUsd,
+        details,
+        sessionNumber: this.currentSessionNumber,
+      });
+    }
 
     this.notifyListeners();
 
@@ -149,6 +217,7 @@ class ChatSavingsTracker {
     this.totalTokensSaved = 0;
     this.totalCostSavedUsd = 0;
     this.events = [];
+    this.knownEventIds.clear();
 
     this.notifyListeners();
     return archived;
@@ -193,6 +262,12 @@ class ChatSavingsTracker {
         this.changeListeners = this.changeListeners.filter(l => l !== listener);
       },
     };
+  }
+
+  dispose(): void {
+    if (this.syncTimer) {
+      clearInterval(this.syncTimer);
+    }
   }
 }
 

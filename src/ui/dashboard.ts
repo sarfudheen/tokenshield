@@ -210,6 +210,7 @@ export class DashboardPanel {
     if (this.panel !== DashboardPanel.currentPanel?.panel) { return; }
 
     const wsPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || process.cwd();
+    chatSavingsTracker.syncFromDisk();
     const cacheStore = new SemanticCacheStore(wsPath);
     const cacheStats = cacheStore.stats();
     const recentEvents = chatSavingsTracker.getRecentEvents(25);

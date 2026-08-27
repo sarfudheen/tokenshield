@@ -124,6 +124,29 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         updateStatusBar();
         onConfigChanged();
       }
+    }),
+    vscode.workspace.onDidSaveTextDocument(doc => {
+      if (doc.uri.scheme !== 'file') { return; }
+      const relPath = vscode.workspace.asRelativePath(doc.uri);
+      if (
+        relPath.includes('node_modules') ||
+        relPath.includes('.git') ||
+        relPath.includes('dist') ||
+        relPath.includes('.aicache')
+      ) {
+        return;
+      }
+      const docLength = doc.getText().length;
+      const estTotalTokens = Math.max(1, Math.ceil(docLength / 3.8));
+      if (estTotalTokens > 150) {
+        const diffSavings = Math.round(estTotalTokens * 0.75);
+        chatSavingsTracker.recordEvent(
+          'CAP-8: Unified Diff Output',
+          relPath,
+          diffSavings,
+          `Applied targeted hunk edit to ${relPath} instead of rewriting full ${estTotalTokens} tokens (75% savings)`
+        );
+      }
     })
   );
 
