@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { isBinaryAvailable } from '../installer/installer';
-import { MCP_CACHE_SERVER_NAME } from '../constants';
+import { MCP_CACHE_SERVER_NAME } from '../core/constants';
 
 export interface McpServerConfig {
   command: string;
@@ -10,10 +10,11 @@ export interface McpServerConfig {
   env?: Record<string, string>;
 }
 
-export function detectExistingMcpConfig(workspacePath: string): { vscode: boolean; claude: boolean } {
+export function detectExistingMcpConfig(workspacePath: string): { vscode: boolean; claude: boolean; antigravity: boolean } {
   const vscodeMcp = hasVsCodeMcpConfig(workspacePath);
   const claudeMcp = hasClaudeMcpConfig();
-  return { vscode: vscodeMcp, claude: claudeMcp };
+  const antigravityMcp = hasAntigravityMcpConfig(workspacePath);
+  return { vscode: vscodeMcp, claude: claudeMcp, antigravity: antigravityMcp };
 }
 
 function hasVsCodeMcpConfig(workspacePath: string): boolean {
@@ -33,6 +34,11 @@ function hasClaudeMcpConfig(): boolean {
   const homedir = require('os').homedir();
   const claudeConfigPath = path.join(homedir, '.claude.json');
   return fs.existsSync(claudeConfigPath);
+}
+
+function hasAntigravityMcpConfig(workspacePath: string): boolean {
+  const antigravityMcpPath = path.join(workspacePath, '.agents', 'mcp_config.json');
+  return fs.existsSync(antigravityMcpPath);
 }
 
 function detectProjectLanguages(workspacePath: string): string[] {
@@ -84,16 +90,16 @@ export async function configureMcpServers(outputChannel: vscode.OutputChannel, e
   const languages = detectProjectLanguages(wsPath);
   outputChannel.appendLine(`[mcp] Detected languages/frameworks: ${languages.join(', ') || 'none'}`);
 
-  // Configure VS Code MCP settings for Copilot
+  // 1. Configure VS Code MCP settings for Copilot
   await configureVsCodeMcp(wsPath, languages, outputChannel, extensionPath);
 
-  // Configure Claude Code MCP
+  // 2. Configure Claude Code MCP
   await configureClaudeMcp(languages, outputChannel, extensionPath, wsPath);
+
+  // 3. Configure Antigravity MCP (.agents/mcp_config.json)
+  await configureAntigravityMcp(wsPath, outputChannel, extensionPath);
 }
 
-// The token-cache entry is always overwritten (not guarded like context7):
-// the extension install path is versioned, so a stale absolute path from a
-// previous version must be replaced on every activation.
 function cacheServerEntry(extensionPath: string, wsPath: string): Record<string, unknown> {
   return {
     command: 'node',
@@ -121,13 +127,11 @@ async function configureVsCodeMcp(wsPath: string, languages: string[], outputCha
 
   const mcpServers: Record<string, unknown> = (settings['mcp'] as Record<string, unknown>)?.['servers'] as Record<string, unknown> || {};
 
-  // RTK uses a PreToolUse hook (not MCP) — remove any stale rtk MCP entry
   if ('rtk' in mcpServers) {
     delete mcpServers['rtk'];
     outputChannel.appendLine('[mcp] Removed stale rtk MCP entry (RTK uses hooks, not MCP)');
   }
 
-  // Add Context7 for documentation lookup
   if (!mcpServers['context7']) {
     mcpServers['context7'] = {
       command: 'npx',
@@ -137,9 +141,6 @@ async function configureVsCodeMcp(wsPath: string, languages: string[], outputCha
     outputChannel.appendLine('[mcp] Added Context7 MCP server for documentation lookup');
   }
 
-  // Add CodeGraph MCP server if the binary is available.
-  // codegraph mcp starts the MCP server in stdio mode (tool: codegraph_explore).
-  // Users can also run `codegraph install` for full agent wiring.
   if (isBinaryAvailable('codegraph') && !mcpServers['codegraph']) {
     mcpServers['codegraph'] = {
       command: 'codegraph',
@@ -150,21 +151,13 @@ async function configureVsCodeMcp(wsPath: string, languages: string[], outputCha
   }
 
   mcpServers[MCP_CACHE_SERVER_NAME] = cacheServerEntry(extensionPath, wsPath);
-  outputChannel.appendLine('[mcp] Added token-cache MCP server (local semantic cache, CAP-5)');
+  outputChannel.appendLine('[mcp] Added token-cache MCP server (local semantic cache & AST skeleton, CAP-5 & CAP-6)');
 
   settings['mcp'] = { servers: mcpServers };
   fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf-8');
   outputChannel.appendLine('[mcp] Updated .vscode/settings.json with MCP configuration');
 }
 
-// Claude Code CLI does NOT read ~/.config/claude/mcp.json — it reads
-// ~/.claude.json, with per-project server entries under projects[wsPath].mcpServers.
-// (Confirmed by inspecting a live ~/.claude.json: project entries already have
-// an mcpServers key, and servers registered only in ~/.config/claude/mcp.json
-// never show up as available tools in a Claude Code session.) Writing here
-// also fixes the "global mcp.json + per-workspace cache path" mismatch noted
-// below: each project gets its own entry instead of the last-activated
-// workspace clobbering every other project's token-cache path.
 export async function configureClaudeMcp(
   languages: string[],
   outputChannel: vscode.OutputChannel,
@@ -189,28 +182,22 @@ export async function configureClaudeMcp(
   const project = projects[wsPath] || {};
   const servers = (project['mcpServers'] as Record<string, McpServerConfig>) || {};
 
-  // RTK uses a PreToolUse hook (not MCP) — remove any stale rtk MCP entry
   if ('rtk' in servers) {
     delete servers['rtk'];
-    outputChannel.appendLine('[mcp] Removed stale rtk MCP entry from Claude config');
   }
 
-  // Add Context7
   if (!servers['context7']) {
     servers['context7'] = {
       command: 'npx',
       args: ['-y', '@context7/mcp-server'],
     };
-    outputChannel.appendLine('[mcp] Added Context7 to Claude MCP config');
   }
 
-  // Add CodeGraph if installed
   if (isBinaryAvailable('codegraph') && !servers['codegraph']) {
     servers['codegraph'] = {
       command: 'codegraph',
       args: ['mcp'],
     };
-    outputChannel.appendLine('[mcp] Added CodeGraph to Claude MCP config (codegraph_explore tool)');
   }
 
   servers[MCP_CACHE_SERVER_NAME] = cacheServerEntry(extensionPath, wsPath) as unknown as McpServerConfig;
@@ -222,4 +209,39 @@ export async function configureClaudeMcp(
 
   fs.writeFileSync(claudeConfigPath, JSON.stringify(root, null, 2), 'utf-8');
   outputChannel.appendLine('[mcp] Updated ~/.claude.json with project-scoped MCP configuration');
+}
+
+/**
+ * Configure Antigravity MCP server in .agents/mcp_config.json
+ */
+export async function configureAntigravityMcp(
+  wsPath: string,
+  outputChannel: vscode.OutputChannel,
+  extensionPath: string
+): Promise<void> {
+  const agentsDir = path.join(wsPath, '.agents');
+  const mcpConfigPath = path.join(agentsDir, 'mcp_config.json');
+
+  if (!fs.existsSync(agentsDir)) {
+    fs.mkdirSync(agentsDir, { recursive: true });
+  }
+
+  let config: Record<string, unknown> = {};
+  if (fs.existsSync(mcpConfigPath)) {
+    try {
+      config = JSON.parse(fs.readFileSync(mcpConfigPath, 'utf-8'));
+    } catch {
+      config = {};
+    }
+  }
+
+  const mcpServers = (config['mcpServers'] as Record<string, unknown>) || {};
+  mcpServers[MCP_CACHE_SERVER_NAME] = {
+    command: 'node',
+    args: [path.join(extensionPath, 'dist', 'cache-server.js'), wsPath],
+  };
+
+  config['mcpServers'] = mcpServers;
+  fs.writeFileSync(mcpConfigPath, JSON.stringify(config, null, 2), 'utf-8');
+  outputChannel.appendLine('[mcp] Updated .agents/mcp_config.json with TokenShield MCP server for Antigravity');
 }

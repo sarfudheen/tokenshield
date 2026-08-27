@@ -1,10 +1,29 @@
+import * as path from 'path';
+import * as fs from 'fs';
 import { TargetTool, StrategyState, ExtensionConfig } from '../core/config';
 import { MARKER_START, MARKER_END, MARKER_COMMENT, ANTIGRAVITY_INSTRUCTIONS_PATH } from '../core/constants';
-import { BaseInstructionGenerator } from './engine';
+import { BaseInstructionGenerator, GenerationResult } from './engine';
 
 export class AntigravityGenerator extends BaseInstructionGenerator {
   readonly target: TargetTool = 'antigravity';
   readonly relativePath = ANTIGRAVITY_INSTRUCTIONS_PATH;
+
+  override async generate(workspacePath: string, config: ExtensionConfig): Promise<GenerationResult> {
+    const mainResult = await super.generate(workspacePath, config);
+
+    // Also write to .agents/rules/tokenshield.md for deep Antigravity integration
+    try {
+      const agentsRulesDir = path.join(workspacePath, '.agents', 'rules');
+      if (!fs.existsSync(agentsRulesDir)) {
+        fs.mkdirSync(agentsRulesDir, { recursive: true });
+      }
+      const rulePath = path.join(agentsRulesDir, 'tokenshield.md');
+      const content = this.generateContent(config.activeStrategies, config);
+      fs.writeFileSync(rulePath, content, 'utf-8');
+    } catch { /* ignore */ }
+
+    return mainResult;
+  }
 
   generateContent(strategies: StrategyState, config: ExtensionConfig): string {
     const sections: string[] = [];
@@ -31,27 +50,27 @@ export class AntigravityGenerator extends BaseInstructionGenerator {
 
     if (strategies.semanticCache) {
       sections.push(`### Local MCP Semantic Cache (CAP-5)
-- Query token-cache tool \`cache_lookup\` to reuse proven answers.`);
+- Query token-cache tool \`cache_lookup\` to reuse proven answers from local disk.`);
     }
 
     if (strategies.astSkeleton) {
       sections.push(`### AST Skeleton Pruning (CAP-6)
-- Call \`skeleton_view\` tool first when navigating repository files.`);
+- Call \`skeleton_view\` MCP tool first when navigating repository files to load signatures only (~90% savings).`);
     }
 
     if (strategies.contextExclusion) {
       sections.push(`### Context Exclusions (CAP-7)
-- Exclude generated assets, lockfiles, and bundle artifacts.`);
+- Exclude generated assets, lockfiles (*.lock, package-lock.json), and bundle artifacts (dist/, build/) from context.`);
     }
 
     if (strategies.diffOnlyOutput) {
       sections.push(`### Unified Diff Formatting (CAP-8)
-- Always propose edits as unified diff chunks with line context.`);
+- Always propose code edits as targeted unified diff chunks with line context.`);
     }
 
     if (strategies.agentGuardrails) {
       sections.push(`### Autonomous Guardrails (CAP-9)
-- Abort infinite retry cycles after ${config.guardrails.maxRetries} failures.`);
+- Abort infinite retry cycles after ${config.guardrails.maxRetries} failures and summarize blocker.`);
     }
 
     if (strategies.smartModelRouting) {
@@ -59,10 +78,12 @@ export class AntigravityGenerator extends BaseInstructionGenerator {
 - Leverage fast Flash/Haiku models for simple non-reasoning steps.`);
     }
 
-    return `# Antigravity Agent Guidelines
+    return `# Antigravity TokenShield Directives
 
 ${MARKER_START}
 ${MARKER_COMMENT}
+
+## Active Directives
 
 ${sections.join('\n\n')}
 
