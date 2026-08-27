@@ -138,7 +138,9 @@ async function configureVsCodeMcp(wsPath: string, languages: string[], outputCha
 
   if ('rtk' in mcpServers) {
     delete mcpServers['rtk'];
-    outputChannel.appendLine('[mcp] Removed stale rtk MCP entry (RTK uses hooks, not MCP)');
+  }
+  if ('codegraph' in mcpServers) {
+    delete mcpServers['codegraph'];
   }
 
   if (!mcpServers['context7']) {
@@ -150,17 +152,8 @@ async function configureVsCodeMcp(wsPath: string, languages: string[], outputCha
     outputChannel.appendLine('[mcp] Added Context7 MCP server for documentation lookup');
   }
 
-  if (isBinaryAvailable('codegraph') && !mcpServers['codegraph']) {
-    mcpServers['codegraph'] = {
-      command: 'codegraph',
-      args: ['mcp'],
-      type: 'stdio',
-    };
-    outputChannel.appendLine('[mcp] Added CodeGraph MCP server (codegraph_explore tool)');
-  }
-
   mcpServers[MCP_CACHE_SERVER_NAME] = cacheServerEntry(extensionPath, wsPath);
-  outputChannel.appendLine('[mcp] Added token-cache MCP server (local semantic cache & AST skeleton, CAP-5 & CAP-6)');
+  outputChannel.appendLine('[mcp] Added token-cache MCP server (local semantic cache, AST skeleton, adaptive pruner)');
 
   settings['mcp'] = { servers: mcpServers };
   fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf-8');
@@ -194,18 +187,14 @@ export async function configureClaudeMcp(
   if ('rtk' in servers) {
     delete servers['rtk'];
   }
+  if ('codegraph' in servers) {
+    delete servers['codegraph'];
+  }
 
   if (!servers['context7']) {
     servers['context7'] = {
       command: 'npx',
       args: ['-y', '@context7/mcp-server'],
-    };
-  }
-
-  if (isBinaryAvailable('codegraph') && !servers['codegraph']) {
-    servers['codegraph'] = {
-      command: 'codegraph',
-      args: ['mcp'],
     };
   }
 

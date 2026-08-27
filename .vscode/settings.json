@@ -12,15 +12,8 @@
       "token-cache": {
         "command": "node",
         "args": [
-          "D:\\sarfu_works\\copilot_optimation\\dist\\cache-server.js",
-          "D:\\sarfu_works\\copilot_optimation"
-        ],
-        "type": "stdio"
-      },
-      "codegraph": {
-        "command": "codegraph",
-        "args": [
-          "mcp"
+          "d:\\sarfu_works\\copilot_optimation\\dist\\cache-server.js",
+          "d:\\sarfu_works\\copilot_optimation"
         ],
         "type": "stdio"
       }
