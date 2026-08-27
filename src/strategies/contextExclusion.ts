@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { DEFAULT_EXCLUSION_PATTERNS } from '../constants';
+import { DEFAULT_EXCLUSION_PATTERNS } from '../core/constants';
 
 export interface ExclusionStats {
   excludedPatterns: number;
@@ -37,12 +37,12 @@ export function detectProjectExclusions(workspacePath: string): string[] {
     patterns.push(...DEFAULT_EXCLUSION_PATTERNS.java);
   }
 
-  return [...new Set(patterns)]; // deduplicate
+  return [...new Set(patterns)];
 }
 
 /**
- * Apply context exclusions to VS Code Copilot settings.
- * Writes to `github.copilot.chat.codesearch.exclude` and `files.exclude`.
+ * Apply context exclusions to workspace settings.
+ * Writes directly to `.vscode/settings.json` so it works across Antigravity, Copilot, and Claude.
  */
 export async function applyContextExclusions(
   outputChannel: vscode.OutputChannel,
@@ -56,30 +56,43 @@ export async function applyContextExclusions(
   const wsPath = workspaceFolders[0].uri.fsPath;
   const patterns = detectProjectExclusions(wsPath);
 
-  // Build the exclusion object for VS Code Copilot
+  // Build the exclusion object
   const excludeObj: Record<string, boolean> = {};
   for (const pattern of patterns) {
     excludeObj[pattern] = true;
   }
 
-  // Update VS Code workspace settings programmatically (not touching files)
-  const wsConfig = vscode.workspace.getConfiguration('', workspaceFolders[0].uri);
-
-  // Set copilot search exclusions
+  // Update .vscode/settings.json directly on disk to bypass unregistered schema validation
   try {
-    await wsConfig.update(
-      'github.copilot.chat.codesearch.exclude',
-      excludeObj,
-      vscode.ConfigurationTarget.Workspace,
-    );
-    outputChannel.appendLine(`[cap-7] Applied ${patterns.length} exclusion patterns to Copilot context`);
+    const settingsPath = path.join(wsPath, '.vscode', 'settings.json');
+    const vscodeDir = path.join(wsPath, '.vscode');
+    if (!fs.existsSync(vscodeDir)) {
+      fs.mkdirSync(vscodeDir, { recursive: true });
+    }
+
+    let settings: Record<string, unknown> = {};
+    if (fs.existsSync(settingsPath)) {
+      try {
+        settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+      } catch {
+        settings = {};
+      }
+    }
+
+    settings['github.copilot.chat.codesearch.exclude'] = {
+      ...((settings['github.copilot.chat.codesearch.exclude'] as Record<string, boolean>) || {}),
+      ...excludeObj,
+    };
+
+    fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf-8');
+    outputChannel.appendLine(`[cap-7] Applied ${patterns.length} exclusion patterns to .vscode/settings.json`);
   } catch (err) {
-    outputChannel.appendLine(`[cap-7] Failed to set Copilot exclusions: ${err}`);
+    outputChannel.appendLine(`[cap-7] Notice: could not write exclusions to .vscode/settings.json: ${err}`);
   }
 
   // Estimate savings
   const estimatedFiles = countExcludedFiles(wsPath, patterns);
-  const avgFileTokens = 500; // conservative estimate
+  const avgFileTokens = 500;
   const estimatedTokens = estimatedFiles * avgFileTokens;
 
   outputChannel.appendLine(`[cap-7] Estimated ${estimatedFiles} files excluded, ~${estimatedTokens} tokens saved per full-context scan`);
@@ -93,20 +106,18 @@ export async function applyContextExclusions(
 
 /**
  * Count how many files would be matched by the exclusion patterns.
- * Lightweight scan — doesn't recurse deeply into large directories.
  */
 function countExcludedFiles(workspacePath: string, patterns: string[]): number {
   let count = 0;
   const maxDepth = 3;
 
-  // Simple glob-like matching for common patterns
   const extensionPatterns = patterns
     .filter(p => p.startsWith('*.'))
-    .map(p => p.slice(1)); // *.lock -> .lock
+    .map(p => p.slice(1));
 
   const dirPatterns = patterns
     .filter(p => p.endsWith('/**'))
-    .map(p => p.slice(0, -3)); // dist/** -> dist
+    .map(p => p.slice(0, -3));
 
   const filePatterns = patterns
     .filter(p => !p.includes('*') && !p.endsWith('/**'));
@@ -124,7 +135,6 @@ function countExcludedFiles(workspacePath: string, patterns: string[]): number {
 
       if (entry.isDirectory()) {
         if (dirPatterns.some(p => entry.name === p)) {
-          // Count files in this dir (shallow) as excluded
           try {
             const subEntries = fs.readdirSync(path.join(dir, entry.name));
             count += subEntries.length;
@@ -151,7 +161,7 @@ function countExcludedFiles(workspacePath: string, patterns: string[]): number {
 export async function showExclusionPicker(outputChannel: vscode.OutputChannel): Promise<void> {
   const workspaceFolders = vscode.workspace.workspaceFolders;
   if (!workspaceFolders) {
-    vscode.window.showWarningMessage('AI Token Optimizer: No workspace folder open');
+    vscode.window.showWarningMessage('TokenShield: No workspace folder open');
     return;
   }
 
@@ -164,8 +174,8 @@ export async function showExclusionPicker(outputChannel: vscode.OutputChannel): 
   }));
 
   const selected = await vscode.window.showQuickPick(items, {
-    placeHolder: 'Select patterns to exclude from Copilot context',
-    title: 'AI Token Optimizer — Context Exclusions (CAP-7)',
+    placeHolder: 'Select patterns to exclude from AI reasoning context',
+    title: 'TokenShield — Context Exclusions (CAP-7)',
     canPickMany: true,
   });
 
@@ -177,15 +187,21 @@ export async function showExclusionPicker(outputChannel: vscode.OutputChannel): 
     excludeObj[p] = true;
   }
 
-  const wsConfig = vscode.workspace.getConfiguration('', workspaceFolders[0].uri);
-  await wsConfig.update(
-    'github.copilot.chat.codesearch.exclude',
-    excludeObj,
-    vscode.ConfigurationTarget.Workspace,
-  );
+  const settingsPath = path.join(wsPath, '.vscode', 'settings.json');
+  let settings: Record<string, unknown> = {};
+  if (fs.existsSync(settingsPath)) {
+    try {
+      settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+    } catch {
+      settings = {};
+    }
+  }
+
+  settings['github.copilot.chat.codesearch.exclude'] = excludeObj;
+  fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf-8');
 
   vscode.window.showInformationMessage(
-    `AI Token Optimizer: ${selectedPatterns.length} exclusion patterns applied`
+    `TokenShield: ${selectedPatterns.length} exclusion patterns applied to .vscode/settings.json`
   );
-  outputChannel.appendLine(`[cap-7] User selected ${selectedPatterns.length} exclusion patterns`);
+  outputChannel.appendLine(`[cap-7] User updated ${selectedPatterns.length} exclusion patterns`);
 }

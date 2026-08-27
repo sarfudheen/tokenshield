@@ -25,5 +25,29 @@
         "type": "stdio"
       }
     }
+  },
+  "github.copilot.chat.codesearch.exclude": {
+    "*.lock": true,
+    "*.min.js": true,
+    "*.min.css": true,
+    "*.map": true,
+    "*.d.ts": true,
+    "*.generated.*": true,
+    "dist/**": true,
+    "build/**": true,
+    "coverage/**": true,
+    ".git/**": true,
+    "node_modules/**": true,
+    ".next/**": true,
+    ".nuxt/**": true,
+    "__pycache__/**": true,
+    "*.pyc": true,
+    "*.pyo": true,
+    "target/**": true,
+    "vendor/**": true,
+    "package-lock.json": true,
+    "yarn.lock": true,
+    "pnpm-lock.yaml": true,
+    ".yarn/**": true
   }
 }
