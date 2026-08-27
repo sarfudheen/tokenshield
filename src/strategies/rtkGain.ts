@@ -61,7 +61,20 @@ export function parseRtkGainOutput(jsonText: string): RtkGainResult {
 
 /** Thin I/O wrapper — shells out to the real rtk binary and delegates parsing. */
 export function getRtkGain(cwd: string): RtkGainResult {
-  const result = spawnSync('rtk', ['gain', '--format', 'json', '--all', '--project'], {
+  // First try project-scoped
+  let result = spawnSync('rtk', ['gain', '--format', 'json', '--all', '--project'], {
+    cwd,
+    encoding: 'utf-8',
+    timeout: 5000,
+  });
+
+  const parsedProject = result.stdout ? parseRtkGainOutput(result.stdout) : null;
+  if (parsedProject && parsedProject.status === 'measured') {
+    return parsedProject;
+  }
+
+  // Fallback to global rtk gain
+  result = spawnSync('rtk', ['gain', '--format', 'json'], {
     cwd,
     encoding: 'utf-8',
     timeout: 5000,

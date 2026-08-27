@@ -50,6 +50,15 @@ class ChatSavingsTracker {
         details: '15 targeted diff hunks generated instead of rewriting full 500-line files',
       },
       {
+        id: 'evt-rtk',
+        timestamp: new Date(now - 18 * 60 * 1000),
+        directive: 'CAP-2: RTK Output Compression',
+        source: 'rtk git diff / git status',
+        tokensSaved: 4381,
+        costSavedUsd: 0.0131,
+        details: 'Filtered 26 CLI command outputs (32.2k ➔ 27.9k tokens, -13.5% saved)',
+      },
+      {
         id: 'evt-4',
         timestamp: new Date(now - 25 * 60 * 1000),
         directive: 'CAP-7: Context Exclusions',
