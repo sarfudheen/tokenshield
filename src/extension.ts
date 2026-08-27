@@ -8,7 +8,7 @@ import { createStatusBar, updateStatusBar, disposeStatusBar } from './ui/statusB
 import { createEditorTokenBadge } from './ui/editorTokenBadge';
 import { createSessionSavingsWidget } from './ui/sessionSavingsWidget';
 import { chatSavingsTracker } from './telemetry/chatSavingsTracker';
-import { pruneContext } from './strategies/adaptivePruner';
+import { pruneContext, compressGitDiff } from './strategies/adaptivePruner';
 import { showProfilePicker } from './ui/quickPick';
 import { DashboardPanel } from './ui/dashboard';
 import { exportTelemetryCommand } from './ui/exportTelemetry';
@@ -74,13 +74,48 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       const results = await exportInstructionsToRepo(getConfig());
       vscode.window.showInformationMessage(`TokenShield: Exported ${results.length} instruction files to repository.`);
     }),
+    vscode.commands.registerCommand('aiTokenOptimizer.resetSession', async () => {
+      const archived = await chatSavingsTracker.resetSession();
+      await updateStatusBar();
+      await DashboardPanel.refreshCurrentPanel();
+      vscode.window.showInformationMessage(
+        `🛡️ TokenShield: Started new Session #${chatSavingsTracker.getSessionNumber()}! Session #${archived.sessionNumber} archived (${archived.totalTokensSaved.toLocaleString()} tok, $${archived.totalCostSavedUsd.toFixed(4)} saved).`
+      );
+    }),
+    vscode.commands.registerCommand('aiTokenOptimizer.pruneGitDiff', async () => {
+      try {
+        const { execSync } = require('child_process');
+        const wsPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || process.cwd();
+        let diffRaw = '';
+        try {
+          diffRaw = execSync('rtk git diff HEAD', { cwd: wsPath, encoding: 'utf-8', timeout: 5000 });
+        } catch {
+          diffRaw = execSync('git diff HEAD', { cwd: wsPath, encoding: 'utf-8', timeout: 5000 });
+        }
+        if (!diffRaw || diffRaw.trim().length === 0) {
+          vscode.window.showInformationMessage('TokenShield: No git changes detected (working directory clean).');
+          return;
+        }
+        const result = compressGitDiff(diffRaw);
+        await vscode.env.clipboard.writeText(result.prunedText);
+        const tokensSaved = Math.max(0, result.originalTokensEst - result.prunedTokensEst);
+        chatSavingsTracker.recordEvent(
+          'CAP-11: Git Diff Context',
+          'rtk git diff HEAD',
+          tokensSaved,
+          `Compressed git diff (-${result.reductionPercent}% tokens saved: ${result.originalTokensEst} → ${result.prunedTokensEst} tok)`,
+          true
+        );
+      } catch (err) {
+        vscode.window.showErrorMessage(`TokenShield: Failed to extract git diff: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }),
   );
 
-  // Create main status bar, editor token counter badge, and live session savings widget
-  const statusBar = createStatusBar();
+  // Create unified TokenShield Master Hub and active editor token badge (clean 2-item layout)
+  const statusBar = createStatusBar(context);
   const tokenBadge = createEditorTokenBadge(context);
-  const savingsWidget = createSessionSavingsWidget(context);
-  context.subscriptions.push(statusBar, tokenBadge, savingsWidget);
+  context.subscriptions.push(statusBar, tokenBadge);
 
   // Listen for config changes — hot-swap strategies without restart
   context.subscriptions.push(
@@ -88,6 +123,38 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       if (e.affectsConfiguration('aiTokenOptimizer')) {
         updateStatusBar();
         onConfigChanged();
+      }
+    }),
+    vscode.workspace.onDidSaveTextDocument(doc => {
+      if (doc.uri.scheme !== 'file') { return; }
+      const relPath = vscode.workspace.asRelativePath(doc.uri);
+      if (
+        relPath.includes('node_modules') ||
+        relPath.includes('.git') ||
+        relPath.includes('dist') ||
+        relPath.includes('.aicache')
+      ) {
+        return;
+      }
+      try {
+        const { execSync } = require('child_process');
+        const wsPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || process.cwd();
+        const diffRaw = execSync(`git diff HEAD -- "${relPath}"`, { cwd: wsPath, encoding: 'utf-8', timeout: 3000 });
+        if (diffRaw && diffRaw.trim().length > 0) {
+          const fileTokens = Math.max(1, Math.ceil(doc.getText().length / 3.8));
+          const diffTokens = Math.max(1, Math.ceil(diffRaw.length / 3.8));
+          const savedTokens = Math.max(0, fileTokens - diffTokens);
+          if (savedTokens > 20) {
+            chatSavingsTracker.recordEvent(
+              'CAP-8: Unified Diff Output',
+              relPath,
+              savedTokens,
+              `Applied ${diffTokens} token diff hunk instead of rewriting full ${fileTokens} token file (${Math.round((savedTokens / fileTokens) * 100)}% tokens saved)`
+            );
+          }
+        }
+      } catch {
+        // Not a git repo or unmodified
       }
     })
   );

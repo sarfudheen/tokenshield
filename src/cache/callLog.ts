@@ -7,6 +7,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { CACHE_DIR } from './store';
+import { recordDiskEvent } from './eventLog';
 
 export const CALL_LOG_FILE = 'call-log.json';
 

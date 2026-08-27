@@ -97,6 +97,14 @@
         "title": "TokenShield: Show Live Per-Chat Savings Breakdown"
       },
       {
+        "command": "aiTokenOptimizer.resetSession",
+        "title": "TokenShield: Reset Session Savings / Start New Session"
+      },
+      {
+        "command": "aiTokenOptimizer.pruneGitDiff",
+        "title": "TokenShield: Compress & Copy Git Diff Context (CAP-11)"
+      },
+      {
         "command": "aiTokenOptimizer.exportToRepo",
         "title": "TokenShield: Export Instructions to Repository"
       }

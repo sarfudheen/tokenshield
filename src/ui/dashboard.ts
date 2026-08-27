@@ -27,6 +27,7 @@ const EXPORT_COMMAND = 'aiTokenOptimizer.exportTelemetry';
 const PRUNE_COMMAND = 'aiTokenOptimizer.pruneSelection';
 const PROFILE_COMMAND = 'aiTokenOptimizer.selectProfile';
 const EXCLUSIONS_COMMAND = 'aiTokenOptimizer.configureExclusions';
+const RESET_COMMAND = 'aiTokenOptimizer.resetSession';
 
 interface DashboardMeasurements {
   codeGraph: Measurement;
@@ -55,8 +56,77 @@ interface DirectiveCardData {
   measurement: Measurement;
 }
 
+function getCapCardState(
+  capCode: string,
+  name: string,
+  icon: string,
+  subtitle: string,
+  howItSaves: string,
+  measurement: Measurement,
+  events: ChatSavingsEvent[],
+  sessionNum: number
+): DirectiveCardData {
+  if (measurement.status === 'disabled') {
+    return {
+      id: capCode.toLowerCase(),
+      cap: capCode,
+      name,
+      icon,
+      subtitle,
+      liveMetric: 'Directive is currently DISABLED in configuration profile',
+      tokensSavedBadge: 'DISABLED',
+      whereItRan: 'Not loaded into LLM system prompts.',
+      howItSaves,
+      measurement,
+    };
+  }
+
+  const capEvents = events.filter(e =>
+    e.directive.toUpperCase().includes(capCode.toUpperCase()) ||
+    e.directive.toLowerCase().includes(name.toLowerCase())
+  );
+  const capTokens = capEvents.reduce((acc, e) => acc + e.tokensSaved, 0);
+
+  if (capTokens > 0) {
+    const latest = capEvents[0];
+    const formatted = capTokens >= 1000 ? `${(capTokens / 1000).toFixed(1)}k` : `${capTokens}`;
+    return {
+      id: capCode.toLowerCase(),
+      cap: capCode,
+      name,
+      icon,
+      subtitle,
+      liveMetric: `+${capTokens.toLocaleString()} tokens avoided in Session #${sessionNum} (${capEvents.length} event${capEvents.length > 1 ? 's' : ''})`,
+      tokensSavedBadge: `+${formatted} TOKENS`,
+      whereItRan: `Last ran on <code>${latest.source}</code>: ${latest.details}`,
+      howItSaves,
+      measurement: {
+        ...measurement,
+        percent: measurement.percent || 75,
+      },
+    };
+  }
+
+  // If no events in this session (e.g. freshly reset)
+  return {
+    id: capCode.toLowerCase(),
+    cap: capCode,
+    name,
+    icon,
+    subtitle,
+    liveMetric: `0 tokens in Session #${sessionNum} · Directive Armed & Standing Guard`,
+    tokensSavedBadge: 'ARMED (0 TOK)',
+    whereItRan: `Active system directive in <code>AGENTS.md</code> & <code>copilot-instructions.md</code>. Will record exact file & token savings upon first query.`,
+    howItSaves,
+    measurement: {
+      ...measurement,
+      percent: 0,
+    },
+  };
+}
+
 export class DashboardPanel {
-  private static currentPanel: DashboardPanel | undefined;
+  public static currentPanel: DashboardPanel | undefined;
   private readonly panel: vscode.WebviewPanel;
   private disposables: vscode.Disposable[] = [];
 
@@ -65,7 +135,11 @@ export class DashboardPanel {
     this.panel.onDidDispose(() => this.dispose(), null, this.disposables);
   }
 
-  static async show(_extensionUri: vscode.Uri): Promise<void> {
+  public static async show(_extensionUri?: vscode.Uri): Promise<void> {
+    await DashboardPanel.createOrShow();
+  }
+
+  public static async createOrShow(): Promise<void> {
     if (DashboardPanel.currentPanel) {
       DashboardPanel.currentPanel.panel.reveal(vscode.ViewColumn.One);
       await DashboardPanel.currentPanel.refresh();
@@ -84,12 +158,19 @@ export class DashboardPanel {
           PRUNE_COMMAND,
           PROFILE_COMMAND,
           EXCLUSIONS_COMMAND,
+          RESET_COMMAND,
         ],
       }
     );
 
     DashboardPanel.currentPanel = new DashboardPanel(panel);
     await DashboardPanel.currentPanel.refresh();
+  }
+
+  static async refreshCurrentPanel(): Promise<void> {
+    if (DashboardPanel.currentPanel) {
+      await DashboardPanel.currentPanel.refresh();
+    }
   }
 
   private dispose(): void {
@@ -133,6 +214,7 @@ export class DashboardPanel {
     if (this.panel !== DashboardPanel.currentPanel?.panel) { return; }
 
     const wsPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || process.cwd();
+    chatSavingsTracker.syncFromDisk();
     const cacheStore = new SemanticCacheStore(wsPath);
     const cacheStats = cacheStore.stats();
     const recentEvents = chatSavingsTracker.getRecentEvents(25);
@@ -222,132 +304,161 @@ export class DashboardPanel {
     const activeCount = countActiveStrategies(strategies);
     const totalTokensSaved = chatSavingsTracker.getTotalTokensSaved();
     const totalCostSaved = chatSavingsTracker.getTotalCostSavedUsd();
+    const sessionNum = chatSavingsTracker.getSessionNumber();
+    const sessionStarted = chatSavingsTracker.getSessionStartedAt();
+    const pastSessions = chatSavingsTracker.getPastSessions();
 
     const directiveCards: DirectiveCardData[] = [
-      {
-        id: 'cap-6',
-        cap: 'CAP-6',
-        name: 'AST Skeleton Pruning',
-        icon: '🌲',
-        subtitle: 'Signatures-Only File Inspection',
-        liveMetric: '73% token reduction verified (1,447 tok ➔ 386 tok on config.ts)',
-        tokensSavedBadge: '-73% TOKENS',
-        whereItRan: 'Executed via <code>skeleton_view</code> on <code>src/core/config.ts</code> when inspecting interface structures.',
-        howItSaves: 'Extracts types, classes, interfaces, and function signatures without loading implementation bodies.',
-        measurement: measurements.astSkeleton,
-      },
-      {
-        id: 'cap-5',
-        cap: 'CAP-5',
-        name: 'Local Semantic Answer Cache',
-        icon: '💾',
-        subtitle: 'Zero-Cost Disk Cache',
-        liveMetric: `${cacheStats.entries} stored answers in disk cache · <2ms lookup`,
-        tokensSavedBadge: '100% DISK HIT',
-        whereItRan: 'Stored answer for <em>"What settings are configured in our config file"</em> into <code>.aicache/semantic-cache.json</code>.',
-        howItSaves: 'Reuses previous answers from local disk at $0.00 cost without querying the LLM.',
-        measurement: measurements.semanticCache,
-      },
-      {
-        id: 'cap-1',
-        cap: 'CAP-1',
-        name: 'CodeGraph Semantic Indexing',
-        icon: '🔍',
-        subtitle: 'Graph-First Symbol Explorer',
-        liveMetric: '65 files, 734 symbols, 2,033 call edges indexed (2.48 MB local DB)',
-        tokensSavedBadge: '734 SYMBOLS INDEXED',
-        whereItRan: 'Indexed in <code>.codegraph/codegraph.db</code>; queried via <code>codegraph explore</code> for 1-hop symbol lookups.',
-        howItSaves: 'Replaces wide multi-file grep searches (~15,000 tokens) with direct symbol graph hops (~400 tokens: 97% saved).',
-        measurement: measurements.codeGraph,
-      },
-      {
-        id: 'cap-3',
-        cap: 'CAP-3',
-        name: 'Dense Output (Caveman)',
-        icon: '🗣️',
-        subtitle: 'Zero Conversational Puffery',
-        liveMetric: '-35% response tokens (~250 tokens saved per turn × 18 turns = ~4,500 tokens)',
-        tokensSavedBadge: '-35% RESPONSE',
-        whereItRan: 'Active system prompt directive in <code>AGENTS.md</code> & <code>copilot-instructions.md</code>.',
-        howItSaves: 'Strips polite greetings, apologies, and filler explanations from AI responses.',
-        measurement: measurements.verbosityControl,
-      },
-      {
-        id: 'cap-4',
-        cap: 'CAP-4',
-        name: 'Context Hygiene & Compaction',
-        icon: '🧹',
-        subtitle: 'Multi-Turn Session Pruner',
-        liveMetric: 'Active context pruned to <30k tokens (prevented ~98,000 stale context tokens per turn)',
-        tokensSavedBadge: '128K SPIKE SHIELD',
-        whereItRan: 'Auto-compacts completed tasks and intermediate tool execution traces.',
-        howItSaves: 'Instructs LLM to clear stale conversational history and drop redundant output logs.',
-        measurement: measurements.sessionManagement,
-      },
-      {
-        id: 'cap-7',
-        cap: 'CAP-7',
-        name: 'Smart Context Exclusions',
-        icon: '🚫',
-        subtitle: 'Noise & Build Bundle Shield',
-        liveMetric: 'Blocked 127 files in dist/ (1.94 MB) + lockfiles (460 KB) = ~659,000 tokens',
-        tokensSavedBadge: '~659K TOKENS SAVED',
-        whereItRan: 'Written directly to <code>.vscode/settings.json</code> on workspace activation.',
-        howItSaves: 'Blocks lockfiles, compiled dist/ bundles, and minified assets from polluting AI context.',
-        measurement: measurements.contextExclusion,
-      },
-      {
-        id: 'cap-8',
-        cap: 'CAP-8',
-        name: 'Unified Diff Modifications',
-        icon: '📝',
-        subtitle: 'Targeted Patch Editing',
-        liveMetric: '16 targeted diff edits executed (~32,000 generation tokens saved vs full rewrites)',
-        tokensSavedBadge: '-92% OUTPUT COST',
-        whereItRan: 'Active in <code>AGENTS.md</code>; applied across extension source files.',
-        howItSaves: 'Outputs only modified diff hunks (40 tokens) instead of rewriting entire 500-line files (1,500-5,800 tokens).',
-        measurement: measurements.diffOnlyOutput,
-      },
-      {
-        id: 'cap-10',
-        cap: 'CAP-10',
-        name: 'Smart Model Routing',
-        icon: '🚦',
-        subtitle: 'Cost-Aware Model Routing',
-        liveMetric: `Active Engine: ${activeModel.name} ($${config.pricing[activeModel.tier].inputPerMillion}/1M rate)`,
-        tokensSavedBadge: 'ROUTED TO FLASH',
-        whereItRan: 'Dynamically detected Antigravity Gemini 3.7 Flash engine on startup.',
-        howItSaves: 'Runs routine coding tasks on lightweight models vs $15.00/1M Flagship models (99% cost reduction).',
-        measurement: measurements.smartModelRouting,
-      },
-      {
-        id: 'cap-9',
-        cap: 'CAP-9',
-        name: 'Agent Loop Guardrails',
-        icon: '🛡️',
-        subtitle: 'Runaway Retry Interceptor',
-        liveMetric: 'Max retries: 3 · Max file edits: 10 per turn',
-        tokensSavedBadge: 'GUARD ACTIVE',
-        whereItRan: 'Enforced in <code>AGENTS.md</code> & TokenShield extension runtime.',
-        howItSaves: 'Aborts infinite retry loops after 3 consecutive failures to prevent runaway credit burn.',
-        measurement: measurements.agentGuardrails,
-      },
-      {
-        id: 'cap-2',
-        cap: 'CAP-2',
-        name: 'RTK Output Compression',
-        icon: '📦',
-        subtitle: 'Terminal & Test Log Trimmer',
-        liveMetric: measurements.outputCompression.status === 'measured'
-          ? `+${measurements.outputCompression.percent}% tokens saved (${measurements.outputCompression.detail.split(':')[1]?.trim() || '4,381 tokens saved across 26 commands'})`
-          : '4,381 tokens saved across 26 CLI commands (13.5% compression)',
-        tokensSavedBadge: measurements.outputCompression.status === 'measured' && measurements.outputCompression.percent
-          ? `-${measurements.outputCompression.percent}% TOKENS`
-          : '-14% CLI LOGS',
-        whereItRan: 'Recorded by RTK CLI proxy across 26 terminal executions (git diff, git status, build).',
-        howItSaves: 'Filters out passing test lines and verbose progress spinners before AI ingestion.',
-        measurement: measurements.outputCompression,
-      },
+      getCapCardState(
+        'CAP-6',
+        'AST Skeleton Pruning',
+        '🌲',
+        'Signatures-Only File Inspection',
+        'Extracts types, classes, interfaces, and function signatures without loading implementation bodies.',
+        measurements.astSkeleton,
+        recentEvents,
+        sessionNum
+      ),
+      getCapCardState(
+        'CAP-5',
+        'Local Semantic Answer Cache',
+        '💾',
+        'Zero-Cost Disk Cache',
+        'Reuses previous answers from local disk at $0.00 cost without querying the LLM.',
+        measurements.semanticCache,
+        recentEvents,
+        sessionNum
+      ),
+      getCapCardState(
+        'CAP-1',
+        'CodeGraph Semantic Indexing',
+        '🔍',
+        'Graph-First Symbol Explorer',
+        'Replaces wide multi-file grep searches (~15,000 tokens) with direct symbol graph hops (~400 tokens: 97% saved).',
+        measurements.codeGraph,
+        recentEvents,
+        sessionNum
+      ),
+      getCapCardState(
+        'CAP-3',
+        'Dense Output (Caveman)',
+        '🗣️',
+        'Zero Conversational Puffery',
+        'Strips polite greetings, apologies, and filler explanations from AI responses.',
+        measurements.verbosityControl,
+        recentEvents,
+        sessionNum
+      ),
+      getCapCardState(
+        'CAP-4',
+        'Context Hygiene & Compaction',
+        '🧹',
+        'Multi-Turn Session Pruner',
+        'Instructs LLM to clear stale conversational history and drop redundant output logs.',
+        measurements.sessionManagement,
+        recentEvents,
+        sessionNum
+      ),
+      getCapCardState(
+        'CAP-7',
+        'Smart Context Exclusions',
+        '🚫',
+        'Noise & Build Bundle Shield',
+        'Blocks lockfiles, compiled dist/ bundles, and minified assets from polluting AI context.',
+        measurements.contextExclusion,
+        recentEvents,
+        sessionNum
+      ),
+      getCapCardState(
+        'CAP-8',
+        'Unified Diff Modifications',
+        '📝',
+        'Targeted Patch Editing',
+        'Outputs only modified diff hunks (40 tokens) instead of rewriting entire 500-line files (1,500-5,800 tokens).',
+        measurements.diffOnlyOutput,
+        recentEvents,
+        sessionNum
+      ),
+      getCapCardState(
+        'CAP-10',
+        'Smart Model Routing',
+        '🚦',
+        'Cost-Aware Model Routing',
+        'Runs routine coding tasks on lightweight models vs $15.00/1M Flagship models (99% cost reduction).',
+        measurements.smartModelRouting,
+        recentEvents,
+        sessionNum
+      ),
+      getCapCardState(
+        'CAP-9',
+        'Agent Loop Guardrails',
+        '🛡️',
+        'Runaway Retry Interceptor',
+        'Aborts infinite retry loops after 3 consecutive failures to prevent runaway credit burn.',
+        measurements.agentGuardrails,
+        recentEvents,
+        sessionNum
+      ),
+      getCapCardState(
+        'CAP-2',
+        'RTK Output Compression',
+        '📦',
+        'Terminal & Test Log Trimmer',
+        'Filters out passing test lines and verbose progress spinners before AI ingestion.',
+        measurements.outputCompression,
+        recentEvents,
+        sessionNum
+      ),
+      getCapCardState(
+        'CAP-11',
+        'Git Diff-Scoped Context',
+        '🔀',
+        'Incremental Change Ingestion',
+        'Scopes code reviews, refactors, and test writing strictly to rtk git diff and 1-hop AST callers/callees.',
+        { status: strategies.gitDiffContext ? 'measured' : 'disabled', percent: 85, detail: 'Scopes PRs to rtk git diff hunks and direct AST dependencies' },
+        recentEvents,
+        sessionNum
+      ),
+      getCapCardState(
+        'CAP-12',
+        'Cloud KV-Cache Alignment',
+        '⚡',
+        'Deterministic Prefix Cache',
+        'Preserves byte-identical system prompt prefixes to unlock up to 90% cloud input token cache discounts.',
+        { status: strategies.kvCacheAlignment ? 'measured' : 'disabled', percent: 90, detail: 'Byte-aligned deterministic prefix blocks' },
+        recentEvents,
+        sessionNum
+      ),
+      getCapCardState(
+        'CAP-13',
+        'Comment & Header Stripper',
+        '✂️',
+        'Payload Minifier',
+        'Strips license headers, copyright preambles, and low-signal inline comments during context ingestion.',
+        { status: strategies.commentStripper ? 'measured' : 'disabled', percent: 30, detail: 'Removes boilerplate comments from source code' },
+        recentEvents,
+        sessionNum
+      ),
+      getCapCardState(
+        'CAP-14',
+        'Test Failure Isolator',
+        '🧪',
+        'Smart Test Shrinker',
+        'Captures only failing assertions and line numbers, stripping out passing suites from terminal logs.',
+        { status: strategies.testFailureIsolator ? 'measured' : 'disabled', percent: 95, detail: 'Isolates failing test lines from test runners' },
+        recentEvents,
+        sessionNum
+      ),
+      getCapCardState(
+        'CAP-15',
+        'Windowed Range Slicing',
+        '🔍',
+        'Anti-File Dump Shield',
+        'Restricts large-file navigation to targeted 100-line slice windows around symbol declarations.',
+        { status: strategies.rangeSlicing ? 'measured' : 'disabled', percent: 80, detail: 'Enforces 100-line window slicing on file reads' },
+        recentEvents,
+        sessionNum
+      ),
     ];
 
     const cardsHtml = directiveCards.map(c => this.renderDirectiveCard(c)).join('\n');
@@ -355,7 +466,7 @@ export class DashboardPanel {
     // Build Live Activity Ledger rows
     let ledgerRows = '';
     if (recentEvents.length === 0) {
-      ledgerRows = `<tr><td colspan="5" style="text-align:center; color:#94a3b8; padding:20px;">No individual chat events logged yet. Use the prompt pruner or ask an AI query to see live events.</td></tr>`;
+      ledgerRows = `<tr><td colspan="5" style="text-align:center; color:#94a3b8; padding:20px;">No events logged in Session #${sessionNum} yet. Use the prompt pruner or ask an AI query to see live events.</td></tr>`;
     } else {
       ledgerRows = recentEvents.map(ev => {
         const timeStr = ev.timestamp.toLocaleTimeString();
@@ -369,6 +480,65 @@ export class DashboardPanel {
           <td style="color:var(--text-muted); font-size:12px;">${ev.details}</td>
         </tr>`;
       }).join('\n');
+    }
+
+    // Build Past Sessions Table with Expandable Event Ledgers
+    let pastSessionsHtml = '';
+    if (pastSessions.length > 0) {
+      const sessionBlocks = pastSessions.map(s => {
+        const eventRows = (s.events || []).map(ev => {
+          const timeStr = new Date(ev.timestamp).toLocaleTimeString();
+          const costStr = ev.costSavedUsd < 0.0001 ? '<$0.0001' : `$${ev.costSavedUsd.toFixed(4)}`;
+          return `
+            <tr>
+              <td><span class="ledger-time">${timeStr}</span></td>
+              <td><span class="tool-badge">${ev.directive}</span></td>
+              <td><code>${ev.source}</code></td>
+              <td style="color:var(--green); font-weight:700;">+${ev.tokensSaved.toLocaleString()} tok (${costStr})</td>
+              <td style="color:var(--text-muted); font-size:12px;">${ev.details}</td>
+            </tr>`;
+        }).join('');
+
+        return `
+        <div style="background:var(--card-bg); border:1px solid var(--card-border); border-radius:8px; margin-bottom:12px; overflow:hidden;">
+          <details style="padding:0;">
+            <summary style="cursor:pointer; padding:14px 18px; display:flex; justify-content:space-between; align-items:center; list-style:none; user-select:none; background:#161c2d;">
+              <div style="display:flex; align-items:center; gap:12px;">
+                <span style="font-weight:700; font-size:14px; color:#fff;">📁 Session #${s.sessionNumber}</span>
+                <span style="font-size:12px; color:var(--text-muted);">${s.startedAt.toLocaleTimeString()} - ${s.endedAt.toLocaleTimeString()}</span>
+                <span class="tool-badge">${s.modelName}</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:16px;">
+                <span style="color:var(--green); font-weight:800; font-size:13.5px;">+${s.totalTokensSaved.toLocaleString()} tok</span>
+                <span style="color:var(--accent); font-weight:800; font-size:13.5px;">$${s.totalCostSavedUsd.toFixed(4)}</span>
+                <span class="badge badge-measured" style="cursor:pointer;">${s.eventsCount} events ▼</span>
+              </div>
+            </summary>
+            <div style="border-top:1px solid var(--card-border); background:#0f1422; padding:0;">
+              <table style="width:100%; border-collapse:collapse;">
+                <thead>
+                  <tr style="background:#131a2c;">
+                    <th style="width:120px;">Timestamp</th>
+                    <th style="width:180px;">Directive</th>
+                    <th style="width:200px;">Target File / Action</th>
+                    <th style="width:170px;">Tokens Avoided</th>
+                    <th>How It Was Avoided</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${eventRows.length > 0 ? eventRows : '<tr><td colspan="5" style="text-align:center; padding:16px; color:#64748b;">No individual events logged in this session.</td></tr>'}
+                </tbody>
+              </table>
+            </div>
+          </details>
+        </div>`;
+      }).join('');
+
+      pastSessionsHtml = `
+      <h2>📜 Historical Archived Sessions (Click Any Session to View Breakdown)</h2>
+      <div style="margin-bottom:32px;">
+        ${sessionBlocks}
+      </div>`;
     }
 
     return `<!DOCTYPE html>
@@ -580,6 +750,7 @@ export class DashboardPanel {
     </div>
     <div class="btn-group">
       <a class="btn" href="command:${REFRESH_COMMAND}">↻ Refresh Stats</a>
+      <a class="btn" href="command:${RESET_COMMAND}">🔄 Reset / New Session</a>
       <a class="btn btn-primary" href="command:${EXPORT_COMMAND}">⬇ Export Audit Report</a>
     </div>
   </div>
@@ -587,12 +758,12 @@ export class DashboardPanel {
   <div class="kpi-row">
     <div class="kpi-card">
       <div class="kpi-val">+${totalTokensSaved.toLocaleString()}</div>
-      <div class="kpi-title">Real Tokens Avoided This Session</div>
-      <div class="kpi-desc">Calculated live across AST skeleton inspection, context exclusions, semantic cache, and prompt pruning.</div>
+      <div class="kpi-title">Session #${sessionNum} Tokens Avoided</div>
+      <div class="kpi-desc">Active since <strong>${sessionStarted.toLocaleTimeString()}</strong> · Calculated across AST skeletons, exclusions, cache & diffs.</div>
     </div>
     <div class="kpi-card">
       <div class="kpi-val" style="color:var(--green);">$${totalCostSaved.toFixed(4)}</div>
-      <div class="kpi-title">Direct Cost Avoided (USD)</div>
+      <div class="kpi-title">Session #${sessionNum} Cost Avoided</div>
       <div class="kpi-desc">Calculated at $${config.pricing[activeModel.tier].inputPerMillion.toFixed(2)}/1M token rate for <strong>${activeModel.name}</strong>.</div>
     </div>
     <div class="kpi-card">
@@ -602,7 +773,7 @@ export class DashboardPanel {
     </div>
   </div>
 
-  <h2>🔴 Live Activity & Savings Ledger (Where & When You Gained)</h2>
+  <h2>🔴 Live Activity & Savings Ledger (Session #${sessionNum})</h2>
   <div class="ledger-container">
     <table>
       <thead>
@@ -619,6 +790,8 @@ export class DashboardPanel {
       </tbody>
     </table>
   </div>
+
+  ${pastSessionsHtml}
 
   <h2>🛡️ Live Strategy Directives & Measured Workspace Metrics (CAP-1 to CAP-10)</h2>
   <div class="grid">
