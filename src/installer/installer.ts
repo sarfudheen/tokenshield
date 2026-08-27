@@ -21,7 +21,7 @@ export function isBinaryAvailable(bin: string): boolean {
     try {
       const isWindows = process.platform === 'win32';
       const cmd = isWindows ? `where.exe ${bin}` : `which ${bin}`;
-      execSync(cmd, { stdio: 'ignore', timeout: 3000, shell: isWindows });
+      execSync(cmd, { stdio: 'ignore', timeout: 3000, shell: isWindows ? 'powershell.exe' : undefined });
       return true;
     } catch {
       return false;

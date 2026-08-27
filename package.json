@@ -89,6 +89,10 @@
         "title": "TokenShield: Configure Context Exclusions (CAP-7)"
       },
       {
+        "command": "aiTokenOptimizer.pruneSelection",
+        "title": "TokenShield: Compress & Copy Pruned Context to Clipboard"
+      },
+      {
         "command": "aiTokenOptimizer.exportToRepo",
         "title": "TokenShield: Export Instructions to Repository"
       }

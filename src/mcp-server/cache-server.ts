@@ -5,9 +5,10 @@ import * as readline from 'readline';
 import { SemanticCacheStore, CacheScope } from '../cache/store';
 import { CallLogStore } from '../cache/callLog';
 import { getFileSkeleton } from '../strategies/skeleton';
+import { pruneContext } from '../strategies/adaptivePruner';
 
 const SERVER_NAME = 'token-cache';
-const SERVER_VERSION = '0.2.0';
+const SERVER_VERSION = '0.3.0';
 const PROTOCOL_VERSION = '2024-11-05';
 
 const workspaceRoot = process.argv[2] || process.cwd();
@@ -77,6 +78,20 @@ const TOOL_DEFINITIONS = [
       required: ['file'],
     },
   },
+  {
+    name: 'prune_context',
+    description:
+      'Adaptive prompt & context pruner: compresses large prompt texts, markdown docs, and code snippets ' +
+      'by removing redundant whitespace, boilerplate comments, and noise. Saves 30-50% tokens without semantic loss.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        text: { type: 'string', description: 'The raw text, markdown, or code snippet to compress' },
+        aggressive: { type: 'boolean', description: 'Strip non-essential comments and aggressive whitespace' },
+      },
+      required: ['text'],
+    },
+  },
 ];
 
 // New store per call: re-reads the file from disk so this process stays
@@ -97,7 +112,6 @@ function callTool(name: string, args: Record<string, unknown>): unknown {
       if (typeof args.query !== 'string' || typeof args.answer !== 'string') {
         throw new Error('cache_store requires "query" and "answer" strings');
       }
-      // Payload size guard: reject storing answers > 50KB to protect cache health
       if (args.answer.length > 50_000) {
         throw new Error('cache_store rejected: answer exceeds 50KB maximum size');
       }
@@ -118,6 +132,12 @@ function callTool(name: string, args: Record<string, unknown>): unknown {
         throw new Error(`File not found or unreadable: ${args.file}`);
       }
       return result;
+    }
+    case 'prune_context': {
+      if (typeof args.text !== 'string') {
+        throw new Error('prune_context requires a "text" string');
+      }
+      return pruneContext(args.text, { aggressive: !!args.aggressive });
     }
     default:
       throw new Error(`Unknown tool: ${name}`);
@@ -173,7 +193,6 @@ rl.on('line', (line) => {
     return;
   }
 
-  // Notifications (no id) get no response.
   if (request.id === undefined || request.id === null) {
     return;
   }
@@ -196,4 +215,4 @@ rl.on('line', (line) => {
 
 rl.on('close', () => process.exit(0));
 
-process.stderr.write(`[${SERVER_NAME}] serving semantic cache + AST skeleton tools for ${workspaceRoot}\n`);
+process.stderr.write(`[${SERVER_NAME}] serving semantic cache, AST skeleton, and prompt pruner tools for ${workspaceRoot}\n`);

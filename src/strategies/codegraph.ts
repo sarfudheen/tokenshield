@@ -242,13 +242,13 @@ function updateIndexStatusBar(state: 'idle' | 'pending' | 'indexing' | 'fresh' |
   if (!indexStatusBar) { return; }
   const count = getProjectsToIndex().length;
   const cfg: Record<string, { text: string; tooltip: string; bg?: string }> = {
-    idle:     { text: `$(graph) CG:${count}`,     tooltip: `Watching ${count} project(s). Click to validate.` },
-    pending:  { text: `$(graph) CG:${count} ●`,   tooltip: `${pendingChangedFiles.size} change(s) pending (30s debounce).`, bg: 'statusBarItem.warningBackground' },
-    indexing: { text: `$(sync~spin) CG:${count}`, tooltip: 'Reindexing...' },
-    fresh:    { text: `$(graph) CG:${count} ✓`,   tooltip: `All ${count} project(s) indexed. Last: ${lastIndexedAt?.toLocaleTimeString()}.` },
-    stale:    { text: `$(graph) CG:${count} ⚠`,   tooltip: 'Index may be stale. Click to validate.', bg: 'statusBarItem.warningBackground' },
-    error:    { text: `$(graph) CG:${count} ✗`,   tooltip: 'Reindex failed. Check Output panel.', bg: 'statusBarItem.errorBackground' },
-    missing:  { text: `$(graph) CG:0 —`,          tooltip: 'No projects configured. Click to manage.', bg: 'statusBarItem.warningBackground' },
+    idle:     { text: `$(graph) CG:${count}`,     tooltip: `CodeGraph: Watching ${count} indexed repository graph(s). Click to validate.` },
+    pending:  { text: `$(graph) CG:${count} ●`,   tooltip: `CodeGraph: ${pendingChangedFiles.size} change(s) pending (30s debounce).`, bg: 'statusBarItem.warningBackground' },
+    indexing: { text: `$(sync~spin) CG:${count}`, tooltip: 'CodeGraph: Reindexing symbol graphs...' },
+    fresh:    { text: `$(graph) CG:${count} ✓`,   tooltip: `CodeGraph: ${count} repository graph(s) indexed & fresh. (100% local search-first index active). Click to manage.` },
+    stale:    { text: `$(graph) CG:${count} ⚠`,   tooltip: 'CodeGraph: Index may be stale. Click to validate/reindex.', bg: 'statusBarItem.warningBackground' },
+    error:    { text: `$(graph) CG:${count} ✗`,   tooltip: 'CodeGraph: Reindex failed. Check Output panel.', bg: 'statusBarItem.errorBackground' },
+    missing:  { text: `$(graph) CG:0 —`,          tooltip: 'CodeGraph: No indexed projects. Click to configure.', bg: 'statusBarItem.warningBackground' },
   };
   const c = cfg[state];
   indexStatusBar.text = c.text;

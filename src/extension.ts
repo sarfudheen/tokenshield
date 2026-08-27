@@ -5,6 +5,8 @@ import { generateAllInstructions, exportInstructionsToRepo } from './generators'
 import { installAllTools } from './installer';
 import { configureMcpServers } from './mcp';
 import { createStatusBar, updateStatusBar, disposeStatusBar } from './ui/statusBar';
+import { createEditorTokenBadge } from './ui/editorTokenBadge';
+import { pruneContext } from './strategies/adaptivePruner';
 import { showProfilePicker } from './ui/quickPick';
 import { DashboardPanel } from './ui/dashboard';
 import { exportTelemetryCommand } from './ui/exportTelemetry';
@@ -19,7 +21,7 @@ let sessionStarted = false;
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   outputChannel = vscode.window.createOutputChannel('AI Token Optimizer');
-  outputChannel.appendLine('[activate] AI Token Optimizer starting...');
+  outputChannel.appendLine('[activate] TokenShield starting...');
   extensionPath = context.extensionPath;
 
   const config = getConfig();
@@ -39,23 +41,33 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.commands.registerCommand('aiTokenOptimizer.showDashboard', () => DashboardPanel.show(context.extensionUri)),
     vscode.commands.registerCommand('aiTokenOptimizer.reindex', () => runCodeGraphReindex(outputChannel)),
     vscode.commands.registerCommand('aiTokenOptimizer.validateIndex', () => validateIndex(outputChannel)),
-    vscode.commands.registerCommand('aiTokenOptimizer.installTools', () => installAllTools(outputChannel)),
+    vscode.commands.registerCommand('aiTokenOptimizer.installTools', () => installAllTools(outputChannel, true)),
     vscode.commands.registerCommand('aiTokenOptimizer.manageProjects', () => showProjectPicker(outputChannel)),
     vscode.commands.registerCommand('aiTokenOptimizer.configureMcp', () => configureMcpServers(outputChannel, extensionPath)),
     vscode.commands.registerCommand('aiTokenOptimizer.validateAll', () => validateAllStrategies(outputChannel)),
     vscode.commands.registerCommand('aiTokenOptimizer.clearCache', clearCacheCommand),
     vscode.commands.registerCommand('aiTokenOptimizer.exportTelemetry', () => exportTelemetryCommand(outputChannel)),
-    // New commands
     vscode.commands.registerCommand('aiTokenOptimizer.configureExclusions', () => showExclusionPicker(outputChannel)),
+    vscode.commands.registerCommand('aiTokenOptimizer.pruneSelection', async () => {
+      const editor = vscode.window.activeTextEditor;
+      if (!editor) { return; }
+      const text = editor.selection.isEmpty ? editor.document.getText() : editor.document.getText(editor.selection);
+      const result = pruneContext(text, { aggressive: true });
+      await vscode.env.clipboard.writeText(result.prunedText);
+      vscode.window.showInformationMessage(
+        `TokenShield: Pruned context copied to clipboard! (-${result.reductionPercent}% tokens saved: ${result.originalTokensEst} → ${result.prunedTokensEst} tok)`
+      );
+    }),
     vscode.commands.registerCommand('aiTokenOptimizer.exportToRepo', async () => {
       const results = await exportInstructionsToRepo(getConfig());
-      vscode.window.showInformationMessage(`AI Token Optimizer: Exported ${results.length} instruction files to repository.`);
+      vscode.window.showInformationMessage(`TokenShield: Exported ${results.length} instruction files to repository.`);
     }),
   );
 
-  // Create status bar
+  // Create main status bar & editor token counter badge
   const statusBar = createStatusBar();
-  context.subscriptions.push(statusBar);
+  const tokenBadge = createEditorTokenBadge(context);
+  context.subscriptions.push(statusBar, tokenBadge);
 
   // Listen for config changes — hot-swap strategies without restart
   context.subscriptions.push(
