@@ -1,0 +1,19 @@
+{
+  "elapsedMs": 101185,
+  "totalTokensSaved": 0,
+  "totalCostSavedUsd": 0,
+  "activeModel": {
+    "id": "copilot/gpt-4o",
+    "name": "GPT-4o (Copilot)",
+    "vendor": "copilot",
+    "family": "gpt-4o",
+    "tier": "standard"
+  },
+  "perModelSavings": {},
+  "cacheHits": 0,
+  "mcpLookups": 0,
+  "filesPruned": 0,
+  "diffEditsCount": 0,
+  "guardrailStops": 0,
+  "downshiftedTasksCount": 0
+}
