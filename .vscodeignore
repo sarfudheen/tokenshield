@@ -9,3 +9,11 @@ esbuild.js
 *.tsbuildinfo
 ARCHITECTURE.md
 ai-token-optimizer-telemetry.json
+.codegraph/**
+.aicache/**
+.agents/**
+.claude/**
+*.vsix
+*.log
+scratch/**
+*.img
