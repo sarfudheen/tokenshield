@@ -80,11 +80,7 @@ function shouldIgnoreFile(relPath: string): boolean {
 
 export function startCodeGraphWatcher(outputChannel: vscode.OutputChannel): vscode.Disposable[] {
   const disposables: vscode.Disposable[] = [];
-  indexStatusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 99);
-  indexStatusBar.command = 'aiTokenOptimizer.validateIndex';
   updateIndexStatusBar('idle');
-  indexStatusBar.show();
-  disposables.push(indexStatusBar);
 
   fileWatcher = vscode.workspace.createFileSystemWatcher('**/*.{ts,js,tsx,jsx,py,go,rs,java,rb,cpp,c,h}');
   const scheduleReindex = (uri: vscode.Uri) => {
@@ -197,6 +193,22 @@ export async function runCodeGraphReindex(outputChannel: vscode.OutputChannel): 
   if (failed > 0) { outputChannel.show(true); }
 }
 
+export type CodeGraphState = 'idle' | 'pending' | 'indexing' | 'fresh' | 'stale' | 'error' | 'missing';
+let currentCodeGraphState: CodeGraphState = 'idle';
+
+export function getCodeGraphState(): { state: CodeGraphState; count: number; lastIndexedAt?: Date; pendingCount: number } {
+  const count = getProjectsToIndex().length;
+  if (!isCodeGraphInstalled() || count === 0) {
+    return { state: 'missing', count: 0, pendingCount: 0 };
+  }
+  return {
+    state: currentCodeGraphState,
+    count,
+    lastIndexedAt,
+    pendingCount: pendingChangedFiles.size,
+  };
+}
+
 export async function validateIndex(outputChannel: vscode.OutputChannel): Promise<void> {
   const projects = getProjectsToIndex();
   if (projects.length === 0) {
@@ -217,21 +229,10 @@ export async function validateIndex(outputChannel: vscode.OutputChannel): Promis
 }
 
 function updateIndexStatusBar(state: 'idle' | 'pending' | 'indexing' | 'fresh' | 'stale' | 'error' | 'missing'): void {
-  if (!indexStatusBar) { return; }
-  const count = getProjectsToIndex().length;
-  const cfg: Record<string, { text: string; tooltip: string; bg?: string }> = {
-    idle:     { text: `$(graph) CG:${count}`,     tooltip: `CodeGraph: Watching ${count} indexed repository graph(s). Click to validate.` },
-    pending:  { text: `$(graph) CG:${count} ●`,   tooltip: `CodeGraph: ${pendingChangedFiles.size} change(s) pending (30s debounce).`, bg: 'statusBarItem.warningBackground' },
-    indexing: { text: `$(sync~spin) CG:${count}`, tooltip: 'CodeGraph: Reindexing symbol graphs...' },
-    fresh:    { text: `$(graph) CG:${count} ✓`,   tooltip: `CodeGraph: ${count} repository graph(s) indexed & fresh. (100% local search-first index active). Click to manage.` },
-    stale:    { text: `$(graph) CG:${count} ⚠`,   tooltip: 'CodeGraph: Index may be stale. Click to validate/reindex.', bg: 'statusBarItem.warningBackground' },
-    error:    { text: `$(graph) CG:${count} ✗`,   tooltip: 'CodeGraph: Reindex failed. Check Output panel.', bg: 'statusBarItem.errorBackground' },
-    missing:  { text: `$(graph) CG:0 —`,          tooltip: 'CodeGraph: No indexed projects. Click to configure.', bg: 'statusBarItem.warningBackground' },
-  };
-  const c = cfg[state];
-  indexStatusBar.text = c.text;
-  indexStatusBar.tooltip = c.tooltip;
-  indexStatusBar.backgroundColor = c.bg ? new vscode.ThemeColor(c.bg) : undefined;
+  currentCodeGraphState = state;
+  try {
+    vscode.commands.executeCommand('aiTokenOptimizer.updateStatusBarHook');
+  } catch { /* ignore */ }
 }
 
 export function disposeCodeGraphWatcher(): void {

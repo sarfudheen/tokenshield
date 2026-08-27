@@ -76,11 +76,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }),
   );
 
-  // Create main status bar, editor token counter badge, and live session savings widget
-  const statusBar = createStatusBar();
+  // Create unified TokenShield Master Hub and active editor token badge (clean 2-item layout)
+  const statusBar = createStatusBar(context);
   const tokenBadge = createEditorTokenBadge(context);
-  const savingsWidget = createSessionSavingsWidget(context);
-  context.subscriptions.push(statusBar, tokenBadge, savingsWidget);
+  context.subscriptions.push(statusBar, tokenBadge);
 
   // Listen for config changes — hot-swap strategies without restart
   context.subscriptions.push(
