@@ -41,17 +41,17 @@ export function classifyModelTier(modelNameOrFamily: string): ModelTier {
  * Detects whether the active environment is Antigravity IDE, Claude, Codex, or VS Code Copilot.
  */
 export function detectHostEnvironment(): 'antigravity' | 'claude' | 'copilot' | 'generic' {
-  const appName = vscode.env.appName || '';
-  if (appName.toLowerCase().includes('antigravity') || vscode.extensions.getExtension('google.antigravity')) {
+  const appName = (vscode.env.appName || '').toLowerCase();
+  if (appName.includes('antigravity') || vscode.extensions.getExtension('google.antigravity')) {
     return 'antigravity';
   }
   if (vscode.extensions.getExtension('anthropic.claude-code')) {
     return 'claude';
   }
-  if (vscode.extensions.getExtension('github.copilot')) {
+  if (vscode.extensions.getExtension('github.copilot') || appName.includes('visual studio code') || appName.includes('vscodium') || appName.includes('cursor')) {
     return 'copilot';
   }
-  return 'antigravity'; // Default to Antigravity if running in this environment
+  return 'copilot'; // Default to Copilot in any standard editor
 }
 
 /**
