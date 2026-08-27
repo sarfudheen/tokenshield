@@ -183,6 +183,7 @@ function callTool(name: string, args: Record<string, unknown>): unknown {
       if (!result) {
         throw new Error(`File not found or unreadable: ${args.file}`);
       }
+      callLog.recordSkeleton();
       const origTok = result.originalTokensEst;
       const skelTok = result.skeletonTokensEst;
       const saved = Math.max(0, origTok - skelTok);
@@ -198,6 +199,7 @@ function callTool(name: string, args: Record<string, unknown>): unknown {
       if (typeof args.text !== 'string') {
         throw new Error('prune_context requires a "text" string');
       }
+      callLog.recordPrune();
       const result = pruneContext(args.text, { aggressive: !!args.aggressive });
       const saved = Math.max(0, result.originalTokensEst - result.prunedTokensEst);
       if (saved > 0) {
@@ -214,6 +216,7 @@ function callTool(name: string, args: Record<string, unknown>): unknown {
       if (typeof args.diff !== 'string') {
         throw new Error('prune_git_diff requires a "diff" string');
       }
+      callLog.recordPrune();
       const result = compressGitDiff(args.diff);
       const saved = Math.max(0, result.originalTokensEst - result.prunedTokensEst);
       if (saved > 0) {
@@ -230,6 +233,7 @@ function callTool(name: string, args: Record<string, unknown>): unknown {
       if (typeof args.code !== 'string') {
         throw new Error('strip_comments requires a "code" string');
       }
+      callLog.recordPrune();
       const pruned = stripCommentsAndHeaders(args.code);
       const saved = Math.max(0, Math.ceil((args.code.length - pruned.length) / 3.8));
       if (saved > 0) {
@@ -246,6 +250,7 @@ function callTool(name: string, args: Record<string, unknown>): unknown {
       if (typeof args.log !== 'string') {
         throw new Error('isolate_test_failures requires a "log" string');
       }
+      callLog.recordPrune();
       const result = isolateTestFailures(args.log);
       const saved = Math.max(0, result.originalTokensEst - result.prunedTokensEst);
       if (saved > 0) {
