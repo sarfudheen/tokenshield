@@ -100,10 +100,19 @@ export async function configureMcpServers(outputChannel: vscode.OutputChannel, e
   await configureAntigravityMcp(wsPath, outputChannel, extensionPath);
 }
 
+function resolveCacheServerPath(extensionPath: string, wsPath: string): string {
+  const wsServer = path.join(wsPath, 'dist', 'cache-server.js');
+  if (fs.existsSync(wsServer)) {
+    return wsServer;
+  }
+  return path.join(extensionPath, 'dist', 'cache-server.js');
+}
+
 function cacheServerEntry(extensionPath: string, wsPath: string): Record<string, unknown> {
+  const serverPath = resolveCacheServerPath(extensionPath, wsPath);
   return {
     command: 'node',
-    args: [path.join(extensionPath, 'dist', 'cache-server.js'), wsPath],
+    args: [serverPath, wsPath],
     type: 'stdio',
   };
 }
@@ -236,9 +245,10 @@ export async function configureAntigravityMcp(
   }
 
   const mcpServers = (config['mcpServers'] as Record<string, unknown>) || {};
+  const serverPath = resolveCacheServerPath(extensionPath, wsPath);
   mcpServers[MCP_CACHE_SERVER_NAME] = {
     command: 'node',
-    args: [path.join(extensionPath, 'dist', 'cache-server.js'), wsPath],
+    args: [serverPath, wsPath],
   };
 
   config['mcpServers'] = mcpServers;
