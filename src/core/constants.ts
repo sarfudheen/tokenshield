@@ -95,8 +95,10 @@ export const STRATEGY_CAP_LABELS: Record<string, string> = {
   threadResetTrigger:      'CAP-19',
 };
 
+import { TOTAL_STRATEGIES } from './config';
+
 export const PROFILE_DESCRIPTIONS: Record<string, string> = {
-  full: '$(zap) Full Optimization — all 10 TokenShield strategies active',
+  full: `$(zap) Full Optimization — all ${TOTAL_STRATEGIES} TokenShield strategies active`,
   debug: '$(bug) Debug Mode — output compression & diff-only disabled for full diagnostics',
   planning: '$(lightbulb) Planning Mode — verbosity & guardrails relaxed for deep architectural review',
   review: '$(eye) Review Mode — session clearing preserved for full historical context',

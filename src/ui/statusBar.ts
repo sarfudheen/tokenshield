@@ -170,7 +170,7 @@ async function showMasterHubQuickPick(): Promise<void> {
     {
       label: `$(settings-gear) Switch Optimization Profile (Current: ${config.profile.toUpperCase()})`,
       description: 'Full · Debug · Planning · Review · Custom',
-      detail: 'Instantly toggle presets of the 10 optimization directives.',
+      detail: `Instantly toggle presets of all ${TOTAL_STRATEGIES} optimization directives.`,
     },
     {
       label: `$(filter) Configure Context Exclusions (CAP-7)`,

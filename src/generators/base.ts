@@ -71,20 +71,26 @@ export abstract class BaseInstructionGenerator {
     const section = this.extractMarkedSection(newOptimizationBlock);
 
     if (startIdx !== -1 && endIdx !== -1) {
-      const before = existing.substring(0, startIdx);
-      const after = existing.substring(endIdx + MARKER_END.length);
-      return before + section + after;
+      const before = existing.substring(0, startIdx).trimEnd();
+      const after = existing.substring(endIdx + MARKER_END.length).trimStart();
+      const prefix = before.length > 0 ? before + '\n\n' : '';
+      const suffix = after.length > 0 ? '\n\n' + after : '\n';
+      return prefix + section + suffix;
     }
 
-    return existing.trimEnd() + '\n\n' + section + '\n';
+    const trimmed = existing.trim();
+    if (trimmed.length === 0) {
+      return section + '\n';
+    }
+    return trimmed + '\n\n' + section + '\n';
   }
 
   private extractMarkedSection(content: string): string {
     const startIdx = content.indexOf(MARKER_START);
     const endIdx = content.indexOf(MARKER_END);
     if (startIdx !== -1 && endIdx !== -1) {
-      return content.substring(startIdx, endIdx + MARKER_END.length);
+      return content.substring(startIdx, endIdx + MARKER_END.length).trim();
     }
-    return `${MARKER_START}\n${MARKER_COMMENT}\n${content}\n${MARKER_END}`;
+    return `${MARKER_START}\n${MARKER_COMMENT}\n\n${content.trim()}\n\n${MARKER_END}`;
   }
 }

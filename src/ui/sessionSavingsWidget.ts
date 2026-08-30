@@ -30,11 +30,20 @@ export function createSessionSavingsWidget(context: vscode.ExtensionContext): vs
   const workspaceFolders = vscode.workspace.workspaceFolders;
   if (workspaceFolders && workspaceFolders.length > 0) {
     const wsPath = workspaceFolders[0].uri.fsPath;
+    const eventsPattern = new vscode.RelativePattern(wsPath, '.aicache/events.json');
+    const eventsWatcher = vscode.workspace.createFileSystemWatcher(eventsPattern);
+    const onEventsChange = () => {
+      chatSavingsTracker.syncFromDisk();
+    };
+    eventsWatcher.onDidChange(onEventsChange);
+    eventsWatcher.onDidCreate(onEventsChange);
+    context.subscriptions.push(eventsWatcher);
+
     const callLogPattern = new vscode.RelativePattern(wsPath, '.aicache/call-log.json');
     callLogWatcher = vscode.workspace.createFileSystemWatcher(callLogPattern);
 
     const onLogChange = () => {
-      syncWithCallLog(wsPath);
+      chatSavingsTracker.syncFromDisk();
     };
 
     callLogWatcher.onDidChange(onLogChange);

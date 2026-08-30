@@ -168,19 +168,34 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     await autoApply(config);
   }
 
-  // First-run nudge: if .github/copilot-instructions.md doesn't exist, prompt the user
+  // First-run nudge: only prompt if NO instructions file exists and user has not dismissed it
   const wsPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
   if (wsPath) {
-    const githubInstructionsPath = path.join(wsPath, '.github', 'copilot-instructions.md');
-    if (!fs.existsSync(githubInstructionsPath)) {
-      const action = await vscode.window.showInformationMessage(
+    const candidatePaths = [
+      path.join(wsPath, '.github', 'instructions', 'copilot-instructions.md'),
+      path.join(wsPath, '.github', 'instructions', 'tokenshield.instructions.md'),
+      path.join(wsPath, '.github', 'copilot-instructions.md'),
+      path.join(wsPath, 'AGENTS.md'),
+      path.join(wsPath, 'CLAUDE.md'),
+      path.join(wsPath, '.vscode', 'copilot-instructions.md'),
+    ];
+
+    const hasAnyInstructions = candidatePaths.some(p => fs.existsSync(p));
+    const alreadyDismissed = context.workspaceState.get<boolean>('tokenshield.initPromptDismissed', false);
+
+    if (!hasAnyInstructions && !alreadyDismissed) {
+      vscode.window.showInformationMessage(
         '🛡️ TokenShield: No project-level Copilot instructions found. Initialize for this project to get stack-specific optimizations?',
         'Initialize Now',
-        'Later'
-      );
-      if (action === 'Initialize Now') {
-        await initializeForProject(config, outputChannel);
-      }
+        'Do Not Show Again'
+      ).then(async action => {
+        if (action === 'Initialize Now') {
+          await context.workspaceState.update('tokenshield.initPromptDismissed', true);
+          await initializeForProject(config, outputChannel);
+        } else if (action === 'Do Not Show Again') {
+          await context.workspaceState.update('tokenshield.initPromptDismissed', true);
+        }
+      });
     }
   }
 

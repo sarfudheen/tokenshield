@@ -2,7 +2,7 @@
   "name": "tokenshield",
   "displayName": "TokenShield — AI Token & Cost Optimizer",
   "description": "Universal AI token & cost optimizer for GitHub Copilot, Claude Code, OpenAI Codex, and Antigravity. Real-time context pruning, AST skeletons, semantic caching, CLI output compression, and provable ROI reporting.",
-  "version": "1.0.3",
+  "version": "1.0.11",
   "publisher": "tokenshield",
   "license": "MIT",
   "repository": {
@@ -66,7 +66,7 @@
       },
       {
         "command": "aiTokenOptimizer.validateAll",
-        "title": "TokenShield: Validate All 10 Strategies"
+        "title": "TokenShield: Validate All 19 Strategies"
       },
       {
         "command": "aiTokenOptimizer.clearCache",
@@ -138,7 +138,10 @@
             ]
           },
           "default": [
-            "copilot"
+            "copilot",
+            "antigravity",
+            "claude",
+            "codex"
           ],
           "description": "Which AI tools to generate instruction files for."
         },
@@ -154,7 +157,7 @@
           "default": "full",
           "description": "Active optimization profile. Profiles control which strategies are enabled.",
           "enumDescriptions": [
-            "All 10 strategies active — maximum enterprise token & cost savings",
+            "All 19 strategies active — maximum enterprise token & cost savings",
             "Disables output compression and diff-only for full log & test diagnostics",
             "Disables verbosity restrictions and guardrails for deep architectural reviews",
             "Preserves full context history for thorough code reviews",
@@ -349,13 +352,13 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run build",
+    "vscode:prepublish": "echo done",
     "build": "node esbuild.js --production",
     "watch": "node esbuild.js --watch",
     "compile": "tsc -p ./",
     "lint": "eslint src --ext ts",
     "test": "node ./dist/test/runTest.js",
-    "package": "npm run build && vsce package --no-dependencies --no-yarn --allow-star-activation"
+    "package": "node esbuild.js --production && node ./node_modules/@vscode/vsce/vsce package --no-dependencies --no-yarn --allow-star-activation"
   },
   "devDependencies": {
     "@types/glob": "^8.1.0",

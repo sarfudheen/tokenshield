@@ -103,8 +103,8 @@ export class InstructionEngine {
           });
         }
 
-        // 2. Cross-reference injection: ensure the primary instructions file points to tokenshield.instructions.md
-        this.injectCrossReference(wsPath);
+        // 2. Direct injection: ensure the primary instructions file includes the managed block
+        this.injectCrossReference(wsPath, config);
 
         // 3. Optional agent & skill scaffolding
         if (config.generateAgentFiles) {
@@ -180,41 +180,33 @@ export class InstructionEngine {
   }
 
   /**
-   * Injects a lightweight cross-reference into the project's primary instructions file
-   * so Copilot Chat always references TokenShield optimization directives.
+   * Injects the managed TokenShield optimization directives block directly into the
+   * project's primary instructions file so Copilot Chat immediately enforces them without
+   * needing secondary file-read tool calls.
    */
-  private injectCrossReference(wsPath: string): void {
+  private injectCrossReference(wsPath: string, config: ExtensionConfig): void {
     const candidatePaths = [
       path.join(wsPath, COPILOT_PROJECT_INSTRUCTIONS_SUBDIR_PATH),
       path.join(wsPath, COPILOT_INSTRUCTIONS_PATH),
     ];
 
-    const refMarkerStart = '<!-- TOKENSHIELD_REF:START -->';
-    const refMarkerEnd = '<!-- TOKENSHIELD_REF:END -->';
-    const refSnippet = `${refMarkerStart}
-### AI Token & Cost Optimization (TokenShield)
-- **Directives Active**: Read \`.github/instructions/tokenshield.instructions.md\` for token, cache, and cost optimization rules.
-${refMarkerEnd}`;
+    const copilotGen = this.generators.get('copilot');
+    if (!copilotGen) { return; }
+
+    const strategies = config.profile === 'custom' ? config.activeStrategies : undefined;
+    const fullContent = copilotGen.generateContent(
+      strategies || config.activeStrategies,
+      config
+    );
 
     for (const targetFile of candidatePaths) {
       if (fs.existsSync(targetFile)) {
-        const content = fs.readFileSync(targetFile, 'utf-8');
-        if (content.includes(refMarkerStart)) {
-          // Already has reference, update it if needed
-          const sIdx = content.indexOf(refMarkerStart);
-          const eIdx = content.indexOf(refMarkerEnd);
-          if (sIdx !== -1 && eIdx !== -1) {
-            const updated = content.substring(0, sIdx) + refSnippet + content.substring(eIdx + refMarkerEnd.length);
-            if (updated !== content) {
-              fs.writeFileSync(targetFile, updated, 'utf-8');
-            }
-          }
-        } else {
-          // Append reference to the top section of the instruction file
-          const appended = content.trimEnd() + '\n\n' + refSnippet + '\n';
-          fs.writeFileSync(targetFile, appended, 'utf-8');
+        const existing = fs.readFileSync(targetFile, 'utf-8');
+        const merged = (copilotGen as any).mergeContent(existing, fullContent);
+        if (merged !== existing) {
+          fs.writeFileSync(targetFile, merged, 'utf-8');
         }
-        break; // injected into primary existing file
+        break; // merged into primary existing file
       }
     }
   }

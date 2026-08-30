@@ -257,8 +257,8 @@ ${stackSection}
     writtenPath = targetSubdirPath;
     outputChannel.appendLine(`[initProject] Wrote structured directives: ${targetSubdirPath}`);
 
-    // Cross-reference injection into existing main instructions file
-    injectCrossReference(wsPath, outputChannel);
+    // Direct merge of optimization directives into existing main instructions file
+    injectCrossReference(wsPath, fullContent, outputChannel);
 
     // Optional agent & skill scaffolding
     if (config.generateAgentFiles) {
@@ -340,36 +340,21 @@ ${stackSection}
   }
 }
 
-function injectCrossReference(wsPath: string, outputChannel: vscode.OutputChannel): void {
+function injectCrossReference(wsPath: string, fullContent: string, outputChannel: vscode.OutputChannel): void {
   const candidatePaths = [
     path.join(wsPath, COPILOT_PROJECT_INSTRUCTIONS_SUBDIR_PATH),
     path.join(wsPath, COPILOT_INSTRUCTIONS_PATH),
   ];
 
-  const refMarkerStart = '<!-- TOKENSHIELD_REF:START -->';
-  const refMarkerEnd = '<!-- TOKENSHIELD_REF:END -->';
-  const refSnippet = `${refMarkerStart}
-### AI Token & Cost Optimization (TokenShield)
-- **Directives Active**: Read \`.github/instructions/tokenshield.instructions.md\` for token, cache, and cost optimization rules.
-${refMarkerEnd}`;
+  const copilotGen = new CopilotGenerator();
 
   for (const targetFile of candidatePaths) {
     if (fs.existsSync(targetFile)) {
-      const content = fs.readFileSync(targetFile, 'utf-8');
-      if (content.includes(refMarkerStart)) {
-        const sIdx = content.indexOf(refMarkerStart);
-        const eIdx = content.indexOf(refMarkerEnd);
-        if (sIdx !== -1 && eIdx !== -1) {
-          const updated = content.substring(0, sIdx) + refSnippet + content.substring(eIdx + refMarkerEnd.length);
-          if (updated !== content) {
-            fs.writeFileSync(targetFile, updated, 'utf-8');
-            outputChannel.appendLine(`[initProject] Updated TokenShield cross-reference in: ${targetFile}`);
-          }
-        }
-      } else {
-        const appended = content.trimEnd() + '\n\n' + refSnippet + '\n';
-        fs.writeFileSync(targetFile, appended, 'utf-8');
-        outputChannel.appendLine(`[initProject] Injected TokenShield cross-reference into: ${targetFile}`);
+      const existing = fs.readFileSync(targetFile, 'utf-8');
+      const merged = (copilotGen as any).mergeContent(existing, fullContent);
+      if (merged !== existing) {
+        fs.writeFileSync(targetFile, merged, 'utf-8');
+        outputChannel.appendLine(`[initProject] Merged TokenShield optimization directives into: ${targetFile}`);
       }
       break;
     }

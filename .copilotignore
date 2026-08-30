@@ -13,6 +13,11 @@
 # Add your own patterns below the managed block.
 # To regenerate: TokenShield: Configure Context Exclusions
 
+# .copilotignore — Managed by TokenShield (CAP-17)
+# VS Code Copilot respects this file like .gitignore.
+# Add your own patterns below the managed block.
+# To regenerate: TokenShield: Configure Context Exclusions
+
 # --- TOKENSHIELD MANAGED ---
 *.lock
 *.min.js
@@ -37,5 +42,6 @@ yarn.lock
 pnpm-lock.yaml
 .yarn/
 # --- END TOKENSHIELD MANAGED ---
+
 
 

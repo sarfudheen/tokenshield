@@ -79,8 +79,6 @@ export const DEFAULT_PRICING: PricingTable = {
   lightweight: { inputPerMillion: 0.15, outputPerMillion: 0.60 },
 };
 
-export const TOTAL_STRATEGIES = 19;
-
 export const PROFILE_STRATEGIES: Record<Profile, StrategyState> = {
   full: {
     codeGraph: true, outputCompression: true, verbosityControl: true,
@@ -120,7 +118,7 @@ export const PROFILE_STRATEGIES: Record<Profile, StrategyState> = {
     gitDiffContext: true, kvCacheAlignment: true, commentStripper: true,
     testFailureIsolator: true, rangeSlicing: true,
     inlineChatScopePinning: true, copilotIgnoreGeneration: true,
-    copilotEditsAwareness: true, threadResetTrigger: false,
+    copilotEditsAwareness: true, threadResetTrigger: true,
   },
   custom: {
     codeGraph: true, outputCompression: true, verbosityControl: true,
@@ -134,12 +132,14 @@ export const PROFILE_STRATEGIES: Record<Profile, StrategyState> = {
   },
 };
 
+export const TOTAL_STRATEGIES = Object.keys(PROFILE_STRATEGIES.full).length;
+
 export function getConfig(): ExtensionConfig {
   const config = vscode.workspace.getConfiguration('aiTokenOptimizer');
   return {
     enabled: config.get<boolean>('enabled', true),
     autoApply: config.get<boolean>('autoApply', true),
-    targetTools: config.get<TargetTool[]>('targetTools', ['copilot']),
+    targetTools: config.get<TargetTool[]>('targetTools', ['copilot', 'antigravity', 'claude', 'codex']),
     profile: config.get<Profile>('profile', 'full'),
     activeStrategies: config.get<StrategyState>('activeStrategies', PROFILE_STRATEGIES.full),
     verbosityLevel: config.get<VerbosityLevel>('verbosityLevel', 'full'),
