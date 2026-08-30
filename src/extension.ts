@@ -16,6 +16,9 @@ import { startCodeGraphWatcher, runCodeGraphReindex, validateIndex, disposeCodeG
 import { SemanticCacheStore } from './cache/store';
 import { CallLogStore } from './cache/callLog';
 import { startSession } from './session/tracker';
+import { initializeForProject } from './generators/projectInit';
+import * as path from 'path';
+import * as fs from 'fs';
 
 let outputChannel: vscode.OutputChannel;
 let extensionPath: string;
@@ -50,6 +53,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.commands.registerCommand('aiTokenOptimizer.clearCache', clearCacheCommand),
     vscode.commands.registerCommand('aiTokenOptimizer.exportTelemetry', () => exportTelemetryCommand(outputChannel)),
     vscode.commands.registerCommand('aiTokenOptimizer.configureExclusions', () => showExclusionPicker(outputChannel)),
+    vscode.commands.registerCommand('aiTokenOptimizer.initProject', () => initializeForProject(getConfig(), outputChannel)),
     vscode.commands.registerCommand('aiTokenOptimizer.pruneSelection', async () => {
       const editor = vscode.window.activeTextEditor;
       if (!editor) { return; }
@@ -162,6 +166,22 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   // Auto-apply on activation
   if (config.autoApply) {
     await autoApply(config);
+  }
+
+  // First-run nudge: if .github/copilot-instructions.md doesn't exist, prompt the user
+  const wsPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+  if (wsPath) {
+    const githubInstructionsPath = path.join(wsPath, '.github', 'copilot-instructions.md');
+    if (!fs.existsSync(githubInstructionsPath)) {
+      const action = await vscode.window.showInformationMessage(
+        '🛡️ TokenShield: No project-level Copilot instructions found. Initialize for this project to get stack-specific optimizations?',
+        'Initialize Now',
+        'Later'
+      );
+      if (action === 'Initialize Now') {
+        await initializeForProject(config, outputChannel);
+      }
+    }
   }
 
   // Start CodeGraph file watcher

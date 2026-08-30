@@ -2,7 +2,7 @@
   "name": "tokenshield",
   "displayName": "TokenShield — AI Token & Cost Optimizer",
   "description": "Universal AI token & cost optimizer for GitHub Copilot, Claude Code, OpenAI Codex, and Antigravity. Real-time context pruning, AST skeletons, semantic caching, CLI output compression, and provable ROI reporting.",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "publisher": "tokenshield",
   "license": "MIT",
   "repository": {
@@ -107,6 +107,10 @@
       {
         "command": "aiTokenOptimizer.exportToRepo",
         "title": "TokenShield: Export Instructions to Repository"
+      },
+      {
+        "command": "aiTokenOptimizer.initProject",
+        "title": "TokenShield: Initialize for This Project (Stack-Specific Instructions)"
       }
     ],
     "configuration": {
@@ -211,6 +215,42 @@
             "smartModelRouting": {
               "type": "boolean",
               "description": "CAP-10: Smart model routing (suggests lighter models for routine edits)"
+            },
+            "gitDiffContext": {
+              "type": "boolean",
+              "description": "CAP-11: Git diff-scoped context (scope reviews to git diff + 1-hop callers/callees)"
+            },
+            "kvCacheAlignment": {
+              "type": "boolean",
+              "description": "CAP-12: Deterministic prefix caching — for API/agent-mode workflows, not VS Code Copilot chat"
+            },
+            "commentStripper": {
+              "type": "boolean",
+              "description": "CAP-13: Comment & header stripping — strip license preambles and filler comments on ingestion"
+            },
+            "testFailureIsolator": {
+              "type": "boolean",
+              "description": "CAP-14: Test log failure isolation — filter to failing assertions and line numbers only"
+            },
+            "rangeSlicing": {
+              "type": "boolean",
+              "description": "CAP-15: Windowed range slicing — restrict file navigation to 100-line windows around symbols"
+            },
+            "inlineChatScopePinning": {
+              "type": "boolean",
+              "description": "CAP-16: Inline chat scope pinning — constrain VS Code inline chat context to selected lines + 1-hop references"
+            },
+            "copilotIgnoreGeneration": {
+              "type": "boolean",
+              "description": "CAP-17: .copilotignore generation — create .copilotignore to block build outputs, lock files, and secrets from Copilot context"
+            },
+            "copilotEditsAwareness": {
+              "type": "boolean",
+              "description": "CAP-18: Copilot Edits awareness — avoid re-reading files already open in a Copilot Edits session"
+            },
+            "threadResetTrigger": {
+              "type": "boolean",
+              "description": "CAP-19: Thread reset trigger — surface a fresh-thread nudge when conversation exceeds 40 messages"
             }
           },
           "description": "Toggle individual strategies (used when profile is 'custom')."
@@ -280,6 +320,26 @@
           "default": true,
           "description": "Store instructions cleanly in .vscode/copilot-instructions.md instead of modifying public git tracking. Use 'Export to Repository' command when team-wide repo commit is desired."
         },
+        "aiTokenOptimizer.githubInstructions": {
+          "type": "boolean",
+          "default": true,
+          "description": "Write instructions to .github/ (the path VS Code Copilot auto-discovers). Recommended: true. Set false only if you prefer to keep all generated files out of git."
+        },
+        "aiTokenOptimizer.githubStructureMode": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "flat",
+            "structured"
+          ],
+          "default": "auto",
+          "description": "How TokenShield integrates with .github/: 'auto' detects structured layout (.github/instructions/), 'flat' writes directly to .github/copilot-instructions.md, 'structured' writes to .github/instructions/tokenshield.instructions.md."
+        },
+        "aiTokenOptimizer.generateAgentFiles": {
+          "type": "boolean",
+          "default": false,
+          "description": "Scaffold TokenShield agent (.github/agents/tokenshield.agent.md) and optimization skill (.github/skills/tokenshield-optimize/SKILL.md) in structured .github repositories."
+        },
         "aiTokenOptimizer.telemetry.enabled": {
           "type": "boolean",
           "default": true,
@@ -295,7 +355,7 @@
     "compile": "tsc -p ./",
     "lint": "eslint src --ext ts",
     "test": "node ./dist/test/runTest.js",
-    "package": "npm run build && vsce package --no-dependencies --no-yarn"
+    "package": "npm run build && vsce package --no-dependencies --no-yarn --allow-star-activation"
   },
   "devDependencies": {
     "@types/glob": "^8.1.0",

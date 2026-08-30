@@ -20,6 +20,11 @@ export interface StrategyState {
   commentStripper: boolean;
   testFailureIsolator: boolean;
   rangeSlicing: boolean;
+  // New CAPs
+  inlineChatScopePinning: boolean;   // CAP-16: VS Code inline chat scope constraint
+  copilotIgnoreGeneration: boolean;  // CAP-17: .copilotignore file generation
+  copilotEditsAwareness: boolean;    // CAP-18: Copilot Edits session awareness
+  threadResetTrigger: boolean;       // CAP-19: Proactive thread reset nudge
 }
 
 export interface ModelPricing {
@@ -47,6 +52,8 @@ export interface CodeGraphProject {
   enabled: boolean;
 }
 
+export type GithubStructureMode = 'auto' | 'flat' | 'structured';
+
 export interface ExtensionConfig {
   enabled: boolean;
   autoApply: boolean;
@@ -62,6 +69,8 @@ export interface ExtensionConfig {
   guardrails: GuardrailConfig;
   pricing: PricingTable;
   useVscodeStorage: boolean;
+  githubStructureMode: GithubStructureMode;
+  generateAgentFiles: boolean;
 }
 
 export const DEFAULT_PRICING: PricingTable = {
@@ -70,7 +79,7 @@ export const DEFAULT_PRICING: PricingTable = {
   lightweight: { inputPerMillion: 0.15, outputPerMillion: 0.60 },
 };
 
-export const TOTAL_STRATEGIES = 15;
+export const TOTAL_STRATEGIES = 19;
 
 export const PROFILE_STRATEGIES: Record<Profile, StrategyState> = {
   full: {
@@ -80,6 +89,8 @@ export const PROFILE_STRATEGIES: Record<Profile, StrategyState> = {
     agentGuardrails: true, smartModelRouting: true,
     gitDiffContext: true, kvCacheAlignment: true, commentStripper: true,
     testFailureIsolator: true, rangeSlicing: true,
+    inlineChatScopePinning: true, copilotIgnoreGeneration: true,
+    copilotEditsAwareness: true, threadResetTrigger: true,
   },
   debug: {
     codeGraph: true, outputCompression: false, verbosityControl: true,
@@ -88,6 +99,8 @@ export const PROFILE_STRATEGIES: Record<Profile, StrategyState> = {
     agentGuardrails: true, smartModelRouting: true,
     gitDiffContext: true, kvCacheAlignment: true, commentStripper: false,
     testFailureIsolator: true, rangeSlicing: true,
+    inlineChatScopePinning: true, copilotIgnoreGeneration: true,
+    copilotEditsAwareness: true, threadResetTrigger: false,
   },
   planning: {
     codeGraph: true, outputCompression: true, verbosityControl: false,
@@ -96,6 +109,8 @@ export const PROFILE_STRATEGIES: Record<Profile, StrategyState> = {
     agentGuardrails: false, smartModelRouting: true,
     gitDiffContext: true, kvCacheAlignment: true, commentStripper: true,
     testFailureIsolator: false, rangeSlicing: true,
+    inlineChatScopePinning: true, copilotIgnoreGeneration: true,
+    copilotEditsAwareness: true, threadResetTrigger: true,
   },
   review: {
     codeGraph: true, outputCompression: true, verbosityControl: true,
@@ -104,6 +119,8 @@ export const PROFILE_STRATEGIES: Record<Profile, StrategyState> = {
     agentGuardrails: true, smartModelRouting: true,
     gitDiffContext: true, kvCacheAlignment: true, commentStripper: true,
     testFailureIsolator: true, rangeSlicing: true,
+    inlineChatScopePinning: true, copilotIgnoreGeneration: true,
+    copilotEditsAwareness: true, threadResetTrigger: false,
   },
   custom: {
     codeGraph: true, outputCompression: true, verbosityControl: true,
@@ -112,6 +129,8 @@ export const PROFILE_STRATEGIES: Record<Profile, StrategyState> = {
     agentGuardrails: true, smartModelRouting: true,
     gitDiffContext: true, kvCacheAlignment: true, commentStripper: true,
     testFailureIsolator: true, rangeSlicing: true,
+    inlineChatScopePinning: true, copilotIgnoreGeneration: true,
+    copilotEditsAwareness: true, threadResetTrigger: true,
   },
 };
 
@@ -136,6 +155,8 @@ export function getConfig(): ExtensionConfig {
     }),
     pricing: config.get<PricingTable>('pricing', DEFAULT_PRICING),
     useVscodeStorage: config.get<boolean>('useVscodeStorage', true),
+    githubStructureMode: config.get<GithubStructureMode>('githubStructureMode', 'auto'),
+    generateAgentFiles: config.get<boolean>('generateAgentFiles', false),
   };
 }
 

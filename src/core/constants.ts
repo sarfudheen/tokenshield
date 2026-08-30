@@ -39,7 +39,12 @@ export const CLAUDE_EXTENSION_ID = 'anthropic.claude-code';
 export const CODEX_EXTENSION_ID = 'openai.codex';
 
 export const COPILOT_INSTRUCTIONS_PATH = '.github/copilot-instructions.md';
+export const COPILOT_INSTRUCTIONS_SUBDIR_PATH = '.github/instructions/tokenshield.instructions.md';
+export const COPILOT_PROJECT_INSTRUCTIONS_SUBDIR_PATH = '.github/instructions/copilot-instructions.md';
+export const TOKENSHIELD_AGENT_PATH = '.github/agents/tokenshield.agent.md';
+export const TOKENSHIELD_SKILL_PATH = '.github/skills/tokenshield-optimize/SKILL.md';
 export const COPILOT_VSCODE_INSTRUCTIONS_PATH = '.vscode/copilot-instructions.md';
+export const COPILOTIGNORE_PATH = '.copilotignore';
 export const CLAUDE_INSTRUCTIONS_PATH = 'CLAUDE.md';
 export const CODEX_INSTRUCTIONS_PATH = '.codex/instructions.md';
 export const ANTIGRAVITY_INSTRUCTIONS_PATH = 'AGENTS.md';
@@ -47,29 +52,47 @@ export const ANTIGRAVITY_INSTRUCTIONS_PATH = 'AGENTS.md';
 export const MCP_CACHE_SERVER_NAME = 'token-cache';
 
 export const STRATEGY_DESCRIPTIONS: Record<string, string> = {
-  codeGraph: 'CodeGraph pre-indexing — locate files via semantic query instead of grepping',
-  outputCompression: 'RTK output compression — compress CLI/log output before AI reads it',
-  verbosityControl: 'Caveman response control — constrain AI response length',
-  sessionManagement: 'Session management — audit context, clear sessions, route models',
-  semanticCache: 'Semantic cache — serve repeated/similar questions from local disk, zero tokens',
-  astSkeleton: 'AST Skeleton — show only signatures/types, not full source (~90% reduction)',
-  contextExclusion: 'Context Exclusion — auto-exclude lock files, dist/, node_modules from context',
-  diffOnlyOutput: 'Diff-Only Output — produce patches instead of rewriting entire files (~92% reduction)',
-  agentGuardrails: 'Agent Guardrails — prevent runaway retry loops and wasted token burns',
-  smartModelRouting: 'Smart Model Routing — suggest cheaper models for trivial tasks (~80% cost savings)',
+  codeGraph:               'CAP-1:  CodeGraph pre-indexing — locate files via semantic query instead of grepping',
+  outputCompression:       'CAP-2:  CLI output compression — compress test/git/build output (RTK if installed, else inline rules)',
+  verbosityControl:        'CAP-3:  Caveman response control — constrain AI response length',
+  sessionManagement:       'CAP-4:  Session management — audit context, clear sessions, route models',
+  semanticCache:           'CAP-5:  Semantic cache — serve repeated/similar questions from local disk, zero tokens',
+  astSkeleton:             'CAP-6:  AST Skeleton — show only signatures/types, not full source (~90% reduction)',
+  contextExclusion:        'CAP-7:  Context Exclusion — auto-exclude lock files, dist/, node_modules from context',
+  diffOnlyOutput:          'CAP-8:  Diff-Only Output — produce patches instead of rewriting entire files (~92% reduction)',
+  agentGuardrails:         'CAP-9:  Agent Guardrails — prevent runaway retry loops and wasted token burns',
+  smartModelRouting:       'CAP-10: Smart Model Routing — suggest cheaper models for trivial tasks (~80% cost savings)',
+  gitDiffContext:          'CAP-11: Git Diff-Scoped Context — scope reviews to git diff + 1-hop callers',
+  kvCacheAlignment:        'CAP-12: Deterministic Prefix Caching — for API/agent-mode workflows (not VS Code chat)',
+  commentStripper:         'CAP-13: Comment & Header Stripping — strip noise comments on file ingestion',
+  testFailureIsolator:     'CAP-14: Test Log Failure Isolation — filter to failing assertions only',
+  rangeSlicing:            'CAP-15: Windowed Range Slicing — 100-line window navigation around symbols',
+  inlineChatScopePinning:  'CAP-16: Inline Chat Scope Pinning — constrain inline chat to selected lines + 1-hop refs',
+  copilotIgnoreGeneration: 'CAP-17: .copilotignore Generation — create .copilotignore to block noise from Copilot context',
+  copilotEditsAwareness:   'CAP-18: Copilot Edits Awareness — avoid re-reading files already in edit session context',
+  threadResetTrigger:      'CAP-19: Thread Reset Trigger — surface context saturation nudge at 40+ messages',
 };
 
 export const STRATEGY_CAP_LABELS: Record<string, string> = {
-  codeGraph: 'CAP-1',
-  outputCompression: 'CAP-2',
-  verbosityControl: 'CAP-3',
-  sessionManagement: 'CAP-4',
-  semanticCache: 'CAP-5',
-  astSkeleton: 'CAP-6',
-  contextExclusion: 'CAP-7',
-  diffOnlyOutput: 'CAP-8',
-  agentGuardrails: 'CAP-9',
-  smartModelRouting: 'CAP-10',
+  codeGraph:               'CAP-1',
+  outputCompression:       'CAP-2',
+  verbosityControl:        'CAP-3',
+  sessionManagement:       'CAP-4',
+  semanticCache:           'CAP-5',
+  astSkeleton:             'CAP-6',
+  contextExclusion:        'CAP-7',
+  diffOnlyOutput:          'CAP-8',
+  agentGuardrails:         'CAP-9',
+  smartModelRouting:       'CAP-10',
+  gitDiffContext:          'CAP-11',
+  kvCacheAlignment:        'CAP-12',
+  commentStripper:         'CAP-13',
+  testFailureIsolator:     'CAP-14',
+  rangeSlicing:            'CAP-15',
+  inlineChatScopePinning:  'CAP-16',
+  copilotIgnoreGeneration: 'CAP-17',
+  copilotEditsAwareness:   'CAP-18',
+  threadResetTrigger:      'CAP-19',
 };
 
 export const PROFILE_DESCRIPTIONS: Record<string, string> = {
