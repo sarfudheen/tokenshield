@@ -11,47 +11,51 @@ export class ClaudeGenerator extends BaseInstructionGenerator {
 
     if (strategies.codeGraph) {
       sections.push(`### CodeGraph Pre-Indexing (CAP-1)
-- Query codegraph_explore before broad grep searches.`);
+- **MANDATORY**: Query \`codegraph_explore\` before broad grep searches.
+- **FORBIDDEN**: Never run wide file greps when CodeGraph index is available.`);
     }
 
     if (strategies.outputCompression) {
       sections.push(`### RTK Output Compression (CAP-2)
-- Pipe command execution through rtk filters to minimize context consumption.`);
+- **MANDATORY**: Pipe shell executions through \`rtk\` filters (\`rtk git\`, \`rtk test\`, \`rtk ls\`).
+- **FORBIDDEN**: Never run raw \`git\` commands directly in terminal.`);
     }
 
     if (strategies.verbosityControl) {
       sections.push(`### Verbosity Reduction (CAP-3: Caveman mode)
-- Concise, dense output. Zero preambles or chit-chat.`);
+- **MANDATORY**: Answer code-first and densely. Zero preambles, summaries, or conversational sign-offs.`);
     }
 
     if (strategies.sessionManagement) {
       sections.push(`### Context Hygiene (CAP-4)
-- Maintain tight session scope and avoid accumulating redundant conversation history.`);
+- **MANDATORY**: Maintain tight session scope. Never re-read previously inspected files in the same turn.`);
     }
 
     if (strategies.semanticCache) {
       sections.push(`### Semantic Cache (CAP-5)
-- Leverage token-cache MCP \`cache_lookup\` tool for identical or repeated questions.`);
+- **MANDATORY**: Query \`cache_lookup\` tool for repeated/boilerplate questions before generating new tokens.`);
     }
 
     if (strategies.astSkeleton) {
       sections.push(`### AST Skeleton Pruning (CAP-6)
-- Call \`skeleton_view\` tool first when navigating large source files.`);
+- **MANDATORY**: Call \`skeleton_view\` tool first when navigating large source files (>100 lines).
+- **FORBIDDEN**: Never ingest full function bodies unless actively modifying them (~90% context reduction).`);
     }
 
     if (strategies.contextExclusion) {
       sections.push(`### Context Exclusion (CAP-7)
-- Exclude build/dist artifacts, lockfiles, and minified files.`);
+- **MANDATORY**: Exclude build/dist artifacts, lockfiles, and minified bundles.`);
     }
 
     if (strategies.diffOnlyOutput) {
       sections.push(`### Diff Formatting (CAP-8)
-- Always provide targeted unified diff chunks rather than full file rewrites.`);
+- **MANDATORY**: Always provide targeted unified diff chunks with ±3 lines of context.
+- **FORBIDDEN**: Never reprint unmodified source files or entire classes.`);
     }
 
     if (strategies.agentGuardrails) {
       sections.push(`### Autonomous Guardrails (CAP-9)
-- Halt and ask user clarification after ${config.guardrails.maxRetries} failed attempts.`);
+- **MANDATORY**: Halt and ask user clarification after ${config.guardrails.maxRetries} failed attempts.`);
     }
 
     if (strategies.smartModelRouting) {
@@ -59,10 +63,55 @@ export class ClaudeGenerator extends BaseInstructionGenerator {
 - Recommend lightweight Claude models (Haiku) for boilerplate/trivial edits.`);
     }
 
-    return `# TokenShield Directives for Claude Code
+    if (strategies.gitDiffContext) {
+      sections.push(`### Git Diff Context (CAP-11)
+- **MANDATORY**: Scope review & test tasks strictly to \`git diff\` lines + 1-hop callers.`);
+    }
 
-${MARKER_START}
+    if (strategies.kvCacheAlignment) {
+      sections.push(`### Deterministic Prefix Caching (CAP-12)
+- Maintain stable instruction prefix order across turns to maximize KV cache hits.`);
+    }
+
+    if (strategies.commentStripper) {
+      sections.push(`### Comment Stripping (CAP-13)
+- Strip copyright headers and filler comments on ingestion.`);
+    }
+
+    if (strategies.testFailureIsolator) {
+      sections.push(`### Test Log Isolation (CAP-14)
+- **MANDATORY**: Report only failing test lines, assertions, and line numbers.`);
+    }
+
+    if (strategies.rangeSlicing) {
+      sections.push(`### Range Slicing (CAP-15)
+- **MANDATORY**: Inspect 100-line windows around target symbols instead of full files.`);
+    }
+
+    if (strategies.inlineChatScopePinning) {
+      sections.push(`### Inline Chat Scope (CAP-16)
+- **MANDATORY**: Restrict context to selected editor lines and direct references.`);
+    }
+
+    if (strategies.copilotIgnoreGeneration) {
+      sections.push(`### .copilotignore Compliance (CAP-17)
+- **MANDATORY**: Never read or reference ignored paths.`);
+    }
+
+    if (strategies.copilotEditsAwareness) {
+      sections.push(`### Edit Session Awareness (CAP-18)
+- **MANDATORY**: Do not re-read files already open in the active edit session.`);
+    }
+
+    if (strategies.threadResetTrigger) {
+      sections.push(`### Thread Reset Trigger (CAP-19)
+- Surface a fresh-thread prompt when conversation exceeds 40 messages.`);
+    }
+
+    return `${MARKER_START}
 ${MARKER_COMMENT}
+
+# TokenShield Directives for Claude Code
 
 ## Optimization Directives
 

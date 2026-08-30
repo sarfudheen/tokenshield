@@ -16,6 +16,9 @@ import { startCodeGraphWatcher, runCodeGraphReindex, validateIndex, disposeCodeG
 import { SemanticCacheStore } from './cache/store';
 import { CallLogStore } from './cache/callLog';
 import { startSession } from './session/tracker';
+import { initializeForProject } from './generators/projectInit';
+import * as path from 'path';
+import * as fs from 'fs';
 
 let outputChannel: vscode.OutputChannel;
 let extensionPath: string;
@@ -50,6 +53,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.commands.registerCommand('aiTokenOptimizer.clearCache', clearCacheCommand),
     vscode.commands.registerCommand('aiTokenOptimizer.exportTelemetry', () => exportTelemetryCommand(outputChannel)),
     vscode.commands.registerCommand('aiTokenOptimizer.configureExclusions', () => showExclusionPicker(outputChannel)),
+    vscode.commands.registerCommand('aiTokenOptimizer.initProject', () => initializeForProject(getConfig(), outputChannel)),
     vscode.commands.registerCommand('aiTokenOptimizer.pruneSelection', async () => {
       const editor = vscode.window.activeTextEditor;
       if (!editor) { return; }
@@ -162,6 +166,37 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   // Auto-apply on activation
   if (config.autoApply) {
     await autoApply(config);
+  }
+
+  // First-run nudge: only prompt if NO instructions file exists and user has not dismissed it
+  const wsPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+  if (wsPath) {
+    const candidatePaths = [
+      path.join(wsPath, '.github', 'instructions', 'copilot-instructions.md'),
+      path.join(wsPath, '.github', 'instructions', 'tokenshield.instructions.md'),
+      path.join(wsPath, '.github', 'copilot-instructions.md'),
+      path.join(wsPath, 'AGENTS.md'),
+      path.join(wsPath, 'CLAUDE.md'),
+      path.join(wsPath, '.vscode', 'copilot-instructions.md'),
+    ];
+
+    const hasAnyInstructions = candidatePaths.some(p => fs.existsSync(p));
+    const alreadyDismissed = context.workspaceState.get<boolean>('tokenshield.initPromptDismissed', false);
+
+    if (!hasAnyInstructions && !alreadyDismissed) {
+      vscode.window.showInformationMessage(
+        '🛡️ TokenShield: No project-level Copilot instructions found. Initialize for this project to get stack-specific optimizations?',
+        'Initialize Now',
+        'Do Not Show Again'
+      ).then(async action => {
+        if (action === 'Initialize Now') {
+          await context.workspaceState.update('tokenshield.initPromptDismissed', true);
+          await initializeForProject(config, outputChannel);
+        } else if (action === 'Do Not Show Again') {
+          await context.workspaceState.update('tokenshield.initPromptDismissed', true);
+        }
+      });
+    }
   }
 
   // Start CodeGraph file watcher

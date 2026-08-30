@@ -1,7 +1,9 @@
 import * as vscode from 'vscode';
+import { spawnSync } from 'child_process';
 import { getConfig } from '../core/config';
 import { getActiveModel } from '../models/modelDetector';
 import { readDiskEvents, recordDiskEvent, DiskSavingsEvent } from '../cache/eventLog';
+import { isBinaryAvailable } from '../installer/installer';
 
 export interface ChatSavingsEvent {
   id: string;
@@ -35,6 +37,10 @@ class ChatSavingsTracker {
   private knownEventIds: Set<string> = new Set();
   private syncTimer?: NodeJS.Timeout;
 
+  private lastRtkCommandCount = 0;
+  private lastRtkSavedTokens = 0;
+  private rtkInitialized = false;
+
   constructor() {
     this.sessionStartedAt = new Date();
     this.events = [];
@@ -45,7 +51,7 @@ class ChatSavingsTracker {
   }
 
   private startDiskSync(): void {
-    // Poll disk events every 1.5s to capture tool calls from MCP server & background tasks
+    // Poll disk & RTK events every 1.5s to capture live tool calls & command line proxy savings
     this.syncTimer = setInterval(() => {
       this.syncFromDisk();
     }, 1500);
@@ -54,6 +60,8 @@ class ChatSavingsTracker {
   public syncFromDisk(): void {
     const wsPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
     if (!wsPath) { return; }
+
+    this.syncRtkSavings(wsPath);
 
     const diskEvents = readDiskEvents(wsPath);
     let newEventsAdded = false;
@@ -86,6 +94,64 @@ class ChatSavingsTracker {
         this.events = this.events.slice(0, 100);
       }
       this.notifyListeners();
+    }
+  }
+
+  private syncRtkSavings(wsPath: string): void {
+    if (!isBinaryAvailable('rtk')) { return; }
+
+    try {
+      const res = spawnSync('rtk', ['gain', '-p', '-f', 'json'], {
+        cwd: wsPath,
+        encoding: 'utf-8',
+        timeout: 2500,
+        stdio: ['ignore', 'pipe', 'ignore'],
+      });
+
+      if (!res.stdout) { return; }
+      const data = JSON.parse(res.stdout);
+      const summary = data?.summary;
+      if (!summary || typeof summary.total_saved !== 'number') { return; }
+
+      const totalSaved = summary.total_saved;
+      const totalCmds = summary.total_commands || 0;
+      const avgPct = summary.avg_savings_pct ? Math.round(summary.avg_savings_pct) : 87;
+
+      if (!this.rtkInitialized) {
+        this.rtkInitialized = true;
+        this.lastRtkSavedTokens = totalSaved;
+        this.lastRtkCommandCount = totalCmds;
+
+        // Ingest workspace RTK command savings into active session
+        if (totalSaved > 0) {
+          this.recordEvent(
+            'CAP-2: RTK Compression',
+            'rtk CLI proxy',
+            totalSaved,
+            `Compressed ${totalCmds} shell command(s) (git/test/build) output by ~${avgPct}%`,
+            false
+          );
+        }
+        return;
+      }
+
+      const deltaTokens = totalSaved - this.lastRtkSavedTokens;
+      const deltaCmds = totalCmds - this.lastRtkCommandCount;
+
+      if (deltaTokens > 0 && deltaCmds > 0) {
+        this.lastRtkSavedTokens = totalSaved;
+        this.lastRtkCommandCount = totalCmds;
+
+        this.recordEvent(
+          'CAP-2: RTK Compression',
+          'rtk CLI proxy',
+          deltaTokens,
+          `Compressed ${deltaCmds} shell command(s) (git/test/build) output by ~${avgPct}%`,
+          true
+        );
+      }
+    } catch {
+      // Non-fatal if RTK check fails
     }
   }
 
@@ -146,6 +212,26 @@ class ChatSavingsTracker {
   }
 
   async resetSession(): Promise<ArchivedSession> {
+    const wsPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    if (wsPath && isBinaryAvailable('rtk')) {
+      try {
+        const res = spawnSync('rtk', ['gain', '-p', '-f', 'json'], {
+          cwd: wsPath,
+          encoding: 'utf-8',
+          timeout: 2500,
+          stdio: ['ignore', 'pipe', 'ignore'],
+        });
+        if (res.stdout) {
+          const data = JSON.parse(res.stdout);
+          if (data?.summary?.total_saved !== undefined) {
+            this.lastRtkSavedTokens = data.summary.total_saved;
+            this.lastRtkCommandCount = data.summary.total_commands || 0;
+            this.rtkInitialized = true;
+          }
+        }
+      } catch { /* ignore */ }
+    }
+
     const activeModel = await getActiveModel();
     const archived: ArchivedSession = {
       sessionNumber: this.currentSessionNumber,

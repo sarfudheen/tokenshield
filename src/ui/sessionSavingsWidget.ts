@@ -20,26 +20,30 @@ export function createSessionSavingsWidget(context: vscode.ExtensionContext): vs
     })
   );
 
-  // Register commands
+  // Register the breakdown picker command only — resetSession is owned by extension.ts
+  // to ensure the full handler (archive + statusBar update + dashboard refresh) runs.
   context.subscriptions.push(
-    vscode.commands.registerCommand('aiTokenOptimizer.showSessionBreakdown', showSessionBreakdownQuickPick),
-    vscode.commands.registerCommand('aiTokenOptimizer.resetSession', async () => {
-      const archived = await chatSavingsTracker.resetSession();
-      vscode.window.showInformationMessage(
-        `🛡️ TokenShield: Started new Session #${chatSavingsTracker.getSessionNumber()}! Session #${archived.sessionNumber} archived (${archived.totalTokensSaved.toLocaleString()} tok, $${archived.totalCostSavedUsd.toFixed(4)} saved).`
-      );
-    })
+    vscode.commands.registerCommand('aiTokenOptimizer.showSessionBreakdown', showSessionBreakdownQuickPick)
   );
 
   // Watch .aicache/call-log.json to capture live MCP calls from Antigravity/Claude
   const workspaceFolders = vscode.workspace.workspaceFolders;
   if (workspaceFolders && workspaceFolders.length > 0) {
     const wsPath = workspaceFolders[0].uri.fsPath;
+    const eventsPattern = new vscode.RelativePattern(wsPath, '.aicache/events.json');
+    const eventsWatcher = vscode.workspace.createFileSystemWatcher(eventsPattern);
+    const onEventsChange = () => {
+      chatSavingsTracker.syncFromDisk();
+    };
+    eventsWatcher.onDidChange(onEventsChange);
+    eventsWatcher.onDidCreate(onEventsChange);
+    context.subscriptions.push(eventsWatcher);
+
     const callLogPattern = new vscode.RelativePattern(wsPath, '.aicache/call-log.json');
     callLogWatcher = vscode.workspace.createFileSystemWatcher(callLogPattern);
 
     const onLogChange = () => {
-      syncWithCallLog(wsPath);
+      chatSavingsTracker.syncFromDisk();
     };
 
     callLogWatcher.onDidChange(onLogChange);

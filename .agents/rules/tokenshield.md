@@ -41,31 +41,4 @@
 ### Model Routing (CAP-10)
 - Leverage fast Flash/Haiku models for simple non-reasoning steps.
 
-### Git Diff Context (CAP-11)
-- **MANDATORY**: Scope review & test tasks strictly to `git diff` lines + 1-hop callers.
-
-### Deterministic Prompt Prefix Caching (CAP-12)
-- Maintain stable instruction prefix order across turns to maximize KV cache hits.
-
-### Comment Stripping (CAP-13)
-- Strip copyright headers and filler comments on ingestion.
-
-### Test Log Isolation (CAP-14)
-- **MANDATORY**: Report only failing test lines, assertions, and line numbers.
-
-### Range Slicing (CAP-15)
-- **MANDATORY**: Inspect 100-line windows around target symbols instead of full files.
-
-### Inline Chat Scope (CAP-16)
-- **MANDATORY**: Restrict context to selected editor lines and direct references.
-
-### .copilotignore Compliance (CAP-17)
-- **MANDATORY**: Never read or reference ignored paths.
-
-### Edit Session Awareness (CAP-18)
-- **MANDATORY**: Do not re-read files already open in the active edit session.
-
-### Thread Reset Trigger (CAP-19)
-- Surface a fresh-thread prompt when conversation exceeds 40 messages.
-
 <!-- TOKENSHIELD:END -->

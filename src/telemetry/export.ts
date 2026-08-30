@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { getConfig } from '../core/config';
+import { getConfig, countActiveStrategies, TOTAL_STRATEGIES } from '../core/config';
 import { getRoiEngine } from './roiEngine';
 
 export async function exportExecutiveReport(outputChannel: vscode.OutputChannel): Promise<void> {
@@ -86,7 +86,7 @@ function generateMarkdownReport(summary: import('../core/types').SessionRoiSumma
 |---|---|
 | **Total Avoided Tokens** | **${summary.totalTokensSaved.toLocaleString()} tokens** |
 | **Total Cost Avoidance (USD)** | **$${summary.totalCostSavedUsd.toFixed(4)}** |
-| **Active Optimization Directives** | **10 / 10 Active** |
+| **Active Optimization Directives** | **${countActiveStrategies(config.activeStrategies)} / ${TOTAL_STRATEGIES} Active** |
 | **Local Cache Hits** | ${summary.cacheHits} requests served from disk (0 tokens) |
 | **AST Files Pruned** | ${summary.filesPruned} files inspected via signatures (~90% savings) |
 | **Diff-Only File Modifications** | ${summary.diffEditsCount} edits (~92% output token savings) |
@@ -103,7 +103,7 @@ ${modelRows || `| ${summary.activeModel.family} | ${summary.activeModel.tier.toU
 
 ---
 
-*Report generated on-device by Copilot Token Optimizer. 100% private, zero telemetry transmission.*
+*Report generated on-device by TokenShield. 100% private, zero telemetry transmission.*
 `;
 }
 

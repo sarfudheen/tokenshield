@@ -340,6 +340,16 @@ export class DashboardPanel {
         sessionNum
       ),
       getCapCardState(
+        'CAP-2',
+        'RTK Command Output Filtering',
+        '⚡',
+        'Shell Output Compression Proxy',
+        'Intercepts shell commands (git, test, build, ls, grep) and strips verbose boilerplate logs (60-90% token savings).',
+        measurements.outputCompression,
+        recentEvents,
+        sessionNum
+      ),
+      getCapCardState(
         'CAP-3',
         'Dense Output (Caveman)',
         '🗣️',
@@ -356,6 +366,26 @@ export class DashboardPanel {
         'Multi-Turn Session Pruner',
         'Instructs LLM to clear stale conversational history and drop redundant output logs.',
         measurements.sessionManagement,
+        recentEvents,
+        sessionNum
+      ),
+      getCapCardState(
+        'CAP-5',
+        'Local Semantic Answer Cache',
+        '💾',
+        'Zero-Cost Disk Cache',
+        'Reuses previous answers from local disk at $0.00 cost without querying the LLM.',
+        measurements.semanticCache,
+        recentEvents,
+        sessionNum
+      ),
+      getCapCardState(
+        'CAP-6',
+        'AST Skeleton Pruning',
+        '🌲',
+        'Signatures-Only File Inspection',
+        'Extracts types, classes, interfaces, and function signatures without loading implementation bodies.',
+        measurements.astSkeleton,
         recentEvents,
         sessionNum
       ),
@@ -380,16 +410,6 @@ export class DashboardPanel {
         sessionNum
       ),
       getCapCardState(
-        'CAP-10',
-        'Smart Model Routing',
-        '🚦',
-        'Cost-Aware Model Routing',
-        'Runs routine coding tasks on lightweight models vs $15.00/1M Flagship models (99% cost reduction).',
-        measurements.smartModelRouting,
-        recentEvents,
-        sessionNum
-      ),
-      getCapCardState(
         'CAP-9',
         'Agent Loop Guardrails',
         '🛡️',
@@ -400,12 +420,12 @@ export class DashboardPanel {
         sessionNum
       ),
       getCapCardState(
-        'CAP-2',
-        'RTK Output Compression',
-        '📦',
-        'Terminal & Test Log Trimmer',
-        'Filters out passing test lines and verbose progress spinners before AI ingestion.',
-        measurements.outputCompression,
+        'CAP-10',
+        'Smart Model Routing',
+        '🚦',
+        'Cost-Aware Model Routing',
+        'Runs routine coding tasks on lightweight models vs $15.00/1M Flagship models (99% cost reduction).',
+        measurements.smartModelRouting,
         recentEvents,
         sessionNum
       ),
@@ -456,6 +476,46 @@ export class DashboardPanel {
         'Anti-File Dump Shield',
         'Restricts large-file navigation to targeted 100-line slice windows around symbol declarations.',
         { status: strategies.rangeSlicing ? 'measured' : 'disabled', percent: 80, detail: 'Enforces 100-line window slicing on file reads' },
+        recentEvents,
+        sessionNum
+      ),
+      getCapCardState(
+        'CAP-16',
+        'Inline Chat Scope Pinning',
+        '🎯',
+        'Selected Lines Scope Lock',
+        'Restricts inline chat context strictly to selected lines and immediate 1-hop symbol references.',
+        { status: strategies.inlineChatScopePinning ? 'measured' : 'disabled', percent: 85, detail: 'Locks inline chat context to active selection' },
+        recentEvents,
+        sessionNum
+      ),
+      getCapCardState(
+        'CAP-17',
+        '.copilotignore Context Blocking',
+        '🛡️',
+        'Noise Exclusion Rules',
+        'Enforces project-level .copilotignore rules to block build files, secrets, and generated artifacts.',
+        { status: strategies.copilotIgnoreGeneration ? 'measured' : 'disabled', percent: 90, detail: 'Enforces .copilotignore file exclusion rules' },
+        recentEvents,
+        sessionNum
+      ),
+      getCapCardState(
+        'CAP-18',
+        'Copilot Edits Session Awareness',
+        '🔄',
+        'Active Edit Set Cache',
+        'Treats files open in a multi-file edit session as loaded, avoiding redundant tool re-reads.',
+        { status: strategies.copilotEditsAwareness ? 'measured' : 'disabled', percent: 75, detail: 'Avoids re-reading open edit session files' },
+        recentEvents,
+        sessionNum
+      ),
+      getCapCardState(
+        'CAP-19',
+        'Thread Reset Trigger',
+        '💡',
+        'Context Saturation Monitor',
+        'Proactively suggests fresh chat threads when context length exceeds 40 messages to prevent degradation.',
+        { status: strategies.threadResetTrigger ? 'measured' : 'disabled', percent: 100, detail: 'Surfaces thread reset nudges on long conversations' },
         recentEvents,
         sessionNum
       ),
@@ -793,7 +853,7 @@ export class DashboardPanel {
 
   ${pastSessionsHtml}
 
-  <h2>🛡️ Live Strategy Directives & Measured Workspace Metrics (CAP-1 to CAP-10)</h2>
+  <h2>🛡️ Live Strategy Directives & Measured Workspace Metrics (CAP-1 to CAP-${TOTAL_STRATEGIES})</h2>
   <div class="grid">
     ${cardsHtml}
   </div>

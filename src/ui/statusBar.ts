@@ -113,7 +113,7 @@ async function buildMasterHubMarkdownTooltip(
   md.appendMarkdown(`**Active Optimization Directives (${activeCount}/${TOTAL_STRATEGIES} Active - ${profile.toUpperCase()})**:\n`);
   const rows = [
     { key: strategies.codeGraph, cap: 'CAP-1', name: 'CodeGraph Indexing' },
-    { key: strategies.outputCompression, cap: 'CAP-2', name: 'RTK CLI Compression' },
+    { key: strategies.outputCompression, cap: 'CAP-2', name: 'CLI Output Compression' },
     { key: strategies.verbosityControl, cap: 'CAP-3', name: 'Dense Output (Caveman)' },
     { key: strategies.sessionManagement, cap: 'CAP-4', name: 'Context Hygiene' },
     { key: strategies.semanticCache, cap: 'CAP-5', name: 'Semantic Answer Cache' },
@@ -123,10 +123,14 @@ async function buildMasterHubMarkdownTooltip(
     { key: strategies.agentGuardrails, cap: 'CAP-9', name: 'Loop Guardrails' },
     { key: strategies.smartModelRouting, cap: 'CAP-10', name: 'Smart Model Routing' },
     { key: strategies.gitDiffContext, cap: 'CAP-11', name: 'Git Diff Context' },
-    { key: strategies.kvCacheAlignment, cap: 'CAP-12', name: 'KV-Cache Alignment' },
+    { key: strategies.kvCacheAlignment, cap: 'CAP-12', name: 'KV-Cache (API mode)' },
     { key: strategies.commentStripper, cap: 'CAP-13', name: 'Comment Stripper' },
     { key: strategies.testFailureIsolator, cap: 'CAP-14', name: 'Test Failure Isolator' },
     { key: strategies.rangeSlicing, cap: 'CAP-15', name: 'Windowed Range Slicing' },
+    { key: strategies.inlineChatScopePinning, cap: 'CAP-16', name: 'Inline Chat Scope' },
+    { key: strategies.copilotIgnoreGeneration, cap: 'CAP-17', name: '.copilotignore' },
+    { key: strategies.copilotEditsAwareness, cap: 'CAP-18', name: 'Copilot Edits Aware' },
+    { key: strategies.threadResetTrigger, cap: 'CAP-19', name: 'Thread Reset Nudge' },
   ];
 
   for (const r of rows) {
@@ -166,7 +170,7 @@ async function showMasterHubQuickPick(): Promise<void> {
     {
       label: `$(settings-gear) Switch Optimization Profile (Current: ${config.profile.toUpperCase()})`,
       description: 'Full · Debug · Planning · Review · Custom',
-      detail: 'Instantly toggle presets of the 10 optimization directives.',
+      detail: `Instantly toggle presets of all ${TOTAL_STRATEGIES} optimization directives.`,
     },
     {
       label: `$(filter) Configure Context Exclusions (CAP-7)`,

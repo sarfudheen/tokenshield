@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as os from 'os';
 import { isBinaryAvailable } from '../installer/installer';
 import { MCP_CACHE_SERVER_NAME } from '../core/constants';
 
@@ -210,37 +211,56 @@ export async function configureClaudeMcp(
 }
 
 /**
- * Configure Antigravity MCP server in .agents/mcp_config.json
+ * Configure Antigravity MCP server across workspace and global Antigravity config roots
  */
 export async function configureAntigravityMcp(
   wsPath: string,
   outputChannel: vscode.OutputChannel,
   extensionPath: string
 ): Promise<void> {
-  const agentsDir = path.join(wsPath, '.agents');
-  const mcpConfigPath = path.join(agentsDir, 'mcp_config.json');
-
-  if (!fs.existsSync(agentsDir)) {
-    fs.mkdirSync(agentsDir, { recursive: true });
-  }
-
-  let config: Record<string, unknown> = {};
-  if (fs.existsSync(mcpConfigPath)) {
-    try {
-      config = JSON.parse(fs.readFileSync(mcpConfigPath, 'utf-8'));
-    } catch {
-      config = {};
-    }
-  }
-
-  const mcpServers = (config['mcpServers'] as Record<string, unknown>) || {};
   const serverPath = resolveCacheServerPath(extensionPath, wsPath);
-  mcpServers[MCP_CACHE_SERVER_NAME] = {
+  const serverDef = {
     command: 'node',
     args: [serverPath, wsPath],
   };
 
-  config['mcpServers'] = mcpServers;
-  fs.writeFileSync(mcpConfigPath, JSON.stringify(config, null, 2), 'utf-8');
-  outputChannel.appendLine('[mcp] Updated .agents/mcp_config.json with TokenShield MCP server for Antigravity');
+  const updateConfigFile = (filePath: string, label: string) => {
+    try {
+      const dir = path.dirname(filePath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      let config: Record<string, unknown> = {};
+      if (fs.existsSync(filePath)) {
+        try {
+          config = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+        } catch {
+          config = {};
+        }
+      }
+      const mcpServers = (config['mcpServers'] as Record<string, unknown>) || {};
+      mcpServers[MCP_CACHE_SERVER_NAME] = serverDef;
+      config['mcpServers'] = mcpServers;
+      fs.writeFileSync(filePath, JSON.stringify(config, null, 2), 'utf-8');
+      outputChannel.appendLine(`[mcp] Updated ${label} with TokenShield MCP server for Antigravity`);
+    } catch (err) {
+      outputChannel.appendLine(`[mcp] Failed to update ${label}: ${err}`);
+    }
+  };
+
+  // 1. .agents/mcp_config.json
+  updateConfigFile(path.join(wsPath, '.agents', 'mcp_config.json'), '.agents/mcp_config.json');
+
+  // 2. Root mcp_config.json (if present or in workspace root)
+  const rootMcpPath = path.join(wsPath, 'mcp_config.json');
+  if (fs.existsSync(rootMcpPath)) {
+    updateConfigFile(rootMcpPath, 'mcp_config.json');
+  }
+
+  // 3. Global Antigravity config (~/.gemini/config/mcp_config.json)
+  const homedir = os.homedir();
+  const globalGeminiDir = path.join(homedir, '.gemini', 'config');
+  if (fs.existsSync(globalGeminiDir)) {
+    updateConfigFile(path.join(globalGeminiDir, 'mcp_config.json'), '~/.gemini/config/mcp_config.json');
+  }
 }

@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { getConfig, getEffectiveStrategies, countActiveStrategies, updateProfile, updateStrategies, Profile, TOTAL_STRATEGIES, StrategyState } from '../core/config';
+import { getConfig, getEffectiveStrategies, countActiveStrategies, updateProfile, updateStrategies, Profile, TOTAL_STRATEGIES, StrategyState, PROFILE_STRATEGIES } from '../core/config';
 import { PROFILE_DESCRIPTIONS, STRATEGY_DESCRIPTIONS, STRATEGY_CAP_LABELS } from '../core/constants';
 
 export async function showProfilePicker(): Promise<void> {
@@ -13,7 +13,7 @@ export async function showProfilePicker(): Promise<void> {
 
   const items: vscode.QuickPickItem[] = [
     { label: enabledLabel, description: enabledDesc },
-    { label: '$(check-all) Validate All Directives', description: 'Run live health-check on CAP-1 through CAP-10' },
+    { label: '$(check-all) Validate All Directives', description: `Run live health-check on all ${TOTAL_STRATEGIES} optimization directives (CAP-1 through CAP-${TOTAL_STRATEGIES})` },
     { label: '', kind: vscode.QuickPickItemKind.Separator },
     { label: PROFILE_DESCRIPTIONS.full,     description: config.profile === 'full'     ? '(active)' : '' },
     { label: PROFILE_DESCRIPTIONS.debug,    description: config.profile === 'debug'    ? '(active)' : '' },
@@ -78,18 +78,7 @@ export async function showProfilePicker(): Promise<void> {
   }
 }
 
-const STRATEGY_KEYS: (keyof StrategyState)[] = [
-  'codeGraph',
-  'outputCompression',
-  'verbosityControl',
-  'sessionManagement',
-  'semanticCache',
-  'astSkeleton',
-  'contextExclusion',
-  'diffOnlyOutput',
-  'agentGuardrails',
-  'smartModelRouting',
-];
+const STRATEGY_KEYS = Object.keys(PROFILE_STRATEGIES.full) as (keyof StrategyState)[];
 
 async function showStrategyToggle(): Promise<void> {
   const config = getConfig();

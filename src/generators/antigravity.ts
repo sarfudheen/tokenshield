@@ -29,47 +29,53 @@ export class AntigravityGenerator extends BaseInstructionGenerator {
 
     if (strategies.codeGraph) {
       sections.push(`### CodeGraph Pre-Indexing (CAP-1)
-- Query codegraph_explore / graph index before running wide grep searches.`);
+- **MANDATORY**: Query \`codegraph_explore\` before broad grep searches.
+- **FORBIDDEN**: Never run wide file greps when CodeGraph index is available.`);
     }
 
     if (strategies.outputCompression) {
       sections.push(`### RTK Command Output Filtering (CAP-2)
-- Execute shell tasks through RTK filters when running tests or git inspections.`);
+- **MANDATORY**: Execute shell commands through RTK filters (\`rtk git\`, \`rtk test\`, \`rtk ls\`).
+- **FORBIDDEN**: Never invoke raw \`git\` commands directly in terminal.`);
     }
 
     if (strategies.verbosityControl) {
       sections.push(`### Dense Precision Output (CAP-3)
-- Answer directly with actionable diffs and zero pleasantries.`);
+- **MANDATORY**: Answer directly with actionable diffs and zero pleasantries.
+- **FORBIDDEN**: Never include preambles, intros, or chit-chat.`);
     }
 
     if (strategies.sessionManagement) {
       sections.push(`### Session Hygiene (CAP-4)
-- Keep task state concise and avoid repeated context accumulation.`);
+- **MANDATORY**: Keep task state concise and reuse loaded symbol memory.
+- **FORBIDDEN**: Never re-read previously inspected files in the same turn.`);
     }
 
     if (strategies.semanticCache) {
       sections.push(`### Local MCP Semantic Cache (CAP-5)
-- Query token-cache tool \`cache_lookup\` to reuse proven answers from local disk.`);
+- **MANDATORY**: Query \`cache_lookup\` tool for repeated/boilerplate answers.`);
     }
 
     if (strategies.astSkeleton) {
       sections.push(`### AST Skeleton Pruning (CAP-6)
-- Call \`skeleton_view\` MCP tool first when navigating repository files to load signatures only (~90% savings).`);
+- **MANDATORY**: Call \`skeleton_view\` MCP tool first when navigating files to load signatures only (~90% savings).
+- **FORBIDDEN**: Never ingest full function bodies unless actively modifying them.`);
     }
 
     if (strategies.contextExclusion) {
       sections.push(`### Context Exclusions (CAP-7)
-- Exclude generated assets, lockfiles (*.lock, package-lock.json), and bundle artifacts (dist/, build/) from context.`);
+- **MANDATORY**: Exclude lock files (\`*.lock\`, \`package-lock.json\`), build outputs (\`dist/\`, \`build/\`), and minified assets.`);
     }
 
     if (strategies.diffOnlyOutput) {
       sections.push(`### Unified Diff Formatting (CAP-8)
-- Always propose code edits as targeted unified diff chunks with line context.`);
+- **MANDATORY**: Always propose code edits as targeted unified diff chunks with ±3 lines of context.
+- **FORBIDDEN**: Never reprint unmodified files or entire classes.`);
     }
 
     if (strategies.agentGuardrails) {
       sections.push(`### Autonomous Guardrails (CAP-9)
-- Abort infinite retry cycles after ${config.guardrails.maxRetries} failures and summarize blocker.`);
+- **MANDATORY**: Abort retry cycles after ${config.guardrails.maxRetries} failures and summarize blocker.`);
     }
 
     if (strategies.smartModelRouting) {
@@ -77,10 +83,55 @@ export class AntigravityGenerator extends BaseInstructionGenerator {
 - Leverage fast Flash/Haiku models for simple non-reasoning steps.`);
     }
 
-    return `# Antigravity TokenShield Directives
+    if (strategies.gitDiffContext) {
+      sections.push(`### Git Diff Context (CAP-11)
+- **MANDATORY**: Scope review & test tasks strictly to \`git diff\` lines + 1-hop callers.`);
+    }
 
-${MARKER_START}
+    if (strategies.kvCacheAlignment) {
+      sections.push(`### Deterministic Prompt Prefix Caching (CAP-12)
+- Maintain stable instruction prefix order across turns to maximize KV cache hits.`);
+    }
+
+    if (strategies.commentStripper) {
+      sections.push(`### Comment Stripping (CAP-13)
+- Strip copyright headers and filler comments on ingestion.`);
+    }
+
+    if (strategies.testFailureIsolator) {
+      sections.push(`### Test Log Isolation (CAP-14)
+- **MANDATORY**: Report only failing test lines, assertions, and line numbers.`);
+    }
+
+    if (strategies.rangeSlicing) {
+      sections.push(`### Range Slicing (CAP-15)
+- **MANDATORY**: Inspect 100-line windows around target symbols instead of full files.`);
+    }
+
+    if (strategies.inlineChatScopePinning) {
+      sections.push(`### Inline Chat Scope (CAP-16)
+- **MANDATORY**: Restrict context to selected editor lines and direct references.`);
+    }
+
+    if (strategies.copilotIgnoreGeneration) {
+      sections.push(`### .copilotignore Compliance (CAP-17)
+- **MANDATORY**: Never read or reference ignored paths.`);
+    }
+
+    if (strategies.copilotEditsAwareness) {
+      sections.push(`### Edit Session Awareness (CAP-18)
+- **MANDATORY**: Do not re-read files already open in the active edit session.`);
+    }
+
+    if (strategies.threadResetTrigger) {
+      sections.push(`### Thread Reset Trigger (CAP-19)
+- Surface a fresh-thread prompt when conversation exceeds 40 messages.`);
+    }
+
+    return `${MARKER_START}
 ${MARKER_COMMENT}
+
+# Antigravity TokenShield Directives
 
 ## Active Directives
 
