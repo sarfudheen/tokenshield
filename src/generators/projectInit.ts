@@ -64,56 +64,56 @@ const STACK_LABELS: Record<ProjectStack, string> = {
 const STACK_DIRECTIVES: Record<ProjectStack, string> = {
   node: `## Project Stack: Node.js / TypeScript
 - Never read \`node_modules/\` — use \`npm ls <pkg>\` or type declarations instead.
-- Run tests with \`npm test -- --reporter=min\` to get failure-only output (CAP-14).
+- Run tests with \`npm test -- --reporter=min\` to get failure-only output (Test Failure Isolator).
 - Prefer \`npx tsc --noEmit\` over full builds to check types without emitting.
 - Lock file is \`package-lock.json\` / \`yarn.lock\` — never modify or ingest it.
 - For imports, resolve from \`tsconfig.json\` paths before suggesting new deps.`,
 
   python: `## Project Stack: Python
 - Never read \`.venv/\`, \`venv/\`, \`__pycache__/\`, or \`*.pyc\` files.
-- Run tests with \`pytest -q --tb=short\` for compressed failure output (CAP-14).
+- Run tests with \`pytest -q --tb=short\` for compressed failure output (Test Failure Isolator).
 - Use \`python -m mypy --ignore-missing-imports\` for type checks.
 - Lock file is \`poetry.lock\` / \`Pipfile.lock\` — treat as read-only context.
 - Prefer \`importlib.resources\` over relative \`__file__\` path hacks.`,
 
   go: `## Project Stack: Go
 - Never read \`vendor/\` directory — use \`go list -m all\` instead.
-- Run tests with \`go test ./... -v 2>&1 | grep -E 'FAIL|PASS|---'\` (CAP-14).
+- Run tests with \`go test ./... -v 2>&1 | grep -E 'FAIL|PASS|---'\` (Test Failure Isolator).
 - Use \`go vet ./...\` and \`staticcheck\` before suggesting fixes.
 - \`go.sum\` is auto-generated — never modify or include it in context.
 - Prefer table-driven tests (\`tt\` pattern) over individual test functions.`,
 
   rust: `## Project Stack: Rust
 - Never read \`target/\` directory — it can be hundreds of MB.
-- Run tests with \`cargo test 2>&1 | grep -E 'FAILED|test result'\` (CAP-14).
+- Run tests with \`cargo test 2>&1 | grep -E 'FAILED|test result'\` (Test Failure Isolator).
 - Use \`cargo check\` (no codegen) for fast type/borrow checking.
 - \`Cargo.lock\` — treat as read-only; for binaries it is committed, for libs it is not.
 - Prefer \`clippy\` suggestions: run \`cargo clippy -- -D warnings\`.`,
 
   java: `## Project Stack: Java / Kotlin (JVM)
 - Never read \`target/\`, \`build/\`, or \`*.class\` files.
-- Run tests with \`mvn test -q\` or \`./gradlew test --quiet\` (CAP-14).
+- Run tests with \`mvn test -q\` or \`./gradlew test --quiet\` (Test Failure Isolator).
 - Use \`javac -proc:only\` for annotation processing checks without full compile.
 - Gradle/Maven lock files are auto-generated — treat as read-only.
 - Prefer referencing existing interfaces and abstract classes before creating new ones.`,
 
   dotnet: `## Project Stack: .NET / C#
 - Never read \`bin/\`, \`obj/\`, or \`*.dll\` files.
-- Run tests with \`dotnet test --logger "console;verbosity=minimal"\` (CAP-14).
+- Run tests with \`dotnet test --logger "console;verbosity=minimal"\` (Test Failure Isolator).
 - Use \`dotnet build --no-restore\` for incremental builds.
 - NuGet \`packages.lock.json\` — treat as read-only context.
 - Prefer existing \`IServiceCollection\` extension patterns for DI registration.`,
 
   ruby: `## Project Stack: Ruby
 - Never read \`.bundle/\`, \`vendor/bundle/\`, or compiled gems.
-- Run tests with \`bundle exec rspec --format progress\` for compact output (CAP-14).
+- Run tests with \`bundle exec rspec --format progress\` for compact output (Test Failure Isolator).
 - Use \`bundle exec rubocop --format clang\` for lint output.
 - \`Gemfile.lock\` — treat as read-only; never modify.
 - Prefer \`ActiveSupport::Concern\` patterns over raw \`module\` includes in Rails.`,
 
   php: `## Project Stack: PHP
 - Never read \`vendor/\` — use \`composer show <pkg>\` for dependency info.
-- Run tests with \`./vendor/bin/phpunit --testdox\` for readable output (CAP-14).
+- Run tests with \`./vendor/bin/phpunit --testdox\` for readable output (Test Failure Isolator).
 - Use \`composer validate\` to check \`composer.json\` integrity.
 - \`composer.lock\` — treat as read-only context.
 - Prefer PSR-4 autoloading paths when suggesting new class locations.`,
@@ -373,7 +373,7 @@ name: "TokenShield Optimizer"
 description: >
   Token and cost optimization agent. Use this agent to analyze
   prompt efficiency, suggest context pruning, and enforce the
-  19 CAP optimization directives.
+  19 optimization features.
 tools:
   - search/codebase
   - terminal
@@ -381,10 +381,10 @@ tools:
 
 # TokenShield Optimizer Agent
 
-You enforce the TokenShield CAP optimization directives for this project.
+You enforce TokenShield optimization standards for this project.
 
-## Active Directives
-Read \`.github/instructions/tokenshield.instructions.md\` for the full list of active CAP directives.
+## Active Optimizations
+Read \`.github/instructions/tokenshield.instructions.md\` for the full list of active features.
 `;
     fs.writeFileSync(agentPath, agentContent, 'utf-8');
     outputChannel.appendLine(`[initProject] Scaffolded agent: ${agentPath}`);
@@ -400,14 +400,14 @@ Read \`.github/instructions/tokenshield.instructions.md\` for the full list of a
 name: tokenshield-optimize
 description: >
   Analyze current AI interaction patterns and suggest token/cost
-  optimizations using TokenShield's 19 CAP directives.
+  optimizations using TokenShield's 19 optimization features.
 ---
 
 # TokenShield Optimization Skill
 
-Invoke this skill to analyze prompt efficiency and apply TokenShield CAP directives.
+Invoke this skill to analyze prompt efficiency and apply TokenShield optimizations.
 
-## Directives
+## Active Optimizations
 Read \`.github/instructions/tokenshield.instructions.md\` for active optimization rules.
 `;
     fs.writeFileSync(skillPath, skillContent, 'utf-8');

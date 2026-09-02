@@ -51,7 +51,7 @@ export class RepositoryMetricsCollector implements MetricsCollector<RepositoryMe
 
     if (results.length === 0) {
       const why = sqlite
-        ? 'No indexed CodeGraph database found — run "AI Token Optimizer: Reindex CodeGraph".'
+        ? 'No indexed CodeGraph database found — run "TokenShield: Reindex Code Graph".'
         : 'sqlite3 CLI not found and `codegraph status` returned nothing — install sqlite3 or reindex.';
       return { collector: this.id, collectedAt, status: 'unavailable', detail: why };
     }

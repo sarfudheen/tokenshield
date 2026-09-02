@@ -103,7 +103,7 @@ export function startCodeGraphWatcher(outputChannel: vscode.OutputChannel): vsco
   disposables.push(fileWatcher);
 
   if (!isCodeGraphInstalled()) {
-    outputChannel.appendLine('[codegraph] codegraph CLI not found — running in instruction-only mode (CAP-1 rules active via instruction files)');
+    outputChannel.appendLine('[codegraph] codegraph CLI not found — running in instruction-only mode (symbol search rules active via instruction files)');
     updateIndexStatusBar('missing');
   } else {
     const projects = getProjectsToIndex();
@@ -121,7 +121,7 @@ export function startCodeGraphWatcher(outputChannel: vscode.OutputChannel): vsco
 
 export async function runCodeGraphReindex(outputChannel: vscode.OutputChannel): Promise<void> {
   if (!isCodeGraphInstalled()) {
-    outputChannel.appendLine('[codegraph] codegraph CLI not found — instruction-based search rules are active (CAP-1)');
+    outputChannel.appendLine('[codegraph] codegraph CLI not found — instruction-based search rules are active');
     outputChannel.appendLine('[codegraph] To enable index-based search: install codegraph separately and restart VS Code.');
     updateIndexStatusBar('missing');
     pendingChangedFiles.clear();
@@ -222,7 +222,7 @@ export async function validateIndex(outputChannel: vscode.OutputChannel): Promis
       'Index Now', 'Manage Projects', 'Cancel'
     );
     if (choice === 'Index Now') { await runCodeGraphReindex(outputChannel); }
-    else if (choice === 'Manage Projects') { await vscode.commands.executeCommand('aiTokenOptimizer.manageProjects'); }
+    else if (choice === 'Manage Projects') { await vscode.commands.executeCommand('tokenshield.manageProjects'); }
   } else {
     vscode.window.showInformationMessage(`CodeGraph: All ${projects.length} project(s) fresh. Last: ${lastIndexedAt?.toLocaleTimeString() ?? 'this session'}`);
   }
@@ -231,7 +231,7 @@ export async function validateIndex(outputChannel: vscode.OutputChannel): Promis
 function updateIndexStatusBar(state: 'idle' | 'pending' | 'indexing' | 'fresh' | 'stale' | 'error' | 'missing'): void {
   currentCodeGraphState = state;
   try {
-    vscode.commands.executeCommand('aiTokenOptimizer.updateStatusBarHook');
+    vscode.commands.executeCommand('tokenshield.refreshStatus');
   } catch { /* ignore */ }
 }
 

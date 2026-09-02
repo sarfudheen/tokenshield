@@ -34,13 +34,13 @@ function primaryWorkspacePath(): string | undefined {
   return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
 }
 
-/** CAP-1: CodeGraph */
+/** CodeGraph Pre-Indexing */
 export function measureCodeGraph(strategies: StrategyState): Measurement {
   if (!strategies.codeGraph) {
     return { status: 'disabled', detail: 'Strategy disabled in current profile' };
   }
   if (!isBinaryAvailable('codegraph')) {
-    return { status: 'unavailable', detail: 'codegraph binary not installed — run "AI Token Optimizer: Install Optimization Tools"' };
+    return { status: 'unavailable', detail: 'codegraph binary not installed — run "TokenShield: Setup CLI Tools"' };
   }
 
   const projects = getProjectsToIndex();
@@ -69,7 +69,7 @@ function measureCodeGraphLive(projects: Array<{ name: string; absPath: string }>
   }
 
   if (indexedCount === 0) {
-    return { status: 'no-data', detail: `${projects.length} project(s) configured, none indexed yet — run "AI Token Optimizer: Reindex CodeGraph"` };
+    return { status: 'no-data', detail: `${projects.length} project(s) configured, none indexed yet — run "TokenShield: Reindex Code Graph"` };
   }
 
   const freshness = staleCount === 0 ? 'up to date' : `${staleCount}/${indexedCount} project(s) stale — reindex recommended`;
@@ -79,13 +79,13 @@ function measureCodeGraphLive(projects: Array<{ name: string; absPath: string }>
   };
 }
 
-/** CAP-2: RTK Output Compression */
+/** CLI Output Compression */
 export function measureRtk(strategies: StrategyState): Measurement {
   if (!strategies.outputCompression) {
     return { status: 'disabled', detail: 'Strategy disabled in current profile' };
   }
   if (!isBinaryAvailable('rtk')) {
-    return { status: 'unavailable', detail: 'rtk binary not installed — run "AI Token Optimizer: Install Optimization Tools"' };
+    return { status: 'unavailable', detail: 'rtk binary not installed — run "TokenShield: Setup CLI Tools"' };
   }
   const ws = primaryWorkspacePath();
   if (!ws) {
@@ -111,7 +111,7 @@ function measureRtkLive(ws: string): Measurement {
   };
 }
 
-/** CAP-3: Caveman Verbosity */
+/** Concise Responses */
 export function measureVerbosity(strategies: StrategyState): Measurement {
   if (!strategies.verbosityControl) {
     return { status: 'disabled', detail: 'Strategy disabled in current profile' };
@@ -123,7 +123,7 @@ export function measureVerbosity(strategies: StrategyState): Measurement {
   };
 }
 
-/** CAP-4: Session Management */
+/** Context Compaction & Session Hygiene */
 export function measureSession(strategies: StrategyState): Measurement {
   if (!strategies.sessionManagement) {
     return { status: 'disabled', detail: 'Strategy disabled in current profile' };
@@ -134,7 +134,7 @@ export function measureSession(strategies: StrategyState): Measurement {
   };
 }
 
-/** CAP-5: Semantic Cache */
+/** Semantic Cache */
 export function measureSemanticCache(strategies: StrategyState): Measurement {
   if (!strategies.semanticCache) {
     return { status: 'disabled', detail: 'Strategy disabled in current profile' };
@@ -157,7 +157,7 @@ export function measureSemanticCache(strategies: StrategyState): Measurement {
   };
 }
 
-/** CAP-5 MCP Tool Calls */
+/** Semantic Cache MCP Tool Calls */
 export function measureCacheCalls(strategies: StrategyState): Measurement {
   if (!strategies.semanticCache) {
     return { status: 'disabled', detail: 'Strategy disabled in current profile' };
@@ -177,7 +177,7 @@ export function measureCacheCalls(strategies: StrategyState): Measurement {
   };
 }
 
-/** CAP-6: AST Skeleton */
+/** AST Skeletons */
 export function measureAstSkeleton(strategies: StrategyState): Measurement {
   if (!strategies.astSkeleton) {
     return { status: 'disabled', detail: 'Strategy disabled in current profile' };
@@ -229,7 +229,7 @@ export function measureAstSkeleton(strategies: StrategyState): Measurement {
   };
 }
 
-/** CAP-7: Context Exclusion */
+/** Smart Context Exclusions */
 export function measureContextExclusion(strategies: StrategyState): Measurement {
   if (!strategies.contextExclusion) {
     return { status: 'disabled', detail: 'Strategy disabled in current profile' };
@@ -246,7 +246,7 @@ export function measureContextExclusion(strategies: StrategyState): Measurement 
   };
 }
 
-/** CAP-8: Diff-Only Output */
+/** Diff-Only Output */
 export function measureDiffOnly(strategies: StrategyState): Measurement {
   if (!strategies.diffOnlyOutput) {
     return { status: 'disabled', detail: 'Strategy disabled in current profile' };
@@ -258,7 +258,7 @@ export function measureDiffOnly(strategies: StrategyState): Measurement {
   };
 }
 
-/** CAP-9: Agent Guardrails */
+/** Loop Guardrails */
 export function measureGuardrails(strategies: StrategyState): Measurement {
   if (!strategies.agentGuardrails) {
     return { status: 'disabled', detail: 'Strategy disabled in current profile' };
@@ -272,7 +272,7 @@ export function measureGuardrails(strategies: StrategyState): Measurement {
   };
 }
 
-/** CAP-10: Smart Model Routing */
+/** Smart Model Routing */
 export function measureModelRouting(strategies: StrategyState): Measurement {
   if (!strategies.smartModelRouting) {
     return { status: 'disabled', detail: 'Strategy disabled in current profile' };

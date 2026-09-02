@@ -3,7 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
 
-suite('Claude Code MCP configuration (CAP-5 wiring)', () => {
+suite('Claude Code MCP configuration (token-cache wiring)', () => {
   let tmpDir: string;
   let claudeConfigPath: string;
   let fakeOutputChannel: { appendLine: (s: string) => void; lines: string[] };

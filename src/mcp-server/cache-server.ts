@@ -63,7 +63,7 @@ const TOOL_DEFINITIONS = [
   {
     name: 'skeleton_view',
     description:
-      'CAP-6: Retrieve an AST skeleton (signatures, types, interfaces, classes) of a source file ' +
+      'Retrieve an AST skeleton (signatures, types, interfaces, classes) of a source file ' +
       'without loading full function implementations. Saves 75-95% tokens compared to full file reads. ' +
       'Always call this first when exploring code; specify expandFunctions to get implementation for specific functions.',
     inputSchema: {
@@ -96,7 +96,7 @@ const TOOL_DEFINITIONS = [
   {
     name: 'prune_git_diff',
     description:
-      'CAP-11: Compress a git diff payload by removing binary headers, index hashes, and redundant metadata. Saves ~85% tokens on PR and code review context.',
+      'Compress a git diff payload by removing binary headers, index hashes, and redundant metadata. Saves ~85% tokens on PR and code review context.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -108,7 +108,7 @@ const TOOL_DEFINITIONS = [
   {
     name: 'strip_comments',
     description:
-      'CAP-13: Strip copyright license preambles, JSDoc filler, and standalone line comments from source code while preserving compiler directives.',
+      'Strip copyright license preambles, JSDoc filler, and standalone line comments from source code while preserving compiler directives.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -120,7 +120,7 @@ const TOOL_DEFINITIONS = [
   {
     name: 'isolate_test_failures',
     description:
-      'CAP-14: Filter verbose test runner logs (Jest, Mocha, Vitest, Pytest, Go) to isolate only the failing assertions, line numbers, and diffs.',
+      'Filter verbose test runner logs (Jest, Mocha, Vitest, Pytest, Go) to isolate only the failing assertions, line numbers, and diffs.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -146,7 +146,7 @@ function callTool(name: string, args: Record<string, unknown>): unknown {
       if (result.hit && result.answer) {
         const saved = Math.max(1, Math.ceil(result.answer.length / 3.8));
         recordDiskEvent(workspaceRoot, {
-          directive: 'CAP-5: Semantic Cache',
+          directive: 'Semantic Cache',
           source: args.query.length > 50 ? args.query.slice(0, 47) + '...' : args.query,
           tokensSaved: saved,
           details: `Answer (${result.answer.length} bytes, ~${saved} tok) served from local disk at $0.00 (${result.exact ? 'exact' : 'fuzzy'} match in <2ms)`,
@@ -166,7 +166,7 @@ function callTool(name: string, args: Record<string, unknown>): unknown {
       callLog.recordStore();
       const saved = Math.max(1, Math.ceil(args.answer.length / 3.8));
       recordDiskEvent(workspaceRoot, {
-        directive: 'CAP-5: Semantic Cache',
+        directive: 'Semantic Cache',
         source: args.query.length > 50 ? args.query.slice(0, 47) + '...' : args.query,
         tokensSaved: saved,
         details: `Stored reusable ${scope} answer (~${saved} tok avoided on next hit) in .aicache/semantic-cache.json`,
@@ -188,7 +188,7 @@ function callTool(name: string, args: Record<string, unknown>): unknown {
       const skelTok = result.skeletonTokensEst;
       const saved = Math.max(0, origTok - skelTok);
       recordDiskEvent(workspaceRoot, {
-        directive: 'CAP-6: AST Skeleton',
+        directive: 'AST Skeletons',
         source: args.file,
         tokensSaved: saved,
         details: `Extracted interface signatures (${result.originalBytes} B ➔ ${result.skeletonBytes} B, ${result.reductionPercent}% tokens saved)`,
@@ -203,7 +203,7 @@ function callTool(name: string, args: Record<string, unknown>): unknown {
       const saved = Math.max(0, result.originalTokensEst - result.prunedTokensEst);
       if (saved > 0) {
         recordDiskEvent(workspaceRoot, {
-          directive: 'CAP-3: Dense Output',
+          directive: 'Concise Responses',
           source: 'Prompt Context',
           tokensSaved: saved,
           details: `Pruned context (-${result.reductionPercent}% tokens saved: ${result.originalTokensEst} ➔ ${result.prunedTokensEst} tok)`,
@@ -219,7 +219,7 @@ function callTool(name: string, args: Record<string, unknown>): unknown {
       const saved = Math.max(0, result.originalTokensEst - result.prunedTokensEst);
       if (saved > 0) {
         recordDiskEvent(workspaceRoot, {
-          directive: 'CAP-11: Git Diff Context',
+          directive: 'Git Diff Scoping',
           source: 'rtk git diff HEAD',
           tokensSaved: saved,
           details: `Compressed git diff (-${result.reductionPercent}% tokens saved: ${result.originalTokensEst} ➔ ${result.prunedTokensEst} tok)`,
@@ -235,7 +235,7 @@ function callTool(name: string, args: Record<string, unknown>): unknown {
       const saved = Math.max(0, Math.ceil((args.code.length - pruned.length) / 3.8));
       if (saved > 0) {
         recordDiskEvent(workspaceRoot, {
-          directive: 'CAP-13: Comment Stripper',
+          directive: 'Comment & Header Stripper',
           source: 'Source Code',
           tokensSaved: saved,
           details: `Stripped license headers & filler comments (${args.code.length} B ➔ ${pruned.length} B)`,
@@ -251,7 +251,7 @@ function callTool(name: string, args: Record<string, unknown>): unknown {
       const saved = Math.max(0, result.originalTokensEst - result.prunedTokensEst);
       if (saved > 0) {
         recordDiskEvent(workspaceRoot, {
-          directive: 'CAP-14: Test Failure Isolator',
+          directive: 'Test Failure Isolator',
           source: 'Test Runner Log',
           tokensSaved: saved,
           details: `Isolated failing assertions (-${result.reductionPercent}% tokens saved: ${result.originalTokensEst} ➔ ${result.prunedTokensEst} tok)`,

@@ -17,7 +17,6 @@ type Status = 'ok' | 'warn' | 'error' | 'disabled';
 
 interface CategoryResult {
   category: string;
-  cap: string;
   status: Status;
   lines: string[];
 }
@@ -64,7 +63,7 @@ function icon(status: Status): string {
   return { ok: '✓', warn: '⚠', error: '✗', disabled: '○' }[status];
 }
 
-// ─── CAP-1: CodeGraph ────────────────────────────────────────────────────────
+// ─── CodeGraph ────────────────────────────────────────────────────────
 
 async function validateCodeGraph(): Promise<CategoryResult> {
   const config = getConfig();
@@ -73,13 +72,13 @@ async function validateCodeGraph(): Promise<CategoryResult> {
   let status: Status = 'ok';
 
   if (!strategies.codeGraph) {
-    return { category: 'CodeGraph', cap: 'CAP-1', status: 'disabled', lines: ['Strategy disabled in current profile'] };
+    return { category: 'CodeGraph', status: 'disabled', lines: ['Strategy disabled in current profile'] };
   }
 
   const installed = isBinaryAvailable('codegraph');
   if (!installed) {
     return {
-      category: 'CodeGraph', cap: 'CAP-1', status: 'warn',
+      category: 'CodeGraph', status: 'warn',
       lines: [
         'codegraph binary not installed — running in instruction-only search mode',
         'Optional CLI install: npm install -g @colbymchenry/codegraph',
@@ -109,10 +108,10 @@ async function validateCodeGraph(): Promise<CategoryResult> {
     }
   }
 
-  return { category: 'CodeGraph', cap: 'CAP-1', status, lines };
+  return { category: 'CodeGraph', status, lines };
 }
 
-// ─── CAP-2: RTK / CLI Compression ───────────────────────────────────────────
+// ─── RTK / CLI Compression ───────────────────────────────────────────
 
 async function validateRtk(): Promise<CategoryResult> {
   const config = getConfig();
@@ -120,13 +119,13 @@ async function validateRtk(): Promise<CategoryResult> {
   const lines: string[] = [];
 
   if (!strategies.outputCompression) {
-    return { category: 'CLI Output Compression', cap: 'CAP-2', status: 'disabled', lines: ['Strategy disabled in current profile'] };
+    return { category: 'CLI Output Compression', status: 'disabled', lines: ['Strategy disabled in current profile'] };
   }
 
   const installed = isBinaryAvailable('rtk');
   if (!installed) {
     return {
-      category: 'CLI Output Compression', cap: 'CAP-2', status: 'ok',
+      category: 'CLI Output Compression', status: 'ok',
       lines: [
         '  ✓ Universal CLI compression rules active in instructions (test failure filtering & git status summaries)',
         '  ○ Optional rtk binary not found on PATH — running in universal instruction mode',
@@ -143,10 +142,10 @@ async function validateRtk(): Promise<CategoryResult> {
     lines.push(`Hook status: ${hookLine}`);
   }
 
-  return { category: 'CLI Output Compression', cap: 'CAP-2', status: 'ok', lines };
+  return { category: 'CLI Output Compression', status: 'ok', lines };
 }
 
-// ─── CAP-3: Verbosity Control ────────────────────────────────────────────────
+// ─── Verbosity Control ────────────────────────────────────────────────
 
 async function validateVerbosity(): Promise<CategoryResult> {
   const config = getConfig();
@@ -154,15 +153,15 @@ async function validateVerbosity(): Promise<CategoryResult> {
   const lines: string[] = [];
 
   if (!strategies.verbosityControl) {
-    return { category: 'Verbosity Control', cap: 'CAP-3', status: 'disabled', lines: ['Strategy disabled in current profile'] };
+    return { category: 'Verbosity Control', status: 'disabled', lines: ['Strategy disabled in current profile'] };
   }
 
   lines.push(`Verbosity level: ${config.verbosityLevel} mode`);
   lines.push('  ✓ Active in Copilot instructions');
-  return { category: 'Verbosity Control', cap: 'CAP-3', status: 'ok', lines };
+  return { category: 'Verbosity Control', status: 'ok', lines };
 }
 
-// ─── CAP-4: Session Management ───────────────────────────────────────────────
+// ─── Session Management ───────────────────────────────────────────────
 
 async function validateSession(): Promise<CategoryResult> {
   const config = getConfig();
@@ -170,14 +169,14 @@ async function validateSession(): Promise<CategoryResult> {
   const lines: string[] = [];
 
   if (!strategies.sessionManagement) {
-    return { category: 'Session Management', cap: 'CAP-4', status: 'disabled', lines: ['Strategy disabled in current profile'] };
+    return { category: 'Session Management', status: 'disabled', lines: ['Strategy disabled in current profile'] };
   }
 
   lines.push('  ✓ Session & context hygiene rules active in instructions');
-  return { category: 'Session Management', cap: 'CAP-4', status: 'ok', lines };
+  return { category: 'Session Management', status: 'ok', lines };
 }
 
-// ─── CAP-5: Semantic Cache ───────────────────────────────────────────────────
+// ─── Semantic Cache ───────────────────────────────────────────────────
 
 async function validateSemanticCache(): Promise<CategoryResult> {
   const config = getConfig();
@@ -186,12 +185,12 @@ async function validateSemanticCache(): Promise<CategoryResult> {
   let status: Status = 'ok';
 
   if (!strategies.semanticCache) {
-    return { category: 'Semantic Cache', cap: 'CAP-5', status: 'disabled', lines: ['Strategy disabled in current profile'] };
+    return { category: 'Semantic Cache', status: 'disabled', lines: ['Strategy disabled in current profile'] };
   }
 
   const ws = wsPath();
   if (!ws) {
-    return { category: 'Semantic Cache', cap: 'CAP-5', status: 'warn', lines: ['No workspace folder open'] };
+    return { category: 'Semantic Cache', status: 'warn', lines: ['No workspace folder open'] };
   }
 
   const settingsPath = path.join(ws, '.vscode', 'settings.json');
@@ -221,10 +220,10 @@ async function validateSemanticCache(): Promise<CategoryResult> {
     lines.push('  ✓ Cache ready: .aicache store initialized');
   }
 
-  return { category: 'Semantic Cache', cap: 'CAP-5', status, lines };
+  return { category: 'Semantic Cache', status, lines };
 }
 
-// ─── CAP-6: AST Skeleton ─────────────────────────────────────────────────────
+// ─── AST Skeleton ─────────────────────────────────────────────────────
 
 async function validateAstSkeleton(): Promise<CategoryResult> {
   const config = getConfig();
@@ -232,17 +231,17 @@ async function validateAstSkeleton(): Promise<CategoryResult> {
   const lines: string[] = [];
 
   if (!strategies.astSkeleton) {
-    return { category: 'AST Skeleton Context Pruning', cap: 'CAP-6', status: 'disabled', lines: ['Strategy disabled in current profile'] };
+    return { category: 'AST Skeleton Context Pruning', status: 'disabled', lines: ['Strategy disabled in current profile'] };
   }
 
   lines.push('  ✓ Language parsers: TypeScript, JavaScript, Python, Go, Rust, Java, C/C++, JSON');
   lines.push('  ✓ skeleton_view MCP tool registered in token-cache server');
   lines.push('  ✓ ~85-95% context reduction on file navigation');
 
-  return { category: 'AST Skeleton Context Pruning', cap: 'CAP-6', status: 'ok', lines };
+  return { category: 'AST Skeleton Context Pruning', status: 'ok', lines };
 }
 
-// ─── CAP-7: Context Exclusion ────────────────────────────────────────────────
+// ─── Context Exclusion ────────────────────────────────────────────────
 
 async function validateContextExclusion(): Promise<CategoryResult> {
   const config = getConfig();
@@ -250,7 +249,7 @@ async function validateContextExclusion(): Promise<CategoryResult> {
   const lines: string[] = [];
 
   if (!strategies.contextExclusion) {
-    return { category: 'Smart Context Exclusion', cap: 'CAP-7', status: 'disabled', lines: ['Strategy disabled in current profile'] };
+    return { category: 'Smart Context Exclusion', status: 'disabled', lines: ['Strategy disabled in current profile'] };
   }
 
   const ws = wsPath();
@@ -258,10 +257,10 @@ async function validateContextExclusion(): Promise<CategoryResult> {
   lines.push(`  ✓ Auto-exclusion: ${patterns.length} patterns configured`);
   lines.push('  ✓ Excludes lock files, minified bundles, build output, coverage from Copilot context');
 
-  return { category: 'Smart Context Exclusion', cap: 'CAP-7', status: 'ok', lines };
+  return { category: 'Smart Context Exclusion', status: 'ok', lines };
 }
 
-// ─── CAP-8: Diff-Only Output ─────────────────────────────────────────────────
+// ─── Diff-Only Output ─────────────────────────────────────────────────
 
 async function validateDiffOnly(): Promise<CategoryResult> {
   const config = getConfig();
@@ -269,16 +268,16 @@ async function validateDiffOnly(): Promise<CategoryResult> {
   const lines: string[] = [];
 
   if (!strategies.diffOnlyOutput) {
-    return { category: 'Diff-Only Output Mode', cap: 'CAP-8', status: 'disabled', lines: ['Strategy disabled in current profile'] };
+    return { category: 'Diff-Only Output Mode', status: 'disabled', lines: ['Strategy disabled in current profile'] };
   }
 
   lines.push('  ✓ Diff-only output rules active in instructions (~92% output token savings)');
   lines.push('  ✓ Instructs AI to produce patches with ±3 context lines instead of rewriting files');
 
-  return { category: 'Diff-Only Output Mode', cap: 'CAP-8', status: 'ok', lines };
+  return { category: 'Diff-Only Output Mode', status: 'ok', lines };
 }
 
-// ─── CAP-9: Agent Guardrails ─────────────────────────────────────────────────
+// ─── Agent Guardrails ─────────────────────────────────────────────────
 
 async function validateGuardrails(): Promise<CategoryResult> {
   const config = getConfig();
@@ -286,7 +285,7 @@ async function validateGuardrails(): Promise<CategoryResult> {
   const lines: string[] = [];
 
   if (!strategies.agentGuardrails) {
-    return { category: 'Agent Loop Guardrails', cap: 'CAP-9', status: 'disabled', lines: ['Strategy disabled in current profile'] };
+    return { category: 'Agent Loop Guardrails', status: 'disabled', lines: ['Strategy disabled in current profile'] };
   }
 
   const tracker = getGuardrailTracker();
@@ -294,10 +293,10 @@ async function validateGuardrails(): Promise<CategoryResult> {
   lines.push(`  ✓ Limits: Max retries = ${config.guardrails.maxRetries}, Max file edits = ${config.guardrails.maxFilesPerTask}`);
   lines.push(`  ✓ Session events: ${stats.totalTriggers} runaway loop(s) intercepted`);
 
-  return { category: 'Agent Loop Guardrails', cap: 'CAP-9', status: 'ok', lines };
+  return { category: 'Agent Loop Guardrails', status: 'ok', lines };
 }
 
-// ─── CAP-10: Smart Model Routing ─────────────────────────────────────────────
+// ─── Smart Model Routing ─────────────────────────────────────────────
 
 async function validateModelRouting(): Promise<CategoryResult> {
   const config = getConfig();
@@ -305,7 +304,7 @@ async function validateModelRouting(): Promise<CategoryResult> {
   const lines: string[] = [];
 
   if (!strategies.smartModelRouting) {
-    return { category: 'Smart Model Routing', cap: 'CAP-10', status: 'disabled', lines: ['Strategy disabled in current profile'] };
+    return { category: 'Smart Model Routing', status: 'disabled', lines: ['Strategy disabled in current profile'] };
   }
 
   const tracker = getModelRoutingTracker();
@@ -313,10 +312,10 @@ async function validateModelRouting(): Promise<CategoryResult> {
   lines.push('  ✓ Prompt task classifier active (lightweight vs full-power)');
   lines.push(`  ✓ Session classifications: ${stats.totalClassified} tasks (${stats.lightweight} lightweight, ${stats.fullPower} full-power)`);
 
-  return { category: 'Smart Model Routing', cap: 'CAP-10', status: 'ok', lines };
+  return { category: 'Smart Model Routing', status: 'ok', lines };
 }
 
-// ─── CAP-11: Git Diff Context ────────────────────────────────────────────────
+// ─── Git Diff Context ────────────────────────────────────────────────
 
 async function validateGitDiffContext(): Promise<CategoryResult> {
   const config = getConfig();
@@ -324,16 +323,16 @@ async function validateGitDiffContext(): Promise<CategoryResult> {
   const lines: string[] = [];
 
   if (!strategies.gitDiffContext) {
-    return { category: 'Git Diff-Scoped Context', cap: 'CAP-11', status: 'disabled', lines: ['Strategy disabled in current profile'] };
+    return { category: 'Git Diff-Scoped Context', status: 'disabled', lines: ['Strategy disabled in current profile'] };
   }
 
   lines.push('  ✓ Prunes reviews and test context to `git diff` boundaries + 1-hop callers');
   lines.push('  ✓ Active in Copilot & Antigravity instruction sets');
 
-  return { category: 'Git Diff-Scoped Context', cap: 'CAP-11', status: 'ok', lines };
+  return { category: 'Git Diff-Scoped Context', status: 'ok', lines };
 }
 
-// ─── CAP-12: Deterministic Prefix Caching ────────────────────────────────────
+// ─── Deterministic Prefix Caching ────────────────────────────────────
 
 async function validateKvCache(): Promise<CategoryResult> {
   const config = getConfig();
@@ -341,16 +340,16 @@ async function validateKvCache(): Promise<CategoryResult> {
   const lines: string[] = [];
 
   if (!strategies.kvCacheAlignment) {
-    return { category: 'Deterministic Prefix Caching', cap: 'CAP-12', status: 'disabled', lines: ['Strategy disabled in current profile'] };
+    return { category: 'Deterministic Prefix Caching', status: 'disabled', lines: ['Strategy disabled in current profile'] };
   }
 
   lines.push('  ✓ Static prefix byte-ordering rules active for API/agent-mode frameworks');
   lines.push('  ✓ Optimizes cloud KV-cache hits in Cursor and custom agents');
 
-  return { category: 'Deterministic Prefix Caching', cap: 'CAP-12', status: 'ok', lines };
+  return { category: 'Deterministic Prefix Caching', status: 'ok', lines };
 }
 
-// ─── CAP-13: Comment Stripper ────────────────────────────────────────────────
+// ─── Comment Stripper ────────────────────────────────────────────────
 
 async function validateCommentStripper(): Promise<CategoryResult> {
   const config = getConfig();
@@ -358,16 +357,16 @@ async function validateCommentStripper(): Promise<CategoryResult> {
   const lines: string[] = [];
 
   if (!strategies.commentStripper) {
-    return { category: 'Comment & Header Stripping', cap: 'CAP-13', status: 'disabled', lines: ['Strategy disabled in current profile'] };
+    return { category: 'Comment & Header Stripping', status: 'disabled', lines: ['Strategy disabled in current profile'] };
   }
 
   lines.push('  ✓ strip_comments tool available in token-cache server');
   lines.push('  ✓ Automatically removes license preambles and boilerplate comments on ingestion');
 
-  return { category: 'Comment & Header Stripping', cap: 'CAP-13', status: 'ok', lines };
+  return { category: 'Comment & Header Stripping', status: 'ok', lines };
 }
 
-// ─── CAP-14: Test Failure Isolator ───────────────────────────────────────────
+// ─── Test Failure Isolator ───────────────────────────────────────────
 
 async function validateTestFailureIsolator(): Promise<CategoryResult> {
   const config = getConfig();
@@ -375,16 +374,16 @@ async function validateTestFailureIsolator(): Promise<CategoryResult> {
   const lines: string[] = [];
 
   if (!strategies.testFailureIsolator) {
-    return { category: 'Test Log Failure Isolation', cap: 'CAP-14', status: 'disabled', lines: ['Strategy disabled in current profile'] };
+    return { category: 'Test Log Failure Isolation', status: 'disabled', lines: ['Strategy disabled in current profile'] };
   }
 
   lines.push('  ✓ isolate_test_failures tool available in token-cache server');
   lines.push('  ✓ Filters test output to failing assertions & file:line references (~90% log savings)');
 
-  return { category: 'Test Log Failure Isolation', cap: 'CAP-14', status: 'ok', lines };
+  return { category: 'Test Log Failure Isolation', status: 'ok', lines };
 }
 
-// ─── CAP-15: Windowed Range Slicing ──────────────────────────────────────────
+// ─── Windowed Range Slicing ──────────────────────────────────────────
 
 async function validateRangeSlicing(): Promise<CategoryResult> {
   const config = getConfig();
@@ -392,16 +391,16 @@ async function validateRangeSlicing(): Promise<CategoryResult> {
   const lines: string[] = [];
 
   if (!strategies.rangeSlicing) {
-    return { category: 'Windowed Range Slicing', cap: 'CAP-15', status: 'disabled', lines: ['Strategy disabled in current profile'] };
+    return { category: 'Windowed Range Slicing', status: 'disabled', lines: ['Strategy disabled in current profile'] };
   }
 
   lines.push('  ✓ Constrains symbol navigation to targeted 100-line windows');
   lines.push('  ✓ Prevents whole-file ingestion when inspecting individual functions');
 
-  return { category: 'Windowed Range Slicing', cap: 'CAP-15', status: 'ok', lines };
+  return { category: 'Windowed Range Slicing', status: 'ok', lines };
 }
 
-// ─── CAP-16: Inline Chat Scope Pinning ───────────────────────────────────────
+// ─── Inline Chat Scope Pinning ───────────────────────────────────────
 
 async function validateInlineChatScope(): Promise<CategoryResult> {
   const config = getConfig();
@@ -409,16 +408,16 @@ async function validateInlineChatScope(): Promise<CategoryResult> {
   const lines: string[] = [];
 
   if (!strategies.inlineChatScopePinning) {
-    return { category: 'Inline Chat Scope Pinning', cap: 'CAP-16', status: 'disabled', lines: ['Strategy disabled in current profile'] };
+    return { category: 'Inline Chat Scope Pinning', status: 'disabled', lines: ['Strategy disabled in current profile'] };
   }
 
   lines.push('  ✓ Constrains VS Code inline chat context to selected lines + 1-hop references');
   lines.push('  ✓ Active in Copilot instructions');
 
-  return { category: 'Inline Chat Scope Pinning', cap: 'CAP-16', status: 'ok', lines };
+  return { category: 'Inline Chat Scope Pinning', status: 'ok', lines };
 }
 
-// ─── CAP-17: .copilotignore Generation ───────────────────────────────────────
+// ─── .copilotignore Generation ───────────────────────────────────────
 
 async function validateCopilotIgnore(): Promise<CategoryResult> {
   const config = getConfig();
@@ -426,7 +425,7 @@ async function validateCopilotIgnore(): Promise<CategoryResult> {
   const lines: string[] = [];
 
   if (!strategies.copilotIgnoreGeneration) {
-    return { category: '.copilotignore Generation', cap: 'CAP-17', status: 'disabled', lines: ['Strategy disabled in current profile'] };
+    return { category: '.copilotignore Generation', status: 'disabled', lines: ['Strategy disabled in current profile'] };
   }
 
   const ws = wsPath();
@@ -440,10 +439,10 @@ async function validateCopilotIgnore(): Promise<CategoryResult> {
     lines.push(`  ○ .copilotignore file will be generated on next context exclusion sync`);
   }
 
-  return { category: '.copilotignore Generation', cap: 'CAP-17', status: 'ok', lines };
+  return { category: '.copilotignore Generation', status: 'ok', lines };
 }
 
-// ─── CAP-18: Copilot Edits Awareness ─────────────────────────────────────────
+// ─── Copilot Edits Awareness ─────────────────────────────────────────
 
 async function validateCopilotEdits(): Promise<CategoryResult> {
   const config = getConfig();
@@ -451,16 +450,16 @@ async function validateCopilotEdits(): Promise<CategoryResult> {
   const lines: string[] = [];
 
   if (!strategies.copilotEditsAwareness) {
-    return { category: 'Copilot Edits Awareness', cap: 'CAP-18', status: 'disabled', lines: ['Strategy disabled in current profile'] };
+    return { category: 'Copilot Edits Awareness', status: 'disabled', lines: ['Strategy disabled in current profile'] };
   }
 
   lines.push('  ✓ Directs Copilot not to re-read files already open in active edit sessions');
   lines.push('  ✓ Enforces incremental patch proposals instead of file rewrites');
 
-  return { category: 'Copilot Edits Awareness', cap: 'CAP-18', status: 'ok', lines };
+  return { category: 'Copilot Edits Awareness', status: 'ok', lines };
 }
 
-// ─── CAP-19: Thread Reset Trigger ────────────────────────────────────────────
+// ─── Thread Reset Trigger ────────────────────────────────────────────
 
 async function validateThreadReset(): Promise<CategoryResult> {
   const config = getConfig();
@@ -468,13 +467,13 @@ async function validateThreadReset(): Promise<CategoryResult> {
   const lines: string[] = [];
 
   if (!strategies.threadResetTrigger) {
-    return { category: 'Thread Reset Trigger', cap: 'CAP-19', status: 'disabled', lines: ['Strategy disabled in current profile'] };
+    return { category: 'Thread Reset Trigger', status: 'disabled', lines: ['Strategy disabled in current profile'] };
   }
 
   lines.push('  ✓ Proactively prompts user to start a fresh thread at 40+ messages / 30m');
   lines.push('  ✓ Prevents context saturation and quality degradation in long chats');
 
-  return { category: 'Thread Reset Trigger', cap: 'CAP-19', status: 'ok', lines };
+  return { category: 'Thread Reset Trigger', status: 'ok', lines };
 }
 
 // ─── main export ─────────────────────────────────────────────────────────────
@@ -483,68 +482,68 @@ export async function validateAllStrategies(outputChannel: vscode.OutputChannel)
   outputChannel.show(true);
   outputChannel.appendLine('');
   outputChannel.appendLine('══════════════════════════════════════════════════════════');
-  outputChannel.appendLine('  AI Token Optimizer — Strategy Validation Report');
+  outputChannel.appendLine('  TokenShield — Strategy Health Check Report');
   outputChannel.appendLine(`  ${new Date().toLocaleString()}  |  Profile: ${getConfig().profile}`);
   outputChannel.appendLine('══════════════════════════════════════════════════════════');
 
   const results = await vscode.window.withProgress(
     { location: vscode.ProgressLocation.Notification, title: `Validating all ${TOTAL_STRATEGIES} strategies…`, cancellable: false },
     async (progress) => {
-      progress.report({ message: 'CAP-1: CodeGraph…' });
+      progress.report({ message: 'CodeGraph Pre-Indexing…' });
       const r1 = await validateCodeGraph();
 
-      progress.report({ message: 'CAP-2: Output Compression…' });
+      progress.report({ message: 'CLI Output Compression…' });
       const r2 = await validateRtk();
 
-      progress.report({ message: 'CAP-3: Verbosity…' });
+      progress.report({ message: 'Concise Responses…' });
       const r3 = await validateVerbosity();
 
-      progress.report({ message: 'CAP-4: Session…' });
+      progress.report({ message: 'Context Compaction…' });
       const r4 = await validateSession();
 
-      progress.report({ message: 'CAP-5: Semantic Cache…' });
+      progress.report({ message: 'Semantic Cache…' });
       const r5 = await validateSemanticCache();
 
-      progress.report({ message: 'CAP-6: AST Skeleton…' });
+      progress.report({ message: 'AST Skeletons…' });
       const r6 = await validateAstSkeleton();
 
-      progress.report({ message: 'CAP-7: Context Exclusion…' });
+      progress.report({ message: 'Smart Context Exclusions…' });
       const r7 = await validateContextExclusion();
 
-      progress.report({ message: 'CAP-8: Diff-Only Output…' });
+      progress.report({ message: 'Diff-Only Output…' });
       const r8 = await validateDiffOnly();
 
-      progress.report({ message: 'CAP-9: Agent Guardrails…' });
+      progress.report({ message: 'Loop Guardrails…' });
       const r9 = await validateGuardrails();
 
-      progress.report({ message: 'CAP-10: Smart Model Routing…' });
+      progress.report({ message: 'Smart Model Routing…' });
       const r10 = await validateModelRouting();
 
-      progress.report({ message: 'CAP-11: Git Diff Context…' });
+      progress.report({ message: 'Git Diff Scoping…' });
       const r11 = await validateGitDiffContext();
 
-      progress.report({ message: 'CAP-12: Deterministic Prefix Caching…' });
+      progress.report({ message: 'Prompt Prefix Caching…' });
       const r12 = await validateKvCache();
 
-      progress.report({ message: 'CAP-13: Comment Stripper…' });
+      progress.report({ message: 'Comment Stripper…' });
       const r13 = await validateCommentStripper();
 
-      progress.report({ message: 'CAP-14: Test Failure Isolator…' });
+      progress.report({ message: 'Test Failure Isolator…' });
       const r14 = await validateTestFailureIsolator();
 
-      progress.report({ message: 'CAP-15: Range Slicing…' });
+      progress.report({ message: 'Windowed Range Slicing…' });
       const r15 = await validateRangeSlicing();
 
-      progress.report({ message: 'CAP-16: Inline Chat Scope…' });
+      progress.report({ message: 'Inline Chat Scope…' });
       const r16 = await validateInlineChatScope();
 
-      progress.report({ message: 'CAP-17: .copilotignore…' });
+      progress.report({ message: '.copilotignore Generator…' });
       const r17 = await validateCopilotIgnore();
 
-      progress.report({ message: 'CAP-18: Copilot Edits…' });
+      progress.report({ message: 'Edit Session Awareness…' });
       const r18 = await validateCopilotEdits();
 
-      progress.report({ message: 'CAP-19: Thread Reset…' });
+      progress.report({ message: 'Context Saturation Monitor…' });
       const r19 = await validateThreadReset();
 
       return [r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, r14, r15, r16, r17, r18, r19];
@@ -553,7 +552,7 @@ export async function validateAllStrategies(outputChannel: vscode.OutputChannel)
 
   for (const r of results) {
     outputChannel.appendLine('');
-    outputChannel.appendLine(`  ${icon(r.status)} ${r.cap}: ${r.category}  [${r.status.toUpperCase()}]`);
+    outputChannel.appendLine(`  ${icon(r.status)} ${r.category}  [${r.status.toUpperCase()}]`);
     outputChannel.appendLine('  ──────────────────────────────────────────────────────');
     for (const line of r.lines) {
       outputChannel.appendLine(`  ${line}`);
@@ -572,7 +571,7 @@ export async function validateAllStrategies(outputChannel: vscode.OutputChannel)
   outputChannel.appendLine('══════════════════════════════════════════════════════════');
 
   vscode.window.showInformationMessage(
-    `AI Token Optimizer: ${okCount}/${TOTAL_STRATEGIES} strategies validated ✓ (${disabledCount} disabled, ${warnCount} warnings)`,
+    `TokenShield: ${okCount}/${TOTAL_STRATEGIES} strategies validated ✓ (${disabledCount} disabled, ${warnCount} warnings)`,
     'Show Report'
   ).then(c => { if (c) { outputChannel.show(); } });
 }

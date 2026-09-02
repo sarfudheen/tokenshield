@@ -8,7 +8,7 @@ let debounceTimer: NodeJS.Timeout | undefined;
 export function createEditorTokenBadge(context: vscode.ExtensionContext): vscode.StatusBarItem {
   tokenStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 99);
   tokenStatusBarItem.name = 'TokenShield Token Counter';
-  tokenStatusBarItem.command = 'aiTokenOptimizer.showDashboard';
+  tokenStatusBarItem.command = 'tokenshield.dashboard';
 
   // Listen to active editor change
   context.subscriptions.push(
@@ -81,15 +81,15 @@ export async function updateTokenBadge(editor: vscode.TextEditor | undefined): P
   md.supportThemeIcons = true;
 
   if (hasSelection) {
-    tokenStatusBarItem.text = `$(symbol-variable) Sel: ${formattedTokens} tok (${formattedCost})`;
+    tokenStatusBarItem.text = `$(symbol-variable) ${formattedTokens} tok (${formattedCost})`;
     md.appendMarkdown(`### 🔍 TokenShield Selection Analysis\n`);
     md.appendMarkdown(`- **Selected Tokens**: ~\`${tokenCount.toLocaleString()}\` tokens\n`);
     md.appendMarkdown(`- **Estimated Inference Cost**: \`${formattedCost}\`\n`);
     md.appendMarkdown(`- **Active Engine**: \`${activeModel.name}\` ($${pricing.inputPerMillion}/1M input tokens)\n\n`);
     md.appendMarkdown(`---\n\n`);
-    md.appendMarkdown(`[⚡ Prune & Copy to Clipboard](command:aiTokenOptimizer.pruneSelection) &nbsp;|&nbsp; [📊 Open ROI Dashboard](command:aiTokenOptimizer.showDashboard)`);
+    md.appendMarkdown(`[⚡ Prune & Copy](command:tokenshield.pruneAndCopy) &nbsp;|&nbsp; [📊 Dashboard](command:tokenshield.dashboard)`);
   } else {
-    tokenStatusBarItem.text = `$(file-code) ${formattedTokens} tok · ${formattedCost}`;
+    tokenStatusBarItem.text = `$(symbol-key) ${formattedTokens} tok (${formattedCost})`;
     md.appendMarkdown(`### 📄 TokenShield File Analysis\n`);
     md.appendMarkdown(`- **File**: \`${vscode.workspace.asRelativePath(editor.document.fileName)}\`\n`);
     md.appendMarkdown(`- **Estimated Tokens**: ~\`${tokenCount.toLocaleString()}\` tokens\n`);
@@ -97,7 +97,7 @@ export async function updateTokenBadge(editor: vscode.TextEditor | undefined): P
     md.appendMarkdown(`- **Total Lines**: \`${editor.document.lineCount.toLocaleString()}\` lines\n`);
     md.appendMarkdown(`- **Active Engine**: \`${activeModel.name}\` ($${pricing.inputPerMillion}/1M input tokens)\n\n`);
     md.appendMarkdown(`---\n\n`);
-    md.appendMarkdown(`[⚡ Compress & Prune File](command:aiTokenOptimizer.pruneSelection) &nbsp;|&nbsp; [📊 Open ROI Dashboard](command:aiTokenOptimizer.showDashboard)`);
+    md.appendMarkdown(`[⚡ Compress & Prune](command:tokenshield.pruneAndCopy) &nbsp;|&nbsp; [📊 Dashboard](command:tokenshield.dashboard)`);
   }
 
   tokenStatusBarItem.tooltip = md;

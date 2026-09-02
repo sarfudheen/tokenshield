@@ -25,7 +25,7 @@ let extensionPath: string;
 let sessionStarted = false;
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
-  outputChannel = vscode.window.createOutputChannel('AI Token Optimizer');
+  outputChannel = vscode.window.createOutputChannel('TokenShield');
   outputChannel.appendLine('[activate] TokenShield starting...');
   extensionPath = context.extensionPath;
 
@@ -40,21 +40,21 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   // Register commands — original + new
   context.subscriptions.push(
-    vscode.commands.registerCommand('aiTokenOptimizer.toggleAll', toggleAllCommand),
-    vscode.commands.registerCommand('aiTokenOptimizer.selectProfile', showProfilePicker),
-    vscode.commands.registerCommand('aiTokenOptimizer.regenerateInstructions', regenerateCommand),
-    vscode.commands.registerCommand('aiTokenOptimizer.showDashboard', () => DashboardPanel.show(context.extensionUri)),
-    vscode.commands.registerCommand('aiTokenOptimizer.reindex', () => runCodeGraphReindex(outputChannel)),
-    vscode.commands.registerCommand('aiTokenOptimizer.validateIndex', () => validateIndex(outputChannel)),
-    vscode.commands.registerCommand('aiTokenOptimizer.installTools', () => installAllTools(outputChannel, true)),
-    vscode.commands.registerCommand('aiTokenOptimizer.manageProjects', () => showProjectPicker(outputChannel)),
-    vscode.commands.registerCommand('aiTokenOptimizer.configureMcp', () => configureMcpServers(outputChannel, extensionPath)),
-    vscode.commands.registerCommand('aiTokenOptimizer.validateAll', () => validateAllStrategies(outputChannel)),
-    vscode.commands.registerCommand('aiTokenOptimizer.clearCache', clearCacheCommand),
-    vscode.commands.registerCommand('aiTokenOptimizer.exportTelemetry', () => exportTelemetryCommand(outputChannel)),
-    vscode.commands.registerCommand('aiTokenOptimizer.configureExclusions', () => showExclusionPicker(outputChannel)),
-    vscode.commands.registerCommand('aiTokenOptimizer.initProject', () => initializeForProject(getConfig(), outputChannel)),
-    vscode.commands.registerCommand('aiTokenOptimizer.pruneSelection', async () => {
+    vscode.commands.registerCommand('tokenshield.toggle', toggleAllCommand),
+    vscode.commands.registerCommand('tokenshield.switchProfile', showProfilePicker),
+    vscode.commands.registerCommand('tokenshield.regenerate', regenerateCommand),
+    vscode.commands.registerCommand('tokenshield.dashboard', () => DashboardPanel.show(context.extensionUri)),
+    vscode.commands.registerCommand('tokenshield.reindex', () => runCodeGraphReindex(outputChannel)),
+    vscode.commands.registerCommand('tokenshield.validateGraph', () => validateIndex(outputChannel)),
+    vscode.commands.registerCommand('tokenshield.setupTools', () => installAllTools(outputChannel, true)),
+    vscode.commands.registerCommand('tokenshield.manageProjects', () => showProjectPicker(outputChannel)),
+    vscode.commands.registerCommand('tokenshield.configureMcp', () => configureMcpServers(outputChannel, extensionPath)),
+    vscode.commands.registerCommand('tokenshield.healthCheck', () => validateAllStrategies(outputChannel)),
+    vscode.commands.registerCommand('tokenshield.flushCache', clearCacheCommand),
+    vscode.commands.registerCommand('tokenshield.exportReport', () => exportTelemetryCommand(outputChannel)),
+    vscode.commands.registerCommand('tokenshield.exclusions', () => showExclusionPicker(outputChannel)),
+    vscode.commands.registerCommand('tokenshield.init', () => initializeForProject(getConfig(), outputChannel)),
+    vscode.commands.registerCommand('tokenshield.pruneAndCopy', async () => {
       const editor = vscode.window.activeTextEditor;
       if (!editor) { return; }
       const text = editor.selection.isEmpty ? editor.document.getText() : editor.document.getText(editor.selection);
@@ -74,11 +74,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         vscode.window.showInformationMessage(`TokenShield: Context copied to clipboard.`);
       }
     }),
-    vscode.commands.registerCommand('aiTokenOptimizer.exportToRepo', async () => {
+    vscode.commands.registerCommand('tokenshield.exportToRepo', async () => {
       const results = await exportInstructionsToRepo(getConfig());
       vscode.window.showInformationMessage(`TokenShield: Exported ${results.length} instruction files to repository.`);
     }),
-    vscode.commands.registerCommand('aiTokenOptimizer.resetSession', async () => {
+    vscode.commands.registerCommand('tokenshield.newSession', async () => {
       const archived = await chatSavingsTracker.resetSession();
       await updateStatusBar();
       await DashboardPanel.refreshCurrentPanel();
@@ -86,7 +86,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         `🛡️ TokenShield: Started new Session #${chatSavingsTracker.getSessionNumber()}! Session #${archived.sessionNumber} archived (${archived.totalTokensSaved.toLocaleString()} tok, $${archived.totalCostSavedUsd.toFixed(4)} saved).`
       );
     }),
-    vscode.commands.registerCommand('aiTokenOptimizer.pruneGitDiff', async () => {
+    vscode.commands.registerCommand('tokenshield.compressDiff', async () => {
       try {
         const { execSync } = require('child_process');
         const wsPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || process.cwd();
@@ -104,7 +104,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         await vscode.env.clipboard.writeText(result.prunedText);
         const tokensSaved = Math.max(0, result.originalTokensEst - result.prunedTokensEst);
         chatSavingsTracker.recordEvent(
-          'CAP-11: Git Diff Context',
+          'Git Diff Scoping',
           'rtk git diff HEAD',
           tokensSaved,
           `Compressed git diff (-${result.reductionPercent}% tokens saved: ${result.originalTokensEst} → ${result.prunedTokensEst} tok)`,
@@ -124,7 +124,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   // Listen for config changes — hot-swap strategies without restart
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration(e => {
-      if (e.affectsConfiguration('aiTokenOptimizer')) {
+      if (e.affectsConfiguration('tokenshield')) {
         updateStatusBar();
         onConfigChanged();
       }
@@ -150,7 +150,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           const savedTokens = Math.max(0, fileTokens - diffTokens);
           if (savedTokens > 20) {
             chatSavingsTracker.recordEvent(
-              'CAP-8: Unified Diff Output',
+              'Diff-Only Output',
               relPath,
               savedTokens,
               `Applied ${diffTokens} token diff hunk instead of rewriting full ${fileTokens} token file (${Math.round((savedTokens / fileTokens) * 100)}% tokens saved)`
@@ -205,7 +205,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     context.subscriptions.push(...watchers);
   }
 
-  // CAP-7: Apply context exclusions on activation
+  // Apply context exclusions on activation
   const strategies = getEffectiveStrategies(config);
   if (strategies.contextExclusion) {
     try {
@@ -216,7 +216,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   }
 
   const activeCount = countActiveStrategies(strategies);
-  outputChannel.appendLine(`[activate] AI Token Optimizer ready — ${activeCount}/${TOTAL_STRATEGIES} strategies active`);
+  outputChannel.appendLine(`[activate] TokenShield ready — ${activeCount}/${TOTAL_STRATEGIES} strategies active`);
 }
 
 // Starts once per window — elapsed-session stats track from here, not from
@@ -250,7 +250,7 @@ async function autoApply(config: ReturnType<typeof getConfig>): Promise<void> {
     const updated = results.filter(r => r.updated).length;
     if (created > 0 || updated > 0) {
       vscode.window.showInformationMessage(
-        `AI Token Optimizer: ${created} instruction files created, ${updated} updated`
+        `TokenShield: ${created} instruction files created, ${updated} updated`
       );
     }
   } catch (err) {
@@ -280,12 +280,12 @@ async function autoApply(config: ReturnType<typeof getConfig>): Promise<void> {
 
 async function toggleAllCommand(): Promise<void> {
   const config = getConfig();
-  const wsConfig = vscode.workspace.getConfiguration('aiTokenOptimizer');
+  const wsConfig = vscode.workspace.getConfiguration('tokenshield');
   const newEnabled = !config.enabled;
   await wsConfig.update('enabled', newEnabled, vscode.ConfigurationTarget.Workspace);
   updateStatusBar();
   vscode.window.showInformationMessage(
-    `AI Token Optimizer: ${newEnabled ? 'Enabled' : 'Disabled'}`
+    `TokenShield: ${newEnabled ? 'Enabled' : 'Disabled'}`
   );
 
   if (newEnabled) {
@@ -301,21 +301,21 @@ async function regenerateCommand(): Promise<void> {
   const results = await generateAllInstructions(overrideConfig);
   const count = results.filter(r => r.created || r.updated).length;
   vscode.window.showInformationMessage(
-    `AI Token Optimizer: Regenerated ${count} instruction files`
+    `TokenShield: Regenerated ${count} instruction files`
   );
 }
 
 async function clearCacheCommand(): Promise<void> {
   const workspaceFolders = vscode.workspace.workspaceFolders;
   if (!workspaceFolders) {
-    vscode.window.showWarningMessage('AI Token Optimizer: No workspace folder open');
+    vscode.window.showWarningMessage('TokenShield: No workspace folder open');
     return;
   }
   const store = new SemanticCacheStore(workspaceFolders[0].uri.fsPath);
   const stats = store.stats();
   store.clear();
   outputChannel.appendLine(`[cache] Cleared semantic cache (${stats.entries} entries, ${stats.totalHits} lifetime hits)`);
-  vscode.window.showInformationMessage(`AI Token Optimizer: Semantic cache cleared (${stats.entries} entries removed)`);
+  vscode.window.showInformationMessage(`TokenShield: Semantic cache cleared (${stats.entries} entries removed)`);
 }
 
 async function onConfigChanged(): Promise<void> {

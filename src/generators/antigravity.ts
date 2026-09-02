@@ -28,112 +28,112 @@ export class AntigravityGenerator extends BaseInstructionGenerator {
     const sections: string[] = [];
 
     if (strategies.codeGraph) {
-      sections.push(`### CodeGraph Pre-Indexing (CAP-1)
+      sections.push(`### CodeGraph Pre-Indexing
 - **MANDATORY**: Query \`codegraph_explore\` before broad grep searches.
 - **FORBIDDEN**: Never run wide file greps when CodeGraph index is available.`);
     }
 
     if (strategies.outputCompression) {
-      sections.push(`### RTK Command Output Filtering (CAP-2)
+      sections.push(`### CLI Output Compression (RTK)
 - **MANDATORY**: Execute shell commands through RTK filters (\`rtk git\`, \`rtk test\`, \`rtk ls\`).
 - **FORBIDDEN**: Never invoke raw \`git\` commands directly in terminal.`);
     }
 
     if (strategies.verbosityControl) {
-      sections.push(`### Dense Precision Output (CAP-3)
+      sections.push(`### Concise Direct Responses
 - **MANDATORY**: Answer directly with actionable diffs and zero pleasantries.
 - **FORBIDDEN**: Never include preambles, intros, or chit-chat.`);
     }
 
     if (strategies.sessionManagement) {
-      sections.push(`### Session Hygiene (CAP-4)
+      sections.push(`### Context Compaction & Session Hygiene
 - **MANDATORY**: Keep task state concise and reuse loaded symbol memory.
 - **FORBIDDEN**: Never re-read previously inspected files in the same turn.`);
     }
 
     if (strategies.semanticCache) {
-      sections.push(`### Local MCP Semantic Cache (CAP-5)
+      sections.push(`### Local Semantic Cache
 - **MANDATORY**: Query \`cache_lookup\` tool for repeated/boilerplate answers.`);
     }
 
     if (strategies.astSkeleton) {
-      sections.push(`### AST Skeleton Pruning (CAP-6)
+      sections.push(`### AST Skeleton Pruning
 - **MANDATORY**: Call \`skeleton_view\` MCP tool first when navigating files to load signatures only (~90% savings).
 - **FORBIDDEN**: Never ingest full function bodies unless actively modifying them.`);
     }
 
     if (strategies.contextExclusion) {
-      sections.push(`### Context Exclusions (CAP-7)
+      sections.push(`### Smart Context Exclusions
 - **MANDATORY**: Exclude lock files (\`*.lock\`, \`package-lock.json\`), build outputs (\`dist/\`, \`build/\`), and minified assets.`);
     }
 
     if (strategies.diffOnlyOutput) {
-      sections.push(`### Unified Diff Formatting (CAP-8)
+      sections.push(`### Unified Diff Formatting
 - **MANDATORY**: Always propose code edits as targeted unified diff chunks with ±3 lines of context.
 - **FORBIDDEN**: Never reprint unmodified files or entire classes.`);
     }
 
     if (strategies.agentGuardrails) {
-      sections.push(`### Autonomous Guardrails (CAP-9)
+      sections.push(`### Autonomous Loop Guardrails
 - **MANDATORY**: Abort retry cycles after ${config.guardrails.maxRetries} failures and summarize blocker.`);
     }
 
     if (strategies.smartModelRouting) {
-      sections.push(`### Model Routing (CAP-10)
+      sections.push(`### Smart Model Routing
 - Leverage fast Flash/Haiku models for simple non-reasoning steps.`);
     }
 
     if (strategies.gitDiffContext) {
-      sections.push(`### Git Diff Context (CAP-11)
+      sections.push(`### Git Diff Context Scoping
 - **MANDATORY**: Scope review & test tasks strictly to \`git diff\` lines + 1-hop callers.`);
     }
 
     if (strategies.kvCacheAlignment) {
-      sections.push(`### Deterministic Prompt Prefix Caching (CAP-12)
+      sections.push(`### Deterministic Prefix Caching
 - Maintain stable instruction prefix order across turns to maximize KV cache hits.`);
     }
 
     if (strategies.commentStripper) {
-      sections.push(`### Comment Stripping (CAP-13)
+      sections.push(`### Comment & Header Stripping
 - Strip copyright headers and filler comments on ingestion.`);
     }
 
     if (strategies.testFailureIsolator) {
-      sections.push(`### Test Log Isolation (CAP-14)
+      sections.push(`### Test Failure Log Isolation
 - **MANDATORY**: Report only failing test lines, assertions, and line numbers.`);
     }
 
     if (strategies.rangeSlicing) {
-      sections.push(`### Range Slicing (CAP-15)
+      sections.push(`### Windowed Range Slicing
 - **MANDATORY**: Inspect 100-line windows around target symbols instead of full files.`);
     }
 
     if (strategies.inlineChatScopePinning) {
-      sections.push(`### Inline Chat Scope (CAP-16)
+      sections.push(`### Inline Chat Scope Pinning
 - **MANDATORY**: Restrict context to selected editor lines and direct references.`);
     }
 
     if (strategies.copilotIgnoreGeneration) {
-      sections.push(`### .copilotignore Compliance (CAP-17)
+      sections.push(`### .copilotignore Compliance
 - **MANDATORY**: Never read or reference ignored paths.`);
     }
 
     if (strategies.copilotEditsAwareness) {
-      sections.push(`### Edit Session Awareness (CAP-18)
+      sections.push(`### Edit Session Awareness
 - **MANDATORY**: Do not re-read files already open in the active edit session.`);
     }
 
     if (strategies.threadResetTrigger) {
-      sections.push(`### Thread Reset Trigger (CAP-19)
+      sections.push(`### Context Saturation Thread Reset
 - Surface a fresh-thread prompt when conversation exceeds 40 messages.`);
     }
 
     return `${MARKER_START}
 ${MARKER_COMMENT}
 
-# Antigravity TokenShield Directives
+# Antigravity TokenShield Optimizations
 
-## Active Directives
+## Active Optimizations
 
 ${sections.join('\n\n')}
 

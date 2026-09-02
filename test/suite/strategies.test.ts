@@ -4,8 +4,8 @@ import { classifyTask } from '../../src/strategies/modelRouting';
 import { detectProjectExclusions } from '../../src/strategies/contextExclusion';
 import { getGuardrailTracker } from '../../src/strategies/guardrails';
 
-suite('Enhanced Strategies (CAP-6 through CAP-10)', () => {
-  suite('CAP-6: AST Skeleton Extraction', () => {
+suite('Enhanced Strategies (AST Skeletons through Model Routing)', () => {
+  suite('AST Skeleton Extraction', () => {
     test('extracts TypeScript interface and function signatures, stripping bodies', () => {
       const tsCode = `
 import { Config } from './config';
@@ -53,7 +53,7 @@ class DataProcessor:
     });
   });
 
-  suite('CAP-7: Context Exclusion', () => {
+  suite('Context Exclusion', () => {
     test('detects standard exclusion patterns', () => {
       const patterns = detectProjectExclusions(process.cwd());
       assert.ok(patterns.includes('*.lock'));
@@ -62,7 +62,7 @@ class DataProcessor:
     });
   });
 
-  suite('CAP-9: Agent Guardrails', () => {
+  suite('Agent Guardrails', () => {
     test('tracks guardrail events and savings', () => {
       const tracker = getGuardrailTracker();
       tracker.reset();
@@ -78,7 +78,7 @@ class DataProcessor:
     });
   });
 
-  suite('CAP-10: Smart Model Routing', () => {
+  suite('Smart Model Routing', () => {
     test('classifies simple prompt as lightweight', () => {
       assert.strictEqual(classifyTask('rename variable foo to bar'), 'lightweight');
       assert.strictEqual(classifyTask('fix typo in comment'), 'lightweight');

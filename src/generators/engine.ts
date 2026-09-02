@@ -230,14 +230,14 @@ export class InstructionEngine {
         agentContent = `---
 name: "TokenShield Optimizer"
 description: >
-  Token and cost optimization agent. Enforces the 19 CAP directives.
+  Token and cost optimization agent. Enforces the 19 optimization features.
 tools:
   - search/codebase
   - terminal
 ---
 
 # TokenShield Optimizer Agent
-Read \`.github/instructions/tokenshield.instructions.md\` for active CAP directives.
+Read \`.github/instructions/tokenshield.instructions.md\` for active optimization features.
 `;
       }
       fs.writeFileSync(agentPath, agentContent, 'utf-8');
@@ -258,11 +258,11 @@ Read \`.github/instructions/tokenshield.instructions.md\` for active CAP directi
         skillContent = `---
 name: tokenshield-optimize
 description: >
-  Analyze current AI interaction patterns and suggest token/cost optimizations using TokenShield's 19 CAP directives.
+  Analyze current AI interaction patterns and suggest token/cost optimizations using TokenShield's 19 optimization features.
 ---
 
 # TokenShield Optimization Skill
-Read \`.github/instructions/tokenshield.instructions.md\` to apply active directives.
+Read \`.github/instructions/tokenshield.instructions.md\` to apply active features.
 `;
       }
       fs.writeFileSync(skillPath, skillContent, 'utf-8');

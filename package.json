@@ -2,8 +2,8 @@
   "name": "tokenshield",
   "displayName": "TokenShield — AI Token & Cost Optimizer",
   "description": "Universal AI token & cost optimizer for GitHub Copilot, Claude Code, OpenAI Codex, and Antigravity. Real-time context pruning, AST skeletons, semantic caching, CLI output compression, and provable ROI reporting.",
-  "version": "1.0.11",
-  "publisher": "tokenshield",
+  "version": "1.0.12",
+  "publisher": "sarfudheen",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -37,96 +37,96 @@
   "contributes": {
     "commands": [
       {
-        "command": "aiTokenOptimizer.toggleAll",
-        "title": "TokenShield: Toggle All Strategies"
+        "command": "tokenshield.toggle",
+        "title": "TokenShield: Toggle On/Off"
       },
       {
-        "command": "aiTokenOptimizer.selectProfile",
-        "title": "TokenShield: Select Optimization Profile"
+        "command": "tokenshield.switchProfile",
+        "title": "TokenShield: Switch Profile"
       },
       {
-        "command": "aiTokenOptimizer.regenerateInstructions",
-        "title": "TokenShield: Regenerate Instruction Files"
+        "command": "tokenshield.regenerate",
+        "title": "TokenShield: Regenerate Directives"
       },
       {
-        "command": "aiTokenOptimizer.showDashboard",
-        "title": "TokenShield: Show ROI Savings Dashboard"
+        "command": "tokenshield.dashboard",
+        "title": "TokenShield: Open Savings Dashboard"
       },
       {
-        "command": "aiTokenOptimizer.reindex",
-        "title": "TokenShield: Reindex CodeGraph"
+        "command": "tokenshield.reindex",
+        "title": "TokenShield: Reindex Code Graph"
       },
       {
-        "command": "aiTokenOptimizer.installTools",
-        "title": "TokenShield: Install Optimization Tools"
+        "command": "tokenshield.setupTools",
+        "title": "TokenShield: Setup CLI Tools"
       },
       {
-        "command": "aiTokenOptimizer.configureMcp",
+        "command": "tokenshield.configureMcp",
         "title": "TokenShield: Configure MCP Servers"
       },
       {
-        "command": "aiTokenOptimizer.validateAll",
-        "title": "TokenShield: Validate All 19 Strategies"
+        "command": "tokenshield.healthCheck",
+        "title": "TokenShield: Run Health Check"
       },
       {
-        "command": "aiTokenOptimizer.clearCache",
-        "title": "TokenShield: Clear Semantic Cache"
+        "command": "tokenshield.flushCache",
+        "title": "TokenShield: Flush Semantic Cache"
       },
       {
-        "command": "aiTokenOptimizer.validateIndex",
-        "title": "TokenShield: Validate CodeGraph Index"
+        "command": "tokenshield.validateGraph",
+        "title": "TokenShield: Validate Code Graph"
       },
       {
-        "command": "aiTokenOptimizer.manageProjects",
-        "title": "TokenShield: Manage CodeGraph Projects"
+        "command": "tokenshield.manageProjects",
+        "title": "TokenShield: Manage Graph Projects"
       },
       {
-        "command": "aiTokenOptimizer.exportTelemetry",
-        "title": "TokenShield: Export Executive Telemetry Report (CSV/JSON/MD)"
+        "command": "tokenshield.exportReport",
+        "title": "TokenShield: Export Savings Report"
       },
       {
-        "command": "aiTokenOptimizer.configureExclusions",
-        "title": "TokenShield: Configure Context Exclusions (CAP-7)"
+        "command": "tokenshield.exclusions",
+        "title": "TokenShield: Edit Context Exclusions"
       },
       {
-        "command": "aiTokenOptimizer.pruneSelection",
-        "title": "TokenShield: Compress & Copy Pruned Context to Clipboard"
+        "command": "tokenshield.pruneAndCopy",
+        "title": "TokenShield: Prune & Copy to Clipboard"
       },
       {
-        "command": "aiTokenOptimizer.showSessionBreakdown",
-        "title": "TokenShield: Show Live Per-Chat Savings Breakdown"
+        "command": "tokenshield.sessionBreakdown",
+        "title": "TokenShield: Show Session Breakdown"
       },
       {
-        "command": "aiTokenOptimizer.resetSession",
-        "title": "TokenShield: Reset Session Savings / Start New Session"
+        "command": "tokenshield.newSession",
+        "title": "TokenShield: Start New Session"
       },
       {
-        "command": "aiTokenOptimizer.pruneGitDiff",
-        "title": "TokenShield: Compress & Copy Git Diff Context (CAP-11)"
+        "command": "tokenshield.compressDiff",
+        "title": "TokenShield: Compress Git Diff"
       },
       {
-        "command": "aiTokenOptimizer.exportToRepo",
-        "title": "TokenShield: Export Instructions to Repository"
+        "command": "tokenshield.exportToRepo",
+        "title": "TokenShield: Export Directives to Repo"
       },
       {
-        "command": "aiTokenOptimizer.initProject",
-        "title": "TokenShield: Initialize for This Project (Stack-Specific Instructions)"
+        "command": "tokenshield.init",
+        "title": "TokenShield: Initialize Project"
       }
     ],
     "configuration": {
       "title": "TokenShield",
       "properties": {
-        "aiTokenOptimizer.enabled": {
+        "tokenshield.enabled": {
           "type": "boolean",
           "default": true,
           "description": "Enable or disable all token optimizations."
         },
-        "aiTokenOptimizer.autoApply": {
+        "tokenshield.autoApply": {
           "type": "boolean",
           "default": true,
           "description": "Automatically apply token optimization directives when opening a workspace."
         },
-        "aiTokenOptimizer.targetTools": {
+        "tokenshield.targetTools": {
           "type": "array",
           "items": {
             "type": "string",
@@ -145,7 +145,7 @@
           ],
           "description": "Which AI tools to generate instruction files for."
         },
-        "aiTokenOptimizer.profile": {
+        "tokenshield.profile": {
           "type": "string",
           "enum": [
             "full",
@@ -164,7 +164,7 @@
             "Use custom strategy combination from activeStrategies setting"
           ]
         },
-        "aiTokenOptimizer.activeStrategies": {
+        "tokenshield.activeStrategies": {
           "type": "object",
           "default": {
             "codeGraph": true,
@@ -181,84 +181,84 @@
           "properties": {
             "codeGraph": {
               "type": "boolean",
-              "description": "CAP-1: CodeGraph semantic pre-indexing"
+              "description": "CodeGraph semantic symbol pre-indexing"
             },
             "outputCompression": {
               "type": "boolean",
-              "description": "CAP-2: RTK output compression for CLI & test commands"
+              "description": "RTK terminal and test output compression"
             },
             "verbosityControl": {
               "type": "boolean",
-              "description": "CAP-3: Caveman concise response control"
+              "description": "Concise AI responses without filler"
             },
             "sessionManagement": {
               "type": "boolean",
-              "description": "CAP-4: Session & context hygiene"
+              "description": "Context compaction and multi-turn session pruning"
             },
             "semanticCache": {
               "type": "boolean",
-              "description": "CAP-5: Local semantic cache (zero model tokens for repeated questions)"
+              "description": "Local semantic cache (zero model tokens for repeated questions)"
             },
             "astSkeleton": {
               "type": "boolean",
-              "description": "CAP-6: AST structural skeleton extraction (~90% context reduction)"
+              "description": "AST type skeleton extraction (~90% smaller file context)"
             },
             "contextExclusion": {
               "type": "boolean",
-              "description": "CAP-7: Smart context exclusion (auto-exclude lock files, dist/, minified code)"
+              "description": "Smart context exclusions (auto-exclude lockfiles, dist/, minified code)"
             },
             "diffOnlyOutput": {
               "type": "boolean",
-              "description": "CAP-8: Diff-only output format (~92% output token savings)"
+              "description": "Diff-only output format (~92% output token savings)"
             },
             "agentGuardrails": {
               "type": "boolean",
-              "description": "CAP-9: Agent loop guardrails (prevents expensive runaway retry cycles)"
+              "description": "Loop guardrails (prevents expensive runaway retry cycles)"
             },
             "smartModelRouting": {
               "type": "boolean",
-              "description": "CAP-10: Smart model routing (suggests lighter models for routine edits)"
+              "description": "Smart model routing (suggests lighter models for routine edits)"
             },
             "gitDiffContext": {
               "type": "boolean",
-              "description": "CAP-11: Git diff-scoped context (scope reviews to git diff + 1-hop callers/callees)"
+              "description": "Git diff scoping (restricts reviews to git diff + 1-hop callers/callees)"
             },
             "kvCacheAlignment": {
               "type": "boolean",
-              "description": "CAP-12: Deterministic prefix caching — for API/agent-mode workflows, not VS Code Copilot chat"
+              "description": "Prompt prefix caching (maintains byte-aligned prefixes for cloud KV caches)"
             },
             "commentStripper": {
               "type": "boolean",
-              "description": "CAP-13: Comment & header stripping — strip license preambles and filler comments on ingestion"
+              "description": "Comment and header stripper (removes copyright preambles on ingestion)"
             },
             "testFailureIsolator": {
               "type": "boolean",
-              "description": "CAP-14: Test log failure isolation — filter to failing assertions and line numbers only"
+              "description": "Test failure isolator (extracts failing assertions and line numbers only)"
             },
             "rangeSlicing": {
               "type": "boolean",
-              "description": "CAP-15: Windowed range slicing — restrict file navigation to 100-line windows around symbols"
+              "description": "Windowed range slicing (restricts file reads to 100-line windows around symbols)"
             },
             "inlineChatScopePinning": {
               "type": "boolean",
-              "description": "CAP-16: Inline chat scope pinning — constrain VS Code inline chat context to selected lines + 1-hop references"
+              "description": "Inline chat scope lock (constrains inline chat to selected lines + references)"
             },
             "copilotIgnoreGeneration": {
               "type": "boolean",
-              "description": "CAP-17: .copilotignore generation — create .copilotignore to block build outputs, lock files, and secrets from Copilot context"
+              "description": ".copilotignore generator (blocks build outputs, lockfiles, and secrets)"
             },
             "copilotEditsAwareness": {
               "type": "boolean",
-              "description": "CAP-18: Copilot Edits awareness — avoid re-reading files already open in a Copilot Edits session"
+              "description": "Edit session awareness (avoids re-reading files already in active editor session)"
             },
             "threadResetTrigger": {
               "type": "boolean",
-              "description": "CAP-19: Thread reset trigger — surface a fresh-thread nudge when conversation exceeds 40 messages"
+              "description": "Context saturation monitor (suggests fresh thread when conversation exceeds 40 messages)"
             }
           },
-          "description": "Toggle individual strategies (used when profile is 'custom')."
+          "description": "Toggle individual optimization features (used when profile is 'custom')."
         },
-        "aiTokenOptimizer.verbosityLevel": {
+        "tokenshield.verbosityLevel": {
           "type": "string",
           "enum": [
             "light",
@@ -268,22 +268,22 @@
           "default": "full",
           "description": "Verbosity reduction level: Light (~20%), Full (~35%), Ultra (~50%)."
         },
-        "aiTokenOptimizer.preserveExistingInstructions": {
+        "tokenshield.preserveExistingInstructions": {
           "type": "boolean",
           "default": true,
           "description": "Preserve existing user content in instruction files when updating."
         },
-        "aiTokenOptimizer.autoInstallTools": {
+        "tokenshield.autoInstallTools": {
           "type": "boolean",
           "default": true,
           "description": "Automatically check and install supporting CLI tools."
         },
-        "aiTokenOptimizer.configureMcpOnActivation": {
+        "tokenshield.configureMcpOnActivation": {
           "type": "boolean",
           "default": true,
           "description": "Automatically configure MCP servers (token-cache, Context7, CodeGraph) on activation."
         },
-        "aiTokenOptimizer.pricing": {
+        "tokenshield.pricing": {
           "type": "object",
           "default": {
             "flagship": { "inputPerMillion": 15.0, "outputPerMillion": 75.0 },
@@ -292,7 +292,7 @@
           },
           "description": "Model pricing table in USD per 1M tokens (used for ROI dashboard calculations)."
         },
-        "aiTokenOptimizer.guardrails": {
+        "tokenshield.guardrails": {
           "type": "object",
           "default": {
             "maxRetries": 3,
@@ -302,33 +302,33 @@
           "properties": {
             "maxRetries": {
               "type": "number",
-              "description": "CAP-9: Max retry attempts before pausing for user input",
+              "description": "Max retry attempts before pausing for user confirmation",
               "default": 3
             },
             "maxFilesPerTask": {
               "type": "number",
-              "description": "CAP-9: Max files to modify in one task before asking confirmation",
+              "description": "Max files to modify in one task before asking confirmation",
               "default": 10
             },
             "maxFileReads": {
               "type": "number",
-              "description": "CAP-9: Max reads of the same file in a single conversation",
+              "description": "Max reads of the same file in a single conversation",
               "default": 2
             }
           },
-          "description": "CAP-9: Agent Loop Guardrail limits."
+          "description": "Agent loop guardrail limits to prevent runaway tool usage."
         },
-        "aiTokenOptimizer.useVscodeStorage": {
+        "tokenshield.useVscodeStorage": {
           "type": "boolean",
           "default": true,
           "description": "Store instructions cleanly in .vscode/copilot-instructions.md instead of modifying public git tracking. Use 'Export to Repository' command when team-wide repo commit is desired."
         },
-        "aiTokenOptimizer.githubInstructions": {
+        "tokenshield.githubInstructions": {
           "type": "boolean",
           "default": true,
           "description": "Write instructions to .github/ (the path VS Code Copilot auto-discovers). Recommended: true. Set false only if you prefer to keep all generated files out of git."
         },
-        "aiTokenOptimizer.githubStructureMode": {
+        "tokenshield.githubStructureMode": {
           "type": "string",
           "enum": [
             "auto",
@@ -338,12 +338,12 @@
           "default": "auto",
           "description": "How TokenShield integrates with .github/: 'auto' detects structured layout (.github/instructions/), 'flat' writes directly to .github/copilot-instructions.md, 'structured' writes to .github/instructions/tokenshield.instructions.md."
         },
-        "aiTokenOptimizer.generateAgentFiles": {
+        "tokenshield.generateAgentFiles": {
           "type": "boolean",
           "default": false,
           "description": "Scaffold TokenShield agent (.github/agents/tokenshield.agent.md) and optimization skill (.github/skills/tokenshield-optimize/SKILL.md) in structured .github repositories."
         },
-        "aiTokenOptimizer.telemetry.enabled": {
+        "tokenshield.telemetry.enabled": {
           "type": "boolean",
           "default": true,
           "description": "Enable 100% on-device ROI and token savings tracking."

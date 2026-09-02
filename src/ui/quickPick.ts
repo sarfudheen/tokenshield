@@ -13,7 +13,7 @@ export async function showProfilePicker(): Promise<void> {
 
   const items: vscode.QuickPickItem[] = [
     { label: enabledLabel, description: enabledDesc },
-    { label: '$(check-all) Validate All Directives', description: `Run live health-check on all ${TOTAL_STRATEGIES} optimization directives (CAP-1 through CAP-${TOTAL_STRATEGIES})` },
+    { label: '$(check-all) Run Health Check', description: `Live health-check across all ${TOTAL_STRATEGIES} optimization features` },
     { label: '', kind: vscode.QuickPickItemKind.Separator },
     { label: PROFILE_DESCRIPTIONS.full,     description: config.profile === 'full'     ? '(active)' : '' },
     { label: PROFILE_DESCRIPTIONS.debug,    description: config.profile === 'debug'    ? '(active)' : '' },
@@ -21,10 +21,10 @@ export async function showProfilePicker(): Promise<void> {
     { label: PROFILE_DESCRIPTIONS.review,   description: config.profile === 'review'   ? '(active)' : '' },
     { label: PROFILE_DESCRIPTIONS.custom,   description: config.profile === 'custom'   ? '(active)' : '' },
     { label: '', kind: vscode.QuickPickItemKind.Separator },
-    { label: '$(settings-gear) Toggle Individual Strategies...', description: '' },
-    { label: '$(dashboard) Show ROI Savings Dashboard', description: '' },
-    { label: '$(refresh) Regenerate Instruction Directives', description: '' },
-    { label: '$(file-symlink-directory) Configure Context Exclusions (CAP-7)...', description: '' },
+    { label: '$(settings-gear) Toggle Individual Features...', description: '' },
+    { label: '$(dashboard) Open Savings Dashboard', description: '' },
+    { label: '$(refresh) Regenerate AI Instruction Files', description: '' },
+    { label: '$(file-symlink-directory) Configure Context Exclusions...', description: '' },
   ];
 
   const selected = await vscode.window.showQuickPick(items, {
@@ -37,12 +37,12 @@ export async function showProfilePicker(): Promise<void> {
   }
 
   if (selected.label.includes('Disable TokenShield') || selected.label.includes('Enable TokenShield')) {
-    await vscode.commands.executeCommand('aiTokenOptimizer.toggleAll');
+    await vscode.commands.executeCommand('tokenshield.toggle');
     return;
   }
 
   if (selected.label.includes('Validate All')) {
-    await vscode.commands.executeCommand('aiTokenOptimizer.validateAll');
+    await vscode.commands.executeCommand('tokenshield.healthCheck');
     return;
   }
 
@@ -52,17 +52,17 @@ export async function showProfilePicker(): Promise<void> {
   }
 
   if (selected.label.includes('Dashboard')) {
-    await vscode.commands.executeCommand('aiTokenOptimizer.showDashboard');
+    await vscode.commands.executeCommand('tokenshield.dashboard');
     return;
   }
 
   if (selected.label.includes('Regenerate')) {
-    await vscode.commands.executeCommand('aiTokenOptimizer.regenerateInstructions');
+    await vscode.commands.executeCommand('tokenshield.regenerate');
     return;
   }
 
   if (selected.label.includes('Context Exclusions')) {
-    await vscode.commands.executeCommand('aiTokenOptimizer.configureExclusions');
+    await vscode.commands.executeCommand('tokenshield.exclusions');
     return;
   }
 
@@ -84,15 +84,18 @@ async function showStrategyToggle(): Promise<void> {
   const config = getConfig();
   const strategies = getEffectiveStrategies(config);
 
-  const items: vscode.QuickPickItem[] = STRATEGY_KEYS.map((key) => ({
-    label: `${strategies[key] ? '$(check)' : '$(circle-large-outline)'} ${STRATEGY_CAP_LABELS[key]}: ${STRATEGY_DESCRIPTIONS[key].split(' — ')[0]}`,
-    description: STRATEGY_DESCRIPTIONS[key].split(' — ')[1] || '',
-    picked: strategies[key],
-  }));
+  const items: vscode.QuickPickItem[] = STRATEGY_KEYS.map((key) => {
+    const parts = STRATEGY_DESCRIPTIONS[key].split(' — ');
+    return {
+      label: `${strategies[key] ? '$(check)' : '$(circle-large-outline)'} ${parts[0]}`,
+      description: parts[1] || '',
+      picked: strategies[key],
+    };
+  });
 
   const selected = await vscode.window.showQuickPick(items, {
-    placeHolder: 'Toggle directives (modifications switch profile to Custom)',
-    title: 'TokenShield — Strategy Directives',
+    placeHolder: 'Toggle optimization features (modifications switch profile to Custom)',
+    title: 'TokenShield — Optimization Features',
     canPickMany: true,
   });
 
@@ -102,13 +105,13 @@ async function showStrategyToggle(): Promise<void> {
 
   const newStrategies: Record<string, boolean> = {};
   for (const key of STRATEGY_KEYS) {
-    const capLabel = STRATEGY_CAP_LABELS[key];
-    newStrategies[key] = selected.some((i) => i.label.includes(capLabel));
+    const featureName = STRATEGY_DESCRIPTIONS[key].split(' — ')[0];
+    newStrategies[key] = selected.some((i) => i.label.includes(featureName));
   }
 
   await updateStrategies(newStrategies);
   const activeCount = Object.values(newStrategies).filter(Boolean).length;
   vscode.window.showInformationMessage(
-    `TokenShield: ${activeCount}/${TOTAL_STRATEGIES} directives active`
+    `TokenShield: ${activeCount}/${TOTAL_STRATEGIES} features active`
   );
 }

@@ -22,12 +22,12 @@ import { DiscoveredModel } from '../core/types';
 import { chatSavingsTracker, ChatSavingsEvent } from '../telemetry/chatSavingsTracker';
 import { SemanticCacheStore } from '../cache/store';
 
-const REFRESH_COMMAND = 'aiTokenOptimizer.showDashboard';
-const EXPORT_COMMAND = 'aiTokenOptimizer.exportTelemetry';
-const PRUNE_COMMAND = 'aiTokenOptimizer.pruneSelection';
-const PROFILE_COMMAND = 'aiTokenOptimizer.selectProfile';
-const EXCLUSIONS_COMMAND = 'aiTokenOptimizer.configureExclusions';
-const RESET_COMMAND = 'aiTokenOptimizer.resetSession';
+const REFRESH_COMMAND = 'tokenshield.dashboard';
+const EXPORT_COMMAND = 'tokenshield.exportReport';
+const PRUNE_COMMAND = 'tokenshield.pruneAndCopy';
+const PROFILE_COMMAND = 'tokenshield.switchProfile';
+const EXCLUSIONS_COMMAND = 'tokenshield.exclusions';
+const RESET_COMMAND = 'tokenshield.newSession';
 
 interface DashboardMeasurements {
   codeGraph: Measurement;
@@ -45,7 +45,7 @@ interface DashboardMeasurements {
 
 interface DirectiveCardData {
   id: string;
-  cap: string;
+  tag: string;
   name: string;
   icon: string;
   subtitle: string;
@@ -54,36 +54,39 @@ interface DirectiveCardData {
   whereItRan: string;
   tokensSavedBadge: string;
   measurement: Measurement;
+  groupClass: string;
 }
 
-function getCapCardState(
-  capCode: string,
+function getFeatureCardState(
+  tag: string,
   name: string,
   icon: string,
   subtitle: string,
   howItSaves: string,
   measurement: Measurement,
   events: ChatSavingsEvent[],
-  sessionNum: number
+  sessionNum: number,
+  groupClass: string = 'cap-group-a'
 ): DirectiveCardData {
   if (measurement.status === 'disabled') {
     return {
-      id: capCode.toLowerCase(),
-      cap: capCode,
+      id: name.toLowerCase().replace(/\s+/g, '-'),
+      tag,
       name,
       icon,
       subtitle,
-      liveMetric: 'Directive is currently DISABLED in configuration profile',
+      liveMetric: 'Feature is currently disabled in your configuration profile',
       tokensSavedBadge: 'DISABLED',
-      whereItRan: 'Not loaded into LLM system prompts.',
+      whereItRan: 'Not active in AI prompts or tools.',
       howItSaves,
       measurement,
+      groupClass,
     };
   }
 
   const capEvents = events.filter(e =>
-    e.directive.toUpperCase().includes(capCode.toUpperCase()) ||
-    e.directive.toLowerCase().includes(name.toLowerCase())
+    e.directive.toLowerCase().includes(name.toLowerCase()) ||
+    e.directive.toLowerCase().includes(tag.toLowerCase())
   );
   const capTokens = capEvents.reduce((acc, e) => acc + e.tokensSaved, 0);
 
@@ -91,12 +94,12 @@ function getCapCardState(
     const latest = capEvents[0];
     const formatted = capTokens >= 1000 ? `${(capTokens / 1000).toFixed(1)}k` : `${capTokens}`;
     return {
-      id: capCode.toLowerCase(),
-      cap: capCode,
+      id: name.toLowerCase().replace(/\s+/g, '-'),
+      tag,
       name,
       icon,
       subtitle,
-      liveMetric: `+${capTokens.toLocaleString()} tokens avoided in Session #${sessionNum} (${capEvents.length} event${capEvents.length > 1 ? 's' : ''})`,
+      liveMetric: `+${capTokens.toLocaleString()} tokens saved in Session #${sessionNum} (${capEvents.length} event${capEvents.length > 1 ? 's' : ''})`,
       tokensSavedBadge: `+${formatted} TOKENS`,
       whereItRan: `Last ran on <code>${latest.source}</code>: ${latest.details}`,
       howItSaves,
@@ -104,24 +107,25 @@ function getCapCardState(
         ...measurement,
         percent: measurement.percent || 75,
       },
+      groupClass,
     };
   }
 
-  // If no events in this session (e.g. freshly reset)
   return {
-    id: capCode.toLowerCase(),
-    cap: capCode,
+    id: name.toLowerCase().replace(/\s+/g, '-'),
+    tag,
     name,
     icon,
     subtitle,
-    liveMetric: `0 tokens in Session #${sessionNum} · Directive Armed & Standing Guard`,
-    tokensSavedBadge: 'ARMED (0 TOK)',
-    whereItRan: `Active system directive in <code>AGENTS.md</code> & <code>copilot-instructions.md</code>. Will record exact file & token savings upon first query.`,
+    liveMetric: `0 tokens in Session #${sessionNum} · Feature active & standing by`,
+    tokensSavedBadge: 'ACTIVE (0 TOK)',
+    whereItRan: `Active in AI instruction directives. Will record savings on your next assistant query.`,
     howItSaves,
     measurement: {
       ...measurement,
       percent: 0,
     },
+    groupClass,
   };
 }
 
@@ -147,8 +151,8 @@ export class DashboardPanel {
     }
 
     const panel = vscode.window.createWebviewPanel(
-      'aiTokenOptimizerDashboard',
-      'TokenShield — ROI Savings Dashboard',
+      'tokenshieldDashboard',
+      'TokenShield — Savings Dashboard',
       vscode.ViewColumn.One,
       {
         enableScripts: true,
@@ -259,10 +263,10 @@ export class DashboardPanel {
     }
 
     return `
-    <div class="card">
+    <div class="card ${card.groupClass || ''} ${m.status === 'disabled' ? 'cap-disabled' : ''}">
       <div class="card-header">
         <div>
-          <div class="cap-tag">${card.cap}</div>
+          <div class="cap-tag">${card.tag}</div>
           <h3 class="card-title">${card.icon} ${card.name}</h3>
           <div class="card-subtitle">${card.subtitle}</div>
         </div>
@@ -270,7 +274,7 @@ export class DashboardPanel {
       </div>
 
       <div class="live-metric-box">
-        <div class="live-metric-title">📊 MEASURED GAIN IN THIS WORKSPACE:</div>
+        <div class="live-metric-title">📊 WORKSPACE SAVINGS:</div>
         <div class="live-metric-val">${card.liveMetric}</div>
       </div>
 
@@ -280,12 +284,12 @@ export class DashboardPanel {
       </div>` : ''}
 
       <div class="info-section">
-        <div class="info-label">🎯 WHERE & WHEN IT RAN:</div>
+        <div class="info-label">🎯 RECENT ACTIVITY:</div>
         <div class="info-text">${card.whereItRan}</div>
       </div>
 
       <div class="card-footer">
-        <span class="detail-note"><strong>Mechanism:</strong> ${card.howItSaves}</span>
+        <span class="detail-note"><strong>How it works:</strong> ${card.howItSaves}</span>
       </div>
     </div>`;
   }
@@ -309,215 +313,214 @@ export class DashboardPanel {
     const pastSessions = chatSavingsTracker.getPastSessions();
 
     const directiveCards: DirectiveCardData[] = [
-      getCapCardState(
-        'CAP-6',
-        'AST Skeleton Pruning',
-        '🌲',
-        'Signatures-Only File Inspection',
-        'Extracts types, classes, interfaces, and function signatures without loading implementation bodies.',
-        measurements.astSkeleton,
-        recentEvents,
-        sessionNum
-      ),
-      getCapCardState(
-        'CAP-5',
-        'Local Semantic Answer Cache',
-        '💾',
-        'Zero-Cost Disk Cache',
-        'Reuses previous answers from local disk at $0.00 cost without querying the LLM.',
-        measurements.semanticCache,
-        recentEvents,
-        sessionNum
-      ),
-      getCapCardState(
-        'CAP-1',
-        'CodeGraph Semantic Indexing',
+      getFeatureCardState(
+        'CODE SEARCH',
+        'CodeGraph Pre-Indexing',
         '🔍',
-        'Graph-First Symbol Explorer',
-        'Replaces wide multi-file grep searches (~15,000 tokens) with direct symbol graph hops (~400 tokens: 97% saved).',
+        'Semantic Symbol Explorer',
+        'Replaces multi-file grep scans with direct AST graph lookups (~97% context reduction).',
         measurements.codeGraph,
         recentEvents,
-        sessionNum
+        sessionNum,
+        'cap-group-a'
       ),
-      getCapCardState(
-        'CAP-2',
-        'RTK Command Output Filtering',
+      getFeatureCardState(
+        'TERMINAL',
+        'CLI Output Compression',
         '⚡',
-        'Shell Output Compression Proxy',
-        'Intercepts shell commands (git, test, build, ls, grep) and strips verbose boilerplate logs (60-90% token savings).',
+        'Shell Output Filter',
+        'Filters verbose terminal, test, and git output to isolate actionable output (60-90% smaller).',
         measurements.outputCompression,
         recentEvents,
-        sessionNum
+        sessionNum,
+        'cap-group-a'
       ),
-      getCapCardState(
-        'CAP-3',
-        'Dense Output (Caveman)',
+      getFeatureCardState(
+        'PROMPT FILTER',
+        'Concise AI Responses',
         '🗣️',
-        'Zero Conversational Puffery',
-        'Strips polite greetings, apologies, and filler explanations from AI responses.',
+        'Compact Output Mode',
+        'Strips conversational filler, pleasantries, and polite apologies from assistant responses.',
         measurements.verbosityControl,
         recentEvents,
-        sessionNum
+        sessionNum,
+        'cap-group-a'
       ),
-      getCapCardState(
-        'CAP-4',
-        'Context Hygiene & Compaction',
+      getFeatureCardState(
+        'SESSION',
+        'Context Compaction',
         '🧹',
-        'Multi-Turn Session Pruner',
-        'Instructs LLM to clear stale conversational history and drop redundant output logs.',
+        'Multi-Turn Session Pruning',
+        'Automatically clears stale conversational history and redundant tool output turns.',
         measurements.sessionManagement,
         recentEvents,
-        sessionNum
+        sessionNum,
+        'cap-group-a'
       ),
-      getCapCardState(
-        'CAP-5',
-        'Local Semantic Answer Cache',
+      getFeatureCardState(
+        'DISK CACHE',
+        'Semantic Cache',
         '💾',
-        'Zero-Cost Disk Cache',
-        'Reuses previous answers from local disk at $0.00 cost without querying the LLM.',
+        'Instant Local Answer Cache',
+        'Serves repeated or similar questions instantly from local disk at $0.00 cost (zero model tokens).',
         measurements.semanticCache,
         recentEvents,
-        sessionNum
+        sessionNum,
+        'cap-group-b'
       ),
-      getCapCardState(
-        'CAP-6',
-        'AST Skeleton Pruning',
+      getFeatureCardState(
+        'AST PARSER',
+        'AST Skeletons',
         '🌲',
-        'Signatures-Only File Inspection',
-        'Extracts types, classes, interfaces, and function signatures without loading implementation bodies.',
+        'Signatures-Only Inspection',
+        'Loads interfaces, classes, and function signatures without ingesting full implementation bodies.',
         measurements.astSkeleton,
         recentEvents,
-        sessionNum
+        sessionNum,
+        'cap-group-b'
       ),
-      getCapCardState(
-        'CAP-7',
+      getFeatureCardState(
+        'EXCLUSIONS',
         'Smart Context Exclusions',
         '🚫',
-        'Noise & Build Bundle Shield',
-        'Blocks lockfiles, compiled dist/ bundles, and minified assets from polluting AI context.',
+        'Noise & Build File Shield',
+        'Prevents lockfiles, compiled dist/ bundles, and minified code from polluting prompt context.',
         measurements.contextExclusion,
         recentEvents,
-        sessionNum
+        sessionNum,
+        'cap-group-b'
       ),
-      getCapCardState(
-        'CAP-8',
-        'Unified Diff Modifications',
+      getFeatureCardState(
+        'PATCH EDITING',
+        'Diff-Only Output',
         '📝',
         'Targeted Patch Editing',
-        'Outputs only modified diff hunks (40 tokens) instead of rewriting entire 500-line files (1,500-5,800 tokens).',
+        'Outputs modified diff hunks instead of rewriting entire multi-hundred line files.',
         measurements.diffOnlyOutput,
         recentEvents,
-        sessionNum
+        sessionNum,
+        'cap-group-b'
       ),
-      getCapCardState(
-        'CAP-9',
-        'Agent Loop Guardrails',
+      getFeatureCardState(
+        'SAFETY',
+        'Loop Guardrails',
         '🛡️',
         'Runaway Retry Interceptor',
-        'Aborts infinite retry loops after 3 consecutive failures to prevent runaway credit burn.',
+        'Halts runaway retry loops after 3 failures to prevent expensive token and cost burns.',
         measurements.agentGuardrails,
         recentEvents,
-        sessionNum
+        sessionNum,
+        'cap-group-c'
       ),
-      getCapCardState(
-        'CAP-10',
+      getFeatureCardState(
+        'ROUTING',
         'Smart Model Routing',
         '🚦',
         'Cost-Aware Model Routing',
-        'Runs routine coding tasks on lightweight models vs $15.00/1M Flagship models (99% cost reduction).',
+        'Routes routine tasks (formatting, renaming, simple edits) to faster, cost-effective models.',
         measurements.smartModelRouting,
         recentEvents,
-        sessionNum
+        sessionNum,
+        'cap-group-c'
       ),
-      getCapCardState(
-        'CAP-11',
-        'Git Diff-Scoped Context',
+      getFeatureCardState(
+        'GIT SCOPE',
+        'Git Diff Scoping',
         '🔀',
         'Incremental Change Ingestion',
-        'Scopes code reviews, refactors, and test writing strictly to rtk git diff and 1-hop AST callers/callees.',
-        { status: strategies.gitDiffContext ? 'measured' : 'disabled', percent: 85, detail: 'Scopes PRs to rtk git diff hunks and direct AST dependencies' },
+        'Restricts code reviews, PRs, and unit test generation strictly to git diff lines and direct callers.',
+        { status: strategies.gitDiffContext ? 'measured' : 'disabled', percent: 85, detail: 'Scopes reviews to git diff hunks and direct AST dependencies' },
         recentEvents,
-        sessionNum
+        sessionNum,
+        'cap-group-c'
       ),
-      getCapCardState(
-        'CAP-12',
-        'Cloud KV-Cache Alignment',
+      getFeatureCardState(
+        'CLOUD CACHE',
+        'Prompt Prefix Caching',
         '⚡',
-        'Deterministic Prefix Cache',
-        'Preserves byte-identical system prompt prefixes to unlock up to 90% cloud input token cache discounts.',
+        'Deterministic KV-Cache',
+        'Maintains deterministic system prompt prefixes to unlock cloud input token caching discounts.',
         { status: strategies.kvCacheAlignment ? 'measured' : 'disabled', percent: 90, detail: 'Byte-aligned deterministic prefix blocks' },
         recentEvents,
-        sessionNum
+        sessionNum,
+        'cap-group-c'
       ),
-      getCapCardState(
-        'CAP-13',
+      getFeatureCardState(
+        'MINIFIER',
         'Comment & Header Stripper',
         '✂️',
-        'Payload Minifier',
-        'Strips license headers, copyright preambles, and low-signal inline comments during context ingestion.',
+        'Source Minifier',
+        'Strips license preambles, copyright blocks, and low-signal filler comments on file reads.',
         { status: strategies.commentStripper ? 'measured' : 'disabled', percent: 30, detail: 'Removes boilerplate comments from source code' },
         recentEvents,
-        sessionNum
+        sessionNum,
+        'cap-group-d'
       ),
-      getCapCardState(
-        'CAP-14',
+      getFeatureCardState(
+        'TEST RUNNER',
         'Test Failure Isolator',
         '🧪',
-        'Smart Test Shrinker',
-        'Captures only failing assertions and line numbers, stripping out passing suites from terminal logs.',
-        { status: strategies.testFailureIsolator ? 'measured' : 'disabled', percent: 95, detail: 'Isolates failing test lines from test runners' },
+        'Failure Extractor',
+        'Isolates failing assertions and line numbers, stripping passing test suites from logs.',
+        { status: strategies.testFailureIsolator ? 'measured' : 'disabled', percent: 95, detail: 'Extracts failing assertions from test runners' },
         recentEvents,
-        sessionNum
+        sessionNum,
+        'cap-group-d'
       ),
-      getCapCardState(
-        'CAP-15',
+      getFeatureCardState(
+        'RANGE SLICER',
         'Windowed Range Slicing',
         '🔍',
-        'Anti-File Dump Shield',
-        'Restricts large-file navigation to targeted 100-line slice windows around symbol declarations.',
+        'Slice Navigation',
+        'Constrains file reads to targeted 100-line slice windows around symbol declarations.',
         { status: strategies.rangeSlicing ? 'measured' : 'disabled', percent: 80, detail: 'Enforces 100-line window slicing on file reads' },
         recentEvents,
-        sessionNum
+        sessionNum,
+        'cap-group-d'
       ),
-      getCapCardState(
-        'CAP-16',
-        'Inline Chat Scope Pinning',
+      getFeatureCardState(
+        'EDITOR SCOPE',
+        'Inline Chat Scope Lock',
         '🎯',
-        'Selected Lines Scope Lock',
-        'Restricts inline chat context strictly to selected lines and immediate 1-hop symbol references.',
+        'Selection Lock',
+        'Pins inline editor chat context strictly to selected lines and immediate symbol references.',
         { status: strategies.inlineChatScopePinning ? 'measured' : 'disabled', percent: 85, detail: 'Locks inline chat context to active selection' },
         recentEvents,
-        sessionNum
+        sessionNum,
+        'cap-group-d'
       ),
-      getCapCardState(
-        'CAP-17',
-        '.copilotignore Context Blocking',
+      getFeatureCardState(
+        'RULES',
+        '.copilotignore Generator',
         '🛡️',
-        'Noise Exclusion Rules',
-        'Enforces project-level .copilotignore rules to block build files, secrets, and generated artifacts.',
+        'Context Filter Rules',
+        'Maintains project-level .copilotignore rules to block build files, secrets, and assets.',
         { status: strategies.copilotIgnoreGeneration ? 'measured' : 'disabled', percent: 90, detail: 'Enforces .copilotignore file exclusion rules' },
         recentEvents,
-        sessionNum
+        sessionNum,
+        'cap-group-d'
       ),
-      getCapCardState(
-        'CAP-18',
-        'Copilot Edits Session Awareness',
+      getFeatureCardState(
+        'SESSION CACHE',
+        'Edit Session Awareness',
         '🔄',
-        'Active Edit Set Cache',
-        'Treats files open in a multi-file edit session as loaded, avoiding redundant tool re-reads.',
+        'Active Editor Cache',
+        'Treats files already open in multi-file edit sessions as loaded, avoiding redundant re-reads.',
         { status: strategies.copilotEditsAwareness ? 'measured' : 'disabled', percent: 75, detail: 'Avoids re-reading open edit session files' },
         recentEvents,
-        sessionNum
+        sessionNum,
+        'cap-group-d'
       ),
-      getCapCardState(
-        'CAP-19',
-        'Thread Reset Trigger',
-        '💡',
+      getFeatureCardState(
+        'MONITOR',
         'Context Saturation Monitor',
-        'Proactively suggests fresh chat threads when context length exceeds 40 messages to prevent degradation.',
+        '💡',
+        'Thread Reset Nudge',
+        'Proactively suggests fresh chat threads when conversation length exceeds 40 messages.',
         { status: strategies.threadResetTrigger ? 'measured' : 'disabled', percent: 100, detail: 'Surfaces thread reset nudges on long conversations' },
         recentEvents,
-        sessionNum
+        sessionNum,
+        'cap-group-d'
       ),
     ];
 
@@ -579,10 +582,10 @@ export class DashboardPanel {
                 <thead>
                   <tr style="background:#131a2c;">
                     <th style="width:120px;">Timestamp</th>
-                    <th style="width:180px;">Directive</th>
+                    <th style="width:180px;">Optimization</th>
                     <th style="width:200px;">Target File / Action</th>
-                    <th style="width:170px;">Tokens Avoided</th>
-                    <th>How It Was Avoided</th>
+                    <th style="width:170px;">Tokens Saved</th>
+                    <th>Details</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -595,7 +598,7 @@ export class DashboardPanel {
       }).join('');
 
       pastSessionsHtml = `
-      <h2>📜 Historical Archived Sessions (Click Any Session to View Breakdown)</h2>
+      <h2>📜 Past Sessions (Click to View Events)</h2>
       <div style="margin-bottom:32px;">
         ${sessionBlocks}
       </div>`;
@@ -606,92 +609,150 @@ export class DashboardPanel {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TokenShield ROI Dashboard</title>
+  <title>TokenShield Savings Dashboard</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
     :root {
-      --bg: #0e131f;
-      --card-bg: #161c2d;
-      --card-border: #232c42;
+      --bg-start: #0a0e1a;
+      --bg-end: #1a1035;
+      --glass: rgba(255,255,255,0.04);
+      --glass-border: rgba(255,255,255,0.08);
+      --glass-hover: rgba(255,255,255,0.07);
       --text: #e2e8f0;
-      --text-muted: #8e9db3;
-      --accent: #38bdf8;
-      --green: #4ade80;
-      --green-bg: rgba(74, 222, 128, 0.14);
-      --blue-bg: rgba(56, 189, 248, 0.14);
+      --text-muted: #8492a6;
+      --accent: #00e5ff;
+      --accent-glow: rgba(0,229,255,0.15);
+      --green: #00ffa3;
+      --green-bg: rgba(0,255,163,0.12);
+      --purple: #a855f7;
+      --purple-bg: rgba(168,85,247,0.12);
+      --amber: #fbbf24;
+      --amber-bg: rgba(251,191,36,0.12);
       --red: #f87171;
+      --gradient-btn: linear-gradient(135deg, #00e5ff, #a855f7);
     }
+    * { box-sizing: border-box; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
       color: var(--text);
-      background-color: var(--bg);
+      background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+      background-attachment: fixed;
       padding: 28px 32px;
       line-height: 1.5;
       margin: 0;
+      min-height: 100vh;
+    }
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes ringDraw {
+      from { stroke-dashoffset: 251; }
+    }
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(0,229,255,0); }
+      50% { box-shadow: 0 0 12px 2px rgba(0,229,255,0.25); }
     }
     .header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-bottom: 1px solid var(--card-border);
+      border-bottom: 1px solid var(--glass-border);
       padding-bottom: 20px;
-      margin-bottom: 24px;
+      margin-bottom: 28px;
+      animation: fadeInUp 0.5s ease;
     }
     h1 {
-      font-size: 24px;
-      font-weight: 700;
+      font-size: 26px;
+      font-weight: 800;
       margin: 0;
       display: flex;
       align-items: center;
       gap: 10px;
+      background: linear-gradient(135deg, #fff 0%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
     .tagline {
       font-size: 13px;
       color: var(--text-muted);
       margin-top: 4px;
+      font-weight: 500;
     }
-    .btn-group {
-      display: flex;
-      gap: 10px;
-    }
+    .btn-group { display: flex; gap: 10px; }
     .btn {
-      background: #1e293b;
-      border: 1px solid #334155;
+      background: var(--glass);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--glass-border);
       color: var(--text);
-      padding: 6px 14px;
-      border-radius: 6px;
+      padding: 8px 16px;
+      border-radius: 8px;
       text-decoration: none;
       font-size: 12.5px;
       font-weight: 600;
       display: inline-flex;
       align-items: center;
       gap: 6px;
+      transition: all 0.2s ease;
     }
-    .btn:hover { background: #334155; color: #fff; }
-    .btn-primary { background: #0284c7; border-color: #0369a1; color: #fff; }
-    .btn-primary:hover { background: #0369a1; }
+    .btn:hover { background: var(--glass-hover); border-color: rgba(255,255,255,0.15); transform: translateY(-1px); }
+    .btn-primary {
+      background: var(--gradient-btn);
+      border: none;
+      color: #fff;
+      font-weight: 700;
+      box-shadow: 0 4px 20px rgba(0,229,255,0.2);
+    }
+    .btn-primary:hover { box-shadow: 0 6px 28px rgba(0,229,255,0.35); transform: translateY(-1px); }
+
+    /* KPI Cards */
     .kpi-row {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       gap: 16px;
-      margin-bottom: 28px;
+      margin-bottom: 32px;
     }
     .kpi-card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 10px;
-      padding: 20px;
+      background: var(--glass);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      border-radius: 14px;
+      padding: 22px 20px;
+      position: relative;
+      overflow: hidden;
+      animation: fadeInUp 0.6s ease both;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .kpi-card:nth-child(1) { animation-delay: 0.1s; }
+    .kpi-card:nth-child(2) { animation-delay: 0.2s; }
+    .kpi-card:nth-child(3) { animation-delay: 0.3s; }
+    .kpi-card:nth-child(4) { animation-delay: 0.4s; }
+    .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,229,255,0.08); }
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--gradient-btn);
+      opacity: 0.6;
     }
     .kpi-val {
-      font-size: 32px;
-      font-weight: 800;
+      font-size: 34px;
+      font-weight: 900;
       color: var(--green);
       line-height: 1.1;
+      letter-spacing: -0.02em;
     }
     .kpi-title {
-      font-size: 13px;
+      font-size: 12.5px;
       font-weight: 600;
       color: var(--text);
       margin-top: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
     }
     .kpi-desc {
       font-size: 11.5px;
@@ -699,87 +760,182 @@ export class DashboardPanel {
       margin-top: 4px;
       line-height: 1.4;
     }
+
+    /* Section Headers */
     h2 {
       font-size: 17px;
       font-weight: 700;
-      margin: 32px 0 16px 0;
+      margin: 36px 0 16px 0;
       display: flex;
       align-items: center;
       gap: 8px;
+      color: #fff;
     }
+    h2::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, var(--glass-border), transparent);
+      margin-left: 12px;
+    }
+
+    /* Ledger Table */
     .ledger-container {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 10px;
+      background: var(--glass);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--glass-border);
+      border-radius: 14px;
       overflow: hidden;
       margin-bottom: 32px;
+      animation: fadeInUp 0.7s ease both;
     }
     table { width: 100%; border-collapse: collapse; font-size: 12.5px; text-align: left; }
-    th { background: #1a2236; padding: 12px 16px; font-weight: 700; color: #cbd5e1; border-bottom: 1px solid var(--card-border); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
-    td { padding: 12px 16px; border-bottom: 1px solid var(--card-border); vertical-align: middle; }
+    th {
+      background: rgba(255,255,255,0.03);
+      padding: 14px 16px;
+      font-weight: 700;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--glass-border);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    td { padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: middle; }
+    tr:nth-child(even) td { background: rgba(255,255,255,0.015); }
     tr:last-child td { border-bottom: none; }
-    .ledger-time { font-family: monospace; font-size: 11.5px; color: var(--accent); background: rgba(56, 189, 248, 0.1); padding: 2px 6px; border-radius: 4px; }
-    .tool-badge { background: #222d44; color: #e2e8f0; padding: 3px 8px; border-radius: 4px; font-size: 11.5px; font-weight: 600; }
+    tr { animation: fadeInUp 0.4s ease both; }
+    .ledger-time {
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 11px;
+      color: var(--accent);
+      background: var(--accent-glow);
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-weight: 600;
+    }
+    .tool-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+    .tool-badge-cyan { background: var(--accent-glow); color: var(--accent); }
+    .tool-badge-purple { background: var(--purple-bg); color: var(--purple); }
+    .tool-badge-green { background: var(--green-bg); color: var(--green); }
+    .tool-badge-amber { background: var(--amber-bg); color: var(--amber); }
+
+    /* Strategy Cards Grid */
     .grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-      gap: 18px;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 16px;
     }
     .card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 10px;
-      padding: 18px 20px;
+      background: var(--glass);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--glass-border);
+      border-radius: 14px;
+      padding: 20px 22px;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+      animation: fadeInUp 0.5s ease both;
+    }
+    .card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 32px rgba(0,229,255,0.06);
+      border-color: rgba(255,255,255,0.12);
+    }
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; bottom: 0; left: 0;
+      width: 3px;
+      border-radius: 3px 0 0 3px;
+    }
+    .card.cap-group-a::before { background: var(--accent); }
+    .card.cap-group-b::before { background: var(--purple); }
+    .card.cap-group-c::before { background: var(--green); }
+    .card.cap-group-d::before { background: var(--amber); }
+    .card.cap-disabled { opacity: 0.5; }
+    .card.cap-disabled::after {
+      content: 'DISABLED';
+      position: absolute;
+      top: 12px; right: 12px;
+      font-size: 9px;
+      font-weight: 800;
+      color: var(--text-muted);
+      background: rgba(255,255,255,0.06);
+      padding: 2px 8px;
+      border-radius: 4px;
+      letter-spacing: 0.06em;
     }
     .card-header {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
       margin-bottom: 12px;
+      padding-left: 10px;
     }
     .cap-tag {
-      font-size: 10.5px;
-      font-weight: 700;
+      font-size: 10px;
+      font-weight: 800;
       color: var(--accent);
       text-transform: uppercase;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.06em;
     }
     .card-title {
-      font-size: 15px;
+      font-size: 14.5px;
       font-weight: 700;
       margin: 2px 0 0 0;
       color: #fff;
     }
     .card-subtitle {
-      font-size: 12px;
+      font-size: 11.5px;
       color: var(--text-muted);
+      font-weight: 500;
     }
+
+    /* Badges */
     .badge {
-      font-size: 10.5px;
-      font-weight: 700;
-      padding: 3px 8px;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 4px 10px;
       border-radius: 20px;
-      letter-spacing: 0.03em;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
     }
-    .badge-measured { background: var(--green-bg); color: var(--green); border: 1px solid rgba(74, 222, 128, 0.3); }
-    .badge-off { background: rgba(148, 163, 184, 0.12); color: var(--text-muted); }
+    .badge-measured {
+      background: var(--green-bg);
+      color: var(--green);
+      border: 1px solid rgba(0,255,163,0.25);
+      animation: pulseGlow 3s ease infinite;
+    }
+    .badge-off { background: rgba(148, 163, 184, 0.1); color: var(--text-muted); }
+
+    /* Live Metric Box */
     .live-metric-box {
-      background: #0f1523;
-      border: 1px solid #1e283d;
+      background: rgba(0,0,0,0.2);
+      border: 1px solid rgba(255,255,255,0.06);
       border-left: 3px solid var(--green);
-      border-radius: 6px;
-      padding: 10px 12px;
-      margin: 8px 0 12px 0;
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin: 8px 0 12px 10px;
     }
     .live-metric-title {
-      font-size: 10px;
+      font-size: 9.5px;
       font-weight: 700;
-      color: #64748b;
-      letter-spacing: 0.05em;
-      margin-bottom: 2px;
+      color: var(--text-muted);
+      letter-spacing: 0.06em;
+      margin-bottom: 3px;
+      text-transform: uppercase;
     }
     .live-metric-val {
       font-size: 12.5px;
@@ -787,43 +943,78 @@ export class DashboardPanel {
       color: var(--green);
       line-height: 1.4;
     }
-    .bar-container { margin: 4px 0 12px 0; }
-    .bar-track { background: #232c42; height: 6px; border-radius: 3px; overflow: hidden; }
-    .bar { background: var(--green); height: 100%; border-radius: 3px; }
-    .info-section { margin-bottom: 12px; }
-    .info-label { font-size: 10px; font-weight: 700; color: #64748b; letter-spacing: 0.04em; margin-bottom: 2px; }
+
+    /* Progress Bars */
+    .bar-container { margin: 4px 0 12px 10px; }
+    .bar-track {
+      background: rgba(255,255,255,0.06);
+      height: 4px;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .bar {
+      height: 100%;
+      border-radius: 2px;
+      background: linear-gradient(90deg, var(--accent), var(--green));
+      transition: width 0.8s ease;
+    }
+
+    /* Card Footer */
+    .info-section { margin-bottom: 12px; padding-left: 10px; }
+    .info-label {
+      font-size: 9.5px;
+      font-weight: 700;
+      color: var(--text-muted);
+      letter-spacing: 0.05em;
+      margin-bottom: 2px;
+      text-transform: uppercase;
+    }
     .info-text { font-size: 12px; color: var(--text); line-height: 1.45; }
     .card-footer {
-      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
       padding-top: 10px;
+      padding-left: 10px;
       font-size: 11px;
       color: var(--text-muted);
     }
+
+    /* Donut Ring */
+    .donut-ring {
+      display: inline-block;
+      width: 44px;
+      height: 44px;
+      vertical-align: middle;
+    }
+    .donut-ring svg { width: 44px; height: 44px; }
+    .donut-ring .ring-bg { fill: none; stroke: rgba(255,255,255,0.06); stroke-width: 4; }
+    .donut-ring .ring-fill { fill: none; stroke-width: 4; stroke-linecap: round;
+      stroke-dasharray: 251; animation: ringDraw 1s ease both; transform: rotate(-90deg); transform-origin: center; }
+    .donut-ring .ring-label { fill: var(--text); font-size: 11px; font-weight: 800; text-anchor: middle; dominant-baseline: central; font-family: 'Inter', sans-serif; }
   </style>
 </head>
 <body>
 
   <div class="header">
     <div>
-      <h1>🛡️ TokenShield Real-Time ROI Dashboard</h1>
-      <div class="tagline">Live Telemetry & Verifiable Token Avoidance Ledger (100% Local On-Device)</div>
+      <h1>🛡️ TokenShield Savings Dashboard</h1>
+      <div class="tagline">Real-time local token & cost optimization monitor (100% private & on-device)</div>
     </div>
     <div class="btn-group">
       <a class="btn" href="command:${REFRESH_COMMAND}">↻ Refresh Stats</a>
       <a class="btn" href="command:${RESET_COMMAND}">🔄 Reset / New Session</a>
-      <a class="btn btn-primary" href="command:${EXPORT_COMMAND}">⬇ Export Audit Report</a>
+      <a class="btn btn-primary" href="command:${EXPORT_COMMAND}">⬇ Export Savings Report</a>
     </div>
   </div>
 
   <div class="kpi-row">
     <div class="kpi-card">
       <div class="kpi-val">+${totalTokensSaved.toLocaleString()}</div>
-      <div class="kpi-title">Session #${sessionNum} Tokens Avoided</div>
+      <div class="kpi-title">Session #${sessionNum} Tokens Saved</div>
       <div class="kpi-desc">Active since <strong>${sessionStarted.toLocaleTimeString()}</strong> · Calculated across AST skeletons, exclusions, cache & diffs.</div>
     </div>
     <div class="kpi-card">
       <div class="kpi-val" style="color:var(--green);">$${totalCostSaved.toFixed(4)}</div>
-      <div class="kpi-title">Session #${sessionNum} Cost Avoided</div>
+      <div class="kpi-title">Session #${sessionNum} Estimated Savings</div>
       <div class="kpi-desc">Calculated at $${config.pricing[activeModel.tier].inputPerMillion.toFixed(2)}/1M token rate for <strong>${activeModel.name}</strong>.</div>
     </div>
     <div class="kpi-card">
@@ -833,16 +1024,16 @@ export class DashboardPanel {
     </div>
   </div>
 
-  <h2>🔴 Live Activity & Savings Ledger (Session #${sessionNum})</h2>
+  <h2>🔴 Live Activity Log (Session #${sessionNum})</h2>
   <div class="ledger-container">
     <table>
       <thead>
         <tr>
           <th>Timestamp</th>
-          <th>Directive</th>
+          <th>Optimization</th>
           <th>Target File / Action</th>
-          <th>Exact Tokens Avoided</th>
-          <th>How It Was Avoided</th>
+          <th>Tokens Saved</th>
+          <th>Details</th>
         </tr>
       </thead>
       <tbody>
@@ -853,7 +1044,7 @@ export class DashboardPanel {
 
   ${pastSessionsHtml}
 
-  <h2>🛡️ Live Strategy Directives & Measured Workspace Metrics (CAP-1 to CAP-${TOTAL_STRATEGIES})</h2>
+  <h2>🛡️ Optimization Features (${TOTAL_STRATEGIES} Active)</h2>
   <div class="grid">
     ${cardsHtml}
   </div>

@@ -125,7 +125,7 @@ class ChatSavingsTracker {
         // Ingest workspace RTK command savings into active session
         if (totalSaved > 0) {
           this.recordEvent(
-            'CAP-2: RTK Compression',
+            'CLI Output Compression',
             'rtk CLI proxy',
             totalSaved,
             `Compressed ${totalCmds} shell command(s) (git/test/build) output by ~${avgPct}%`,
@@ -143,7 +143,7 @@ class ChatSavingsTracker {
         this.lastRtkCommandCount = totalCmds;
 
         this.recordEvent(
-          'CAP-2: RTK Compression',
+          'CLI Output Compression',
           'rtk CLI proxy',
           deltaTokens,
           `Compressed ${deltaCmds} shell command(s) (git/test/build) output by ~${avgPct}%`,

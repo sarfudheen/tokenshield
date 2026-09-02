@@ -203,7 +203,7 @@ async function offerWireCodegraphAgents(outputChannel: vscode.OutputChannel): Pr
 function generateCavemanConfig(wsPath: string, outputChannel: vscode.OutputChannel): void {
   const cavemanrcPath = path.join(wsPath, '.cavemanrc');
   if (!fs.existsSync(cavemanrcPath)) {
-    const verbosityLevel = vscode.workspace.getConfiguration('aiTokenOptimizer').get('verbosityLevel', 'full');
+    const verbosityLevel = vscode.workspace.getConfiguration('tokenshield').get('verbosityLevel', 'full');
     fs.writeFileSync(cavemanrcPath, JSON.stringify({
       mode: verbosityLevel,
       rules: { skipIntroductions: true, skipConclusions: true, compactCodeBlocks: true, bulletOverParagraph: true },

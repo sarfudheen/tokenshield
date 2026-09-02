@@ -179,16 +179,16 @@ suite('AI Token Optimizer Tests', () => {
       const templatePath = path.join(__dirname, '..', '..', '..', 'templates', 'copilot-instructions.md');
       if (fs.existsSync(templatePath)) {
         const content = fs.readFileSync(templatePath, 'utf-8');
-        assert.ok(content.includes('CAP-1'));
-        assert.ok(content.includes('CAP-2'));
-        assert.ok(content.includes('CAP-3'));
-        assert.ok(content.includes('CAP-4'));
-        assert.ok(content.includes('AI-TOKEN-OPTIMIZER:START'));
-        assert.ok(content.includes('AI-TOKEN-OPTIMIZER:END'));
+        assert.ok(content.includes('CodeGraph'));
+        assert.ok(content.includes('Output Compression'));
+        assert.ok(content.includes('Inline Chat Scope Pinning'));
+        assert.ok(content.includes('Context Saturation Thread Reset'));
+        assert.ok(content.includes('TOKENSHIELD:START'));
+        assert.ok(content.includes('TOKENSHIELD:END'));
       }
     });
 
-    test('claude template includes session management commands', () => {
+    test('claude template includes session management commands and all directives', () => {
       const templatePath = path.join(__dirname, '..', '..', '..', 'templates', 'claude-instructions.md');
       if (fs.existsSync(templatePath)) {
         const content = fs.readFileSync(templatePath, 'utf-8');
@@ -196,6 +196,16 @@ suite('AI Token Optimizer Tests', () => {
         assert.ok(content.includes('/clear'));
         assert.ok(content.includes('/model'));
         assert.ok(content.includes('/context'));
+        assert.ok(content.includes('Context Saturation Thread Reset'));
+      }
+    });
+
+    test('codex template includes all 19 optimization directives', () => {
+      const templatePath = path.join(__dirname, '..', '..', '..', 'templates', 'codex-instructions.md');
+      if (fs.existsSync(templatePath)) {
+        const content = fs.readFileSync(templatePath, 'utf-8');
+        assert.ok(content.includes('CodeGraph'));
+        assert.ok(content.includes('Context Saturation Thread Reset'));
       }
     });
   });

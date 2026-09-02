@@ -87,10 +87,10 @@ export async function applyContextExclusions(
     fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf-8');
     outputChannel.appendLine(`[cap-7] Applied ${patterns.length} exclusion patterns to .vscode/settings.json`);
   } catch (err) {
-    outputChannel.appendLine(`[cap-7] Notice: could not write exclusions to .vscode/settings.json: ${err}`);
+    outputChannel.appendLine(`[exclusions] Notice: could not write exclusions to .vscode/settings.json: ${err}`);
   }
 
-  // CAP-17: Also generate .copilotignore — Copilot respects it natively (like .gitignore)
+  // Also generate .copilotignore — Copilot respects it natively (like .gitignore)
   generateCopilotIgnore(wsPath, patterns, outputChannel);
 
   // Estimate savings
@@ -98,7 +98,7 @@ export async function applyContextExclusions(
   const avgFileTokens = 500;
   const estimatedTokens = estimatedFiles * avgFileTokens;
 
-  outputChannel.appendLine(`[cap-7] Estimated ${estimatedFiles} files excluded, ~${estimatedTokens} tokens saved per full-context scan`);
+  outputChannel.appendLine(`[exclusions] Estimated ${estimatedFiles} files excluded, ~${estimatedTokens} tokens saved per full-context scan`);
 
   return {
     excludedPatterns: patterns.length,
@@ -108,7 +108,7 @@ export async function applyContextExclusions(
 }
 
 /**
- * CAP-17: Write a .copilotignore file from the detected exclusion patterns.
+ * Write a .copilotignore file from the detected exclusion patterns.
  * VS Code Copilot natively respects .copilotignore (same syntax as .gitignore).
  * Only writes if the file doesn't exist or content differs — never overwrites user customisations.
  */
@@ -120,7 +120,7 @@ export function generateCopilotIgnore(
   const ignorePath = path.join(workspacePath, '.copilotignore');
 
   const header = [
-    '# .copilotignore — Managed by TokenShield (CAP-17)',
+    '# .copilotignore — Managed by TokenShield',
     '# VS Code Copilot respects this file like .gitignore.',
     '# Add your own patterns below the managed block.',
     '# To regenerate: TokenShield: Configure Context Exclusions',
@@ -240,7 +240,7 @@ export async function showExclusionPicker(outputChannel: vscode.OutputChannel): 
 
   const selected = await vscode.window.showQuickPick(items, {
     placeHolder: 'Select patterns to exclude from AI reasoning context',
-    title: 'TokenShield — Context Exclusions (CAP-7)',
+    title: 'TokenShield — Context Exclusions',
     canPickMany: true,
   });
 

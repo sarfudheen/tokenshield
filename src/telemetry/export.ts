@@ -7,7 +7,7 @@ import { getRoiEngine } from './roiEngine';
 export async function exportExecutiveReport(outputChannel: vscode.OutputChannel): Promise<void> {
   const wsFolders = vscode.workspace.workspaceFolders;
   if (!wsFolders || wsFolders.length === 0) {
-    vscode.window.showWarningMessage('AI Token Optimizer: No open workspace to export telemetry for.');
+    vscode.window.showWarningMessage('TokenShield: No open workspace to export telemetry for.');
     return;
   }
 
@@ -16,11 +16,11 @@ export async function exportExecutiveReport(outputChannel: vscode.OutputChannel)
 
   const format = await vscode.window.showQuickPick(
     [
-      { label: '$(markdown) Markdown Summary (.md)', description: 'Executive report formatted for Slack/Notion/GitHub' },
-      { label: '$(json) JSON Telemetry (.json)', description: 'Raw structured telemetry data' },
+      { label: '$(markdown) Markdown Summary (.md)', description: 'Clean summary formatted for Slack/Notion/GitHub' },
+      { label: '$(json) JSON Telemetry (.json)', description: 'Raw structured savings data' },
       { label: '$(table) CSV Breakdown (.csv)', description: 'Per-model token and cost savings spreadsheet' },
     ],
-    { title: 'Export Enterprise ROI Telemetry Report', placeHolder: 'Select export format' }
+    { title: 'Export Token & Cost Savings Report', placeHolder: 'Select export format' }
   );
 
   if (!format) { return; }
@@ -55,9 +55,9 @@ export async function exportExecutiveReport(outputChannel: vscode.OutputChannel)
   if (!targetUri) { return; }
 
   fs.writeFileSync(targetUri.fsPath, content, 'utf-8');
-  outputChannel.appendLine(`[export] Executive ROI report saved to: ${targetUri.fsPath}`);
+  outputChannel.appendLine(`[export] Savings report saved to: ${targetUri.fsPath}`);
   const action = await vscode.window.showInformationMessage(
-    `AI Token Optimizer: Executive report saved (${path.basename(targetUri.fsPath)})`,
+    `TokenShield: Savings report saved (${path.basename(targetUri.fsPath)})`,
     'Open File'
   );
 
@@ -72,7 +72,7 @@ function generateMarkdownReport(summary: import('../core/types').SessionRoiSumma
     `| ${m.modelFamily} | ${m.tier.toUpperCase()} | ${m.tokensSaved.toLocaleString()} | $${m.costSavedUsd.toFixed(4)} | ${m.queryCount} |`
   ).join('\n');
 
-  return `# Executive AI Token Optimization Report
+  return `# TokenShield Savings Report
 
 **Generated**: ${new Date().toLocaleString()}  
 **Active Profile**: ${config.profile.toUpperCase()}  
@@ -80,24 +80,24 @@ function generateMarkdownReport(summary: import('../core/types').SessionRoiSumma
 
 ---
 
-## 🏆 Key Performance Indicators (KPIs)
+## 🏆 Key Metrics
 
 | Metric | Measured Value |
 |---|---|
-| **Total Avoided Tokens** | **${summary.totalTokensSaved.toLocaleString()} tokens** |
-| **Total Cost Avoidance (USD)** | **$${summary.totalCostSavedUsd.toFixed(4)}** |
-| **Active Optimization Directives** | **${countActiveStrategies(config.activeStrategies)} / ${TOTAL_STRATEGIES} Active** |
+| **Total Tokens Saved** | **${summary.totalTokensSaved.toLocaleString()} tokens** |
+| **Estimated Cost Saved (USD)** | **$${summary.totalCostSavedUsd.toFixed(4)}** |
+| **Active Optimizations** | **${countActiveStrategies(config.activeStrategies)} / ${TOTAL_STRATEGIES} Active** |
 | **Local Cache Hits** | ${summary.cacheHits} requests served from disk (0 tokens) |
-| **AST Files Pruned** | ${summary.filesPruned} files inspected via signatures (~90% savings) |
-| **Diff-Only File Modifications** | ${summary.diffEditsCount} edits (~92% output token savings) |
+| **AST Files Pruned** | ${summary.filesPruned} files inspected via signatures (~90% smaller) |
+| **Diff-Only File Modifications** | ${summary.diffEditsCount} edits (~92% output token reduction) |
 | **Agent Loops Intercepted** | ${summary.guardrailStops} runaway loops prevented |
-| **Tasks Downshifted** | ${summary.downshiftedTasksCount} lightweight tasks routed to cost-effective models |
+| **Tasks Downshifted** | ${summary.downshiftedTasksCount} routine tasks routed to lightweight models |
 
 ---
 
-## 📊 Token & Cost Avoidance per Model Family
+## 📊 Savings per Model Family
 
-| Model Family | Tier | Avoided Tokens | Avoided Cost (USD) | Actions |
+| Model Family | Tier | Tokens Saved | Cost Saved (USD) | Actions |
 |---|---|---|---|---|
 ${modelRows || `| ${summary.activeModel.family} | ${summary.activeModel.tier.toUpperCase()} | ${summary.totalTokensSaved.toLocaleString()} | $${summary.totalCostSavedUsd.toFixed(4)} | Session Baseline |`}
 

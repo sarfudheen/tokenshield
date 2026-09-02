@@ -20,11 +20,10 @@ export interface StrategyState {
   commentStripper: boolean;
   testFailureIsolator: boolean;
   rangeSlicing: boolean;
-  // New CAPs
-  inlineChatScopePinning: boolean;   // CAP-16: VS Code inline chat scope constraint
-  copilotIgnoreGeneration: boolean;  // CAP-17: .copilotignore file generation
-  copilotEditsAwareness: boolean;    // CAP-18: Copilot Edits session awareness
-  threadResetTrigger: boolean;       // CAP-19: Proactive thread reset nudge
+  inlineChatScopePinning: boolean;   // VS Code inline chat scope constraint
+  copilotIgnoreGeneration: boolean;  // .copilotignore file generation
+  copilotEditsAwareness: boolean;    // Copilot Edits session awareness
+  threadResetTrigger: boolean;       // Proactive thread reset nudge
 }
 
 export interface ModelPricing {
@@ -135,7 +134,7 @@ export const PROFILE_STRATEGIES: Record<Profile, StrategyState> = {
 export const TOTAL_STRATEGIES = Object.keys(PROFILE_STRATEGIES.full).length;
 
 export function getConfig(): ExtensionConfig {
-  const config = vscode.workspace.getConfiguration('aiTokenOptimizer');
+  const config = vscode.workspace.getConfiguration('tokenshield');
   return {
     enabled: config.get<boolean>('enabled', true),
     autoApply: config.get<boolean>('autoApply', true),
@@ -172,18 +171,18 @@ export function countActiveStrategies(strategies: StrategyState): number {
 }
 
 export async function updateProfile(profile: Profile): Promise<void> {
-  const config = vscode.workspace.getConfiguration('aiTokenOptimizer');
+  const config = vscode.workspace.getConfiguration('tokenshield');
   await config.update('profile', profile, vscode.ConfigurationTarget.Workspace);
 }
 
 export async function updateStrategies(strategies: Partial<StrategyState>): Promise<void> {
-  const config = vscode.workspace.getConfiguration('aiTokenOptimizer');
+  const config = vscode.workspace.getConfiguration('tokenshield');
   const current = config.get<StrategyState>('activeStrategies', PROFILE_STRATEGIES.full);
   await config.update('activeStrategies', { ...current, ...strategies }, vscode.ConfigurationTarget.Workspace);
   await config.update('profile', 'custom', vscode.ConfigurationTarget.Workspace);
 }
 
 export async function saveCodeGraphProjects(projects: CodeGraphProject[]): Promise<void> {
-  const config = vscode.workspace.getConfiguration('aiTokenOptimizer');
+  const config = vscode.workspace.getConfiguration('tokenshield');
   await config.update('codeGraphProjects', projects, vscode.ConfigurationTarget.Workspace);
 }

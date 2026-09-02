@@ -11,21 +11,20 @@ export class CopilotGenerator extends BaseInstructionGenerator {
     const sections: string[] = [];
 
     if (strategies.codeGraph) {
-      sections.push(`### Code Search & Navigation (CAP-1: CodeGraph)
+      sections.push(`### Code Search & Navigation (CodeGraph)
 - **MANDATORY**: When locating symbols, callers, or implementations, ALWAYS query CodeGraph (\`codegraph_explore\` or \`codegraph\`) before grepping.
 - **FORBIDDEN**: NEVER perform brute-force directory grep searches when CodeGraph semantic indexing is available.`);
     }
 
-    // CAP-2: Only inject RTK directive if rtk binary is actually available on the system.
     if (strategies.outputCompression) {
       const rtkInstalled = isBinaryAvailable('rtk');
       if (rtkInstalled) {
-        sections.push(`### Mandatory CLI Execution: RTK Proxy (CAP-2: RTK Compression)
+        sections.push(`### CLI Output Compression (RTK)
 - **MANDATORY**: When proposing or running terminal commands for \`git\`, \`test\`, \`build\`, \`ls\`, or \`grep\`, ALWAYS prefix them with \`rtk\` (e.g. \`rtk git status\`, \`rtk git diff\`, \`rtk test\`, \`rtk ls\`).
 - **FORBIDDEN**: NEVER execute or propose raw \`git\` commands (\`git status\`, \`git diff\`, \`git log\`) directly in terminal. Always route through \`rtk git <cmd>\` to compress token output by 60-90%.
 - Report only test failure details and status summaries rather than full stdout logs.`);
       } else {
-        sections.push(`### Mandatory CLI Output Compression (CAP-2: Output Compression)
+        sections.push(`### CLI Output Compression
 - **MANDATORY**: Report only test failure details and status summaries — skip passing test lines.
 - **FORBIDDEN**: NEVER run full verbose test suites or print entire git diffs into prompt context without range limits.`);
       }
@@ -33,115 +32,103 @@ export class CopilotGenerator extends BaseInstructionGenerator {
 
     if (strategies.verbosityControl) {
       const reduction = config.verbosityLevel === 'ultra' ? '50%' : config.verbosityLevel === 'light' ? '20%' : '35%';
-      sections.push(`### Response Verbosity Control (CAP-3: Caveman — ${config.verbosityLevel} mode)
+      sections.push(`### Concise Direct Responses (${config.verbosityLevel} mode)
 - **MANDATORY**: Answer code-first and immediately. Provide dense, direct solutions targeting ~${reduction} response token reduction.
 - **FORBIDDEN**: NEVER output conversational preambles ("Sure!", "I can help with that", "Great question", "Certainly!"), recap summaries, or conversational sign-offs.`);
     }
 
     if (strategies.sessionManagement) {
-      sections.push(`### Session Context Hygiene (CAP-4)
+      sections.push(`### Context Compaction & Session Hygiene
 - **MANDATORY**: Reuse previously loaded symbols from working memory. Keep state summaries minimal when switching tasks.
 - **FORBIDDEN**: NEVER re-read or re-fetch files already inspected in the active turn or session.`);
     }
 
     if (strategies.semanticCache) {
-      sections.push(`### Semantic Answer Cache (CAP-5: token-cache MCP)
+      sections.push(`### Local Semantic Cache (token-cache MCP)
 - **MANDATORY**: For boilerplate, configuration, or repeat questions, ALWAYS invoke \`cache_lookup\` before generating an answer.
 - **FORBIDDEN**: NEVER query the full model if a valid cached response is available locally (100% token savings).`);
     }
 
     if (strategies.astSkeleton) {
-      sections.push(`### Smart Context Pruning (CAP-6: AST Skeleton)
+      sections.push(`### AST Skeleton Pruning (skeleton_view MCP)
 - **MANDATORY**: When exploring unfamiliar or large files (>100 lines), ALWAYS invoke \`skeleton_view({ file: "path" })\` first to inspect signatures, interfaces, and types.
 - **FORBIDDEN**: NEVER ingest full implementation bodies unless you are directly editing that exact function (~90% context savings).`);
     }
 
     if (strategies.contextExclusion) {
-      sections.push(`### Context Exclusion (CAP-7)
-- **MANDATORY**: Respect all active exclusion filters (\`.copilotignore\`, \`settings.json\`).
-- **FORBIDDEN**: NEVER ingest, scan, or reference lock files (\`*.lock\`, \`package-lock.json\`), minified bundles, build outputs (\`dist/\`, \`target/\`), or sourcemaps.`);
+      sections.push(`### Smart Context Exclusions
+- **MANDATORY**: Automatically omit lock files (\`package-lock.json\`, \`yarn.lock\`, \`pnpm-lock.yaml\`), build outputs (\`dist/\`, \`build/\`, \`.next/\`, \`out/\`), minified files (\`*.min.js\`, \`*.bundle.js\`), and binary files from prompt context.`);
     }
 
     if (strategies.diffOnlyOutput) {
-      sections.push(`### Diff-Only Modifications (CAP-8)
-- **MANDATORY**: Always propose code modifications strictly as targeted unified diff chunks with ±3 lines of context.
-- **FORBIDDEN**: NEVER reprint full, unmodified source files or classes (~92% output token savings).`);
+      sections.push(`### Diff-Only Modifications
+- **MANDATORY**: For file edits, ALWAYS output changes as targeted unified diffs or focused modification blocks with ±3 lines of context.
+- **FORBIDDEN**: NEVER rewrite or reprint entire unmodified files or whole classes (~92% output token savings).`);
     }
 
     if (strategies.agentGuardrails) {
-      const g = config.guardrails;
-      sections.push(`### Agent Loop Guardrails (CAP-9)
-- **MANDATORY**: Halt execution after ${g.maxRetries} failed retry attempts on the same task and explain the blocker.
-- **FORBIDDEN**: NEVER enter infinite retry loops or inspect the same file more than ${g.maxFileReads} times per turn.
-- If modifying more than ${g.maxFilesPerTask} files, pause and confirm with the user.`);
+      sections.push(`### Autonomous Loop Guardrails
+- **MANDATORY**: Abort and pause for user input if a tool or command fails ${config.guardrails.maxRetries} times in succession.
+- NEVER exceed ${config.guardrails.maxFilesPerTask} file modifications in a single autonomous task without asking confirmation.
+- NEVER read the same file more than ${config.guardrails.maxFileReads} times in a single conversation.`);
     }
 
     if (strategies.smartModelRouting) {
-      sections.push(`### Smart Model Routing (CAP-10)
-- **MANDATORY**: For lightweight tasks (renames, formatting, linting, docstrings), suggest fast/cost-effective models.
-- Preserve flagship reasoning models exclusively for deep architectural or complex debugging tasks.`);
+      sections.push(`### Smart Model Routing
+- When generating suggestions for minor edits, documentation comments, or commit messages, recommend using fast/lightweight models (e.g. Gemini 2.0 Flash, Claude Haiku, GPT-4o-mini) to save ~80% inference cost.`);
     }
 
     if (strategies.gitDiffContext) {
-      sections.push(`### Git Diff-Scoped Context (CAP-11)
-- **MANDATORY**: Scope review, PR analysis, and test writing strictly to \`git diff\` output and direct 1-hop AST callers/callees.
-- **FORBIDDEN**: NEVER ingest entire files when only the changed lines are relevant.`);
+      sections.push(`### Git Diff Scoping
+- **MANDATORY**: When reviewing code, generating pull request summaries, or writing tests, scope file context strictly to lines changed in \`git diff\` plus direct 1-hop AST callers/callees.`);
     }
 
     if (strategies.kvCacheAlignment) {
-      sections.push(`### Deterministic Prompt Prefix Caching (CAP-12: API/Agent Mode)
-- *Applies when using raw API calls or custom agent frameworks (Cursor, custom scripts).*
-- Keep system prompt and instruction blocks byte-identical across turns to maximise cloud KV-cache hits.
-- Place stable context (instructions, project summary) before dynamic context (file content, user query).`);
+      sections.push(`### Prompt Prefix Caching
+- Maintain a deterministic, unchanging instruction prefix order across turns to maximize cloud KV-cache hit rates.`);
     }
 
     if (strategies.commentStripper) {
-      sections.push(`### Comment & Header Stripping (CAP-13)
-- **MANDATORY**: Strip license preambles, copyright headers, and filler comments when ingesting code into prompt context.
-- Preserve doc-comments (JSDoc, docstrings) that describe runtime behavior.`);
+      sections.push(`### Comment & Header Stripping
+- Automatically strip copyright license headers and low-signal comments before ingesting files into context.`);
     }
 
     if (strategies.testFailureIsolator) {
-      sections.push(`### Test Log Failure Isolation (CAP-14)
-- **MANDATORY**: When reporting test execution results, output ONLY failing assertions, error stacks, and file:line locations.
-- **FORBIDDEN**: NEVER include passing test suite lines or full raw stdout in context.`);
+      sections.push(`### Test Failure Isolator
+- When executing test suites, filter terminal output to include ONLY failing assertion lines, file names, and stack traces. Omit passing tests.`);
     }
 
     if (strategies.rangeSlicing) {
-      sections.push(`### Windowed Range Slicing (CAP-15)
-- **MANDATORY**: Read targeted 100-line windows around the exact symbol you are modifying.
-- **FORBIDDEN**: NEVER dump entire 500+ line files into context when only a function or class is needed.`);
+      sections.push(`### Windowed Range Slicing
+- When inspecting large source files, restrict reads to 100-line windows around target symbols instead of loading the entire file.`);
     }
 
     if (strategies.inlineChatScopePinning) {
-      sections.push(`### Inline Chat Scope Pinning (CAP-16)
-- **MANDATORY**: Constrain inline chat context strictly to the selected lines and their direct symbol references.
-- **FORBIDDEN**: NEVER read or infer from unselected parts of the file unless explicitly referenced.`);
+      sections.push(`### Inline Chat Scope Pinning
+- Restrict VS Code inline chat context strictly to currently selected lines and their immediate 1-hop symbol references.`);
     }
 
     if (strategies.copilotIgnoreGeneration) {
-      sections.push(`### .copilotignore Context Blocking (CAP-17)
-- **MANDATORY**: Strictly respect \`.copilotignore\` exclusion rules exactly like \`.gitignore\`.
-- **FORBIDDEN**: NEVER read, reference, or include content from ignored paths (build outputs, lock files, secrets).`);
+      sections.push(`### .copilotignore File Rules
+- Enforce \`.copilotignore\` patterns to block build outputs, secrets, environment files, and non-source artifacts from AI context.`);
     }
 
     if (strategies.copilotEditsAwareness) {
-      sections.push(`### Copilot Edits Session Awareness (CAP-18)
-- **MANDATORY**: Treat all files currently open in a Copilot Edits session as already loaded.
-- **FORBIDDEN**: NEVER re-read active edit session files via secondary tool calls. Propose incremental edits only.`);
+      sections.push(`### Edit Session Awareness
+- Avoid re-reading or re-inspecting files that are already open and dirty in the active multi-file edit session.`);
     }
 
     if (strategies.threadResetTrigger) {
-      sections.push(`### Thread Reset Trigger (CAP-19)
-- **MANDATORY**: When a conversation exceeds 40 messages or 30 minutes, proactively advise the user to start a fresh chat thread to prevent context saturation.`);
+      sections.push(`### Context Saturation Thread Reset
+- When a chat session exceeds 40 conversation turns, surface a clear recommendation to start a fresh chat thread to avoid attention degradation.`);
     }
 
     return `${MARKER_START}
 ${MARKER_COMMENT}
 
-# TokenShield Optimization Standards
+# TokenShield Optimization Directives
 
-## Active Optimization Directives
+## Active Optimizations
 
 ${sections.join('\n\n')}
 

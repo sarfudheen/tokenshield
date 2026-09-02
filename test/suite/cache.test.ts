@@ -3,7 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
 
-suite('Semantic Cache (CAP-5)', () => {
+suite('Semantic Cache', () => {
   let tmpDir: string;
 
   setup(() => {

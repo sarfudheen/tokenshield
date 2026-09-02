@@ -11,9 +11,10 @@
 
 <p align="center">
   <a href="#-step-by-step-installation-guide">Installation</a> •
-  <a href="#-the-10-tokenshield-directives-cap-1-through-cap-10">Directives</a> •
-  <a href="#-real-time-live-activity-ledger--telemetry">Telemetry</a> •
+  <a href="#-the-19-optimization-features">Optimization Features</a> •
+  <a href="#-real-time-savings-dashboard--activity-log">Savings Dashboard</a> •
   <a href="#-commands--keybindings">Commands</a> •
+  <a href="#-configuration-reference-settingsjson">Configuration</a> •
   <a href="#-multi-editor-mcp-integration">MCP Integration</a>
 </p>
 
@@ -23,7 +24,7 @@
 
 AI coding assistants (Copilot, Claude, Gemini, GPT-4o) frequently consume tens of thousands of redundant tokens by re-reading build bundles, lockfiles, verbose test logs, repetitive system instructions, and conversational filler.
 
-**TokenShield solves this by acting as a zero-latency, 100% on-device efficiency layer** that enforces intelligent caching, AST structural pruning, context noise exclusion, and unified diff editing across all your favorite IDEs.
+**TokenShield acts as a zero-latency, 100% on-device efficiency layer** that enforces intelligent caching, AST structural pruning, context noise exclusion, and unified diff editing across all your favorite IDEs.
 
 ### 🏆 Key Benchmarked Gains:
 - **~75–95% context reduction** during file navigation using AST Signatures (`skeleton_view`).
@@ -34,43 +35,53 @@ AI coding assistants (Copilot, Claude, Gemini, GPT-4o) frequently consume tens o
 
 ---
 
-## ⚡ The 10 TokenShield Directives (CAP-1 through CAP-10)
+## ⚡ The 19 Optimization Features
 
-| Directive | Name | Real-World Mechanism | Measured Gain |
+TokenShield comes equipped with 19 modular optimizations, active right out of the box:
+
+| Category | Optimization Feature | How It Works | Measured Gain |
 |---|---|---|---|
-| **CAP-1** | **CodeGraph Indexing** | Semantic graph search before full file reads (`.codegraph/`) | **97% savings** vs wide grep |
-| **CAP-2** | **RTK Output Compression** | CLI proxy trimming test spinners, build logs, and git outputs | **60–90%** CLI log reduction |
-| **CAP-3** | **Dense Output (Caveman)** | Strips conversational pleasantries and filler prose from AI responses | **~35%** output token savings |
-| **CAP-4** | **Context Hygiene** | Auto-compacts completed tasks and clears stale conversational history | Prevents 128k context bloat |
-| **CAP-5** | **Semantic Answer Cache** | Local JSON-RPC 2.0 MCP server with TF-IDF cosine matching | **100% savings** on repeated queries |
-| **CAP-6** | **AST Skeleton Extraction** | MCP tool (`skeleton_view`) providing types & signatures only | **75–95%** file inspection savings |
-| **CAP-7** | **Smart Context Exclusion** | Auto-excludes `dist/**`, `package-lock.json`, minified bundles | **~500k tokens** kept out of prompt |
-| **CAP-8** | **Diff-Only Output Mode** | Enforces unified diff patches (±3 context lines) | **~92%** reduction on file edits |
-| **CAP-9** | **Agent Loop Guardrails** | Hard limits on retries (max 3) and file edits (max 10) | Stops runaway autonomous loops |
-| **CAP-10** | **Smart Model Routing** | Auto-routes routine tasks to fast, lightweight models (Gemini Flash/Haiku) | **99% cost reduction** per query |
+| **Code Search** | **CodeGraph Pre-Indexing** | Uses AST symbol graphs to find files instead of wide grep scans | **~97% savings** vs multi-file grep |
+| **Terminal** | **CLI Output Compression** | Strips build spinners, git noise, and verbose logs via RTK/inline filters | **60–90%** terminal log reduction |
+| **Prompt Filter** | **Concise AI Responses** | Strips conversational filler, apologies, and greetings from AI responses | **~35%** output token reduction |
+| **Session** | **Context Compaction** | Prunes stale multi-turn history and drops redundant tool output | Prevents context window bloat |
+| **Disk Cache** | **Semantic Cache** | Local semantic cache serving repeat answers instantly at $0.00 cost | **100% savings** on repeated queries |
+| **AST Parser** | **AST Skeletons** | Extracts types, classes, and function signatures without full bodies | **75–95%** file inspection savings |
+| **Exclusions** | **Smart Context Exclusions** | Auto-excludes `dist/**`, `package-lock.json`, and minified assets | **~500k tokens** blocked per scan |
+| **Patch Editing** | **Diff-Only Output** | Outputs targeted diff hunks (±3 lines) rather than rewriting full files | **~92%** reduction on code changes |
+| **Safety** | **Loop Guardrails** | Halts runaway retry loops after 3 consecutive autonomous failures | Prevents runaway credit burn |
+| **Routing** | **Smart Model Routing** | Routes routine tasks (formatting, typos, minor edits) to lighter models | **Up to 99% cost reduction** |
+| **Git Scope** | **Git Diff Scoping** | Scopes code reviews and unit test generation strictly to git diff lines | **~85% context reduction** |
+| **Cloud Cache** | **Prompt Prefix Caching** | Maintains byte-stable instruction prefixes to unlock cloud KV cache hits | **Up to 90% cloud discounts** |
+| **Minifier** | **Comment & Header Stripper** | Strips license preambles and low-signal filler comments on file reads | **~30%** context reduction |
+| **Test Runner** | **Test Failure Isolator** | Captures failing assertions and stack traces while stripping passing suites | **~95%** test log compression |
+| **Range Slicer** | **Windowed Range Slicing** | Restricts large file reads to 100-line windows around symbol targets | **~80%** reduction on file lookups |
+| **Editor Scope** | **Inline Chat Scope Lock** | Constrains inline editor chat strictly to selected lines and dependencies | **~85%** prompt reduction |
+| **Rules** | **.copilotignore Generator** | Maintains project-level `.copilotignore` rules to block build noise | Blocks secrets and artifacts |
+| **Session Cache** | **Edit Session Awareness** | Treats files open in multi-file edit sessions as already loaded | Avoids redundant tool re-reads |
+| **Monitor** | **Context Saturation Monitor** | Proactively suggests a fresh chat thread when conversation exceeds 40 turns | Prevents quality degradation |
 
 ---
 
 ## 🚀 Step-by-Step Installation Guide
 
-TokenShield can be installed seamlessly across all major AI coding environments:
+TokenShield works seamlessly across all major AI coding environments:
 
 ### 1. Google Antigravity IDE
-TokenShield has first-class native support for Antigravity IDE (Gemini Pro & Flash High models):
+TokenShield has first-class native support for Antigravity IDE:
 
 #### Method A: Direct VSIX Installation (Recommended)
 1. Open Antigravity IDE.
 2. Press `Ctrl+Shift+P` (Windows/Linux) or `Cmd+Shift+P` (macOS).
 3. Type **`Extensions: Install from VSIX...`** and press Enter.
-4. Select `tokenshield-1.0.0.vsix` from your project folder.
+4. Select the `tokenshield.vsix` package.
 5. Reload the window (`Ctrl+Shift+P` → `Developer: Reload Window`).
 
 #### Method B: Extension Runtime Directory Sync
-Copy the built extension folder directly into your Antigravity user directory:
 ```powershell
 # Windows
-Copy-Item -Path ".\dist\*" -Destination "$HOME\.antigravity-ide\extensions\tokenshield.tokenshield-1.0.0\dist\" -Recurse -Force
-Copy-Item -Path ".\package.json" -Destination "$HOME\.antigravity-ide\extensions\tokenshield.tokenshield-1.0.0\package.json" -Force
+Copy-Item -Path ".\dist\*" -Destination "$HOME\.antigravity-ide\extensions\tokenshield\dist\" -Recurse -Force
+Copy-Item -Path ".\package.json" -Destination "$HOME\.antigravity-ide\extensions\tokenshield\package.json" -Force
 ```
 
 ---
@@ -78,48 +89,29 @@ Copy-Item -Path ".\package.json" -Destination "$HOME\.antigravity-ide\extensions
 ### 2. Visual Studio Code & VS Code Insiders
 Works with GitHub Copilot, Copilot Chat, and Codex:
 
-#### Via Command Line:
 ```bash
-code --install-extension tokenshield-1.0.0.vsix
+code --install-extension tokenshield.vsix
 ```
 
-#### Via VS Code GUI:
-1. Open VS Code.
-2. Click the **Extensions** icon in the Activity Bar (`Ctrl+Shift+X`).
-3. Click the **`...` (Views and More Actions)** menu at the top-right of the Extensions panel.
-4. Choose **`Install from VSIX...`**.
-5. Select `tokenshield-1.0.0.vsix`.
+Or via the GUI:
+1. Open VS Code → Extensions (`Ctrl+Shift+X`).
+2. Click **`...` (Views and More Actions)** at top-right.
+3. Choose **`Install from VSIX...`** and select the package.
 
 ---
 
-### 3. Cursor IDE
-Works with Cursor Tab, Composer, and Agent Mode:
-
-#### Via Command Line:
+### 3. Cursor & Windsurf IDE
 ```bash
-cursor --install-extension tokenshield-1.0.0.vsix
+cursor --install-extension tokenshield.vsix
 ```
-
-#### Via Cursor GUI:
-1. Open Cursor.
-2. Press `Ctrl+Shift+P` (or `Cmd+Shift+P`) → type `Extensions: Install from VSIX...`.
-3. Select `tokenshield-1.0.0.vsix`.
+Or use the Command Palette (`Ctrl+Shift+P`) → `Extensions: Install from VSIX...`.
 
 ---
 
-### 4. Windsurf IDE (Codeium)
-1. Open Windsurf.
-2. Press `Ctrl+Shift+P` → select `Extensions: Install from VSIX...`.
-3. Select `tokenshield-1.0.0.vsix`.
-4. Run `Developer: Reload Window`.
-
----
-
-### 5. Claude Code CLI & Standalone AI Agents
-TokenShield provides an on-disk MCP server (`dist/cache-server.js`) that gives Claude Code CLI immediate access to `cache_lookup`, `cache_store`, `skeleton_view`, and `prune_context`.
+### 4. Claude Code CLI & Standalone Agents
+TokenShield includes an on-disk MCP server (`dist/cache-server.js`) providing immediate access to `cache_lookup`, `cache_store`, `skeleton_view`, and `prune_context`.
 
 #### Configure Claude Code (`~/.claude.json`):
-Add the project-scoped MCP server to your `~/.claude.json`:
 ```json
 {
   "mcpServers": {
@@ -136,73 +128,87 @@ Add the project-scoped MCP server to your `~/.claude.json`:
 
 ---
 
-### 6. Neovim, JetBrains & Other MCP-Compatible Editors
-Run the standalone TokenShield stdio MCP server in any tool supporting the Model Context Protocol:
-```bash
-node dist/cache-server.js /absolute/path/to/workspace
-```
-Exposes 5 tools over stdio JSON-RPC 2.0:
-1. `cache_lookup`: Query local semantic cache for instant zero-token answers.
-2. `cache_store`: Store self-contained answers in `.aicache/semantic-cache.json`.
-3. `cache_stats`: View total hits, entries, and estimated token savings.
-4. `skeleton_view`: Retrieve AST structural signatures of source files.
-5. `prune_context`: Heuristically compress verbose markdown, JSON, or code by 30–50%.
+## 🔴 Real-Time Savings Dashboard & Activity Log
 
----
+TokenShield features a modern **Glassmorphism Savings Dashboard** that tracks your token savings and estimated spend reduction in real time:
 
-## 🔴 Real-Time Live Activity Ledger & Telemetry
-
-TokenShield includes an interactive **Live Activity & Savings Ledger** that proves your exact return on investment in real time:
-
-<p align="center">
-  <img src="images/icon.png" width="48" height="48" alt="Dashboard" />
-</p>
-
-### What You See in the Dashboard:
-- **Real Tokens Avoided**: Aggregated live across AST skeletons, diffs, caching, and context exclusions.
-- **Direct Dollars Saved ($)**: Dynamically calculated based on your active model tier (Gemini Flash, GPT-4o, Claude 3.7).
-- **Where & When Ledger**: Every optimization event logged with exact timestamp, target file, and token delta.
+- **Tokens Saved Counter**: Live session savings aggregated across AST skeletons, semantic caching, exclusions, and diff modifications.
+- **Estimated Spend Reduction ($)**: Calculated using active model rates (Gemini Flash, Haiku, GPT-4o, Claude Sonnet/Opus).
+- **Live Activity Log**: Every single optimization event tracked with timestamps, target file, exact tokens saved, and mechanism.
+- **Visual Donut & Progress Metrics**: Clean visual health bars and efficiency gauges for all 19 optimization features.
 
 ### How to Access:
-- Press `Ctrl+Shift+P` → **`TokenShield: Show ROI Savings Dashboard`**
-- Or click the **`$(sparkle) Saved:`** widget in the bottom status bar!
+- Press `Ctrl+Shift+P` → **`TokenShield: Open Savings Dashboard`**
+- Or click the **`$(shield) TS:`** badge in the bottom status bar!
 
 ---
 
 ## ⌨️ Commands & Keybindings
 
-| Command Name | Command ID | Description |
+All commands are registered under the clean `tokenshield.*` namespace:
+
+| Command Title | Command ID | Description |
 |---|---|---|
-| **Show ROI Savings Dashboard** | `aiTokenOptimizer.showDashboard` | Opens the interactive visual ROI telemetry dashboard |
-| **Show Live Per-Chat Savings** | `aiTokenOptimizer.showSessionBreakdown` | QuickPick menu of recent query optimization events |
-| **Compress & Copy Context** | `aiTokenOptimizer.pruneSelection` | Prunes active file/selection (30–50% savings) & copies to clipboard |
-| **Export Telemetry Report** | `aiTokenOptimizer.exportTelemetry` | Exports executive audit reports (CSV, JSON, Markdown) |
-| **Configure Exclusions (CAP-7)** | `aiTokenOptimizer.configureExclusions` | Interactive multi-select picker for noise & bundle exclusions |
-| **Select Optimization Profile** | `aiTokenOptimizer.selectProfile` | Switch between `full`, `debug`, `planning`, `review`, and `custom` |
-| **Reindex CodeGraph** | `aiTokenOptimizer.reindex` | Triggers a fresh AST graph sync in `.codegraph/` |
-| **Clear Semantic Cache** | `aiTokenOptimizer.clearCache` | Flushes `.aicache/semantic-cache.json` |
+| **TokenShield: Open Savings Dashboard** | `tokenshield.dashboard` | Open visual savings dashboard with live activity log |
+| **TokenShield: Show Session Breakdown** | `tokenshield.sessionBreakdown` | QuickPick breakdown of per-query savings events |
+| **TokenShield: Start New Session** | `tokenshield.newSession` | Reset active counters and archive current session to history |
+| **TokenShield: Switch Profile** | `tokenshield.switchProfile` | Switch between `full`, `debug`, `planning`, `review`, and `custom` |
+| **TokenShield: Toggle On/Off** | `tokenshield.toggle` | Globally enable or disable all TokenShield optimizations |
+| **TokenShield: Prune & Copy to Clipboard** | `tokenshield.pruneAndCopy` | Compresses active file or selection (30–50% savings) to clipboard |
+| **TokenShield: Compress Git Diff** | `tokenshield.compressDiff` | Compresses current git diff for token-efficient PR reviews |
+| **TokenShield: Edit Context Exclusions** | `tokenshield.exclusions` | Interactive picker for build folder, lockfile, and bundle filters |
+| **TokenShield: Run Health Check** | `tokenshield.healthCheck` | Live diagnostic validation across all 19 optimization features |
+| **TokenShield: Flush Semantic Cache** | `tokenshield.flushCache` | Clears local disk cache in `.aicache/semantic-cache.json` |
+| **TokenShield: Reindex Code Graph** | `tokenshield.reindex` | Triggers a fresh AST symbol graph index in `.codegraph/` |
+| **TokenShield: Export Savings Report** | `tokenshield.exportReport` | Exports clean savings reports in Markdown, JSON, or CSV format |
+| **TokenShield: Regenerate Directives** | `tokenshield.regenerate` | Updates AI instruction files (`AGENTS.md`, `.github/`, `CLAUDE.md`) |
+| **TokenShield: Initialize Project** | `tokenshield.init` | Analyzes workspace stack and generates customized instruction files |
+| **TokenShield: Setup CLI Tools** | `tokenshield.setupTools` | Verifies and configures optional CLI acceleration tools (RTK, CodeGraph) |
 
 ---
 
 ## ⚙️ Configuration Reference (`settings.json`)
 
-Configure TokenShield via `.vscode/settings.json`:
+Configure TokenShield via `.vscode/settings.json` or your user settings under the `tokenshield` namespace:
 
 ```json
 {
-  "aiTokenOptimizer.enabled": true,
-  "aiTokenOptimizer.profile": "full",
-  "aiTokenOptimizer.autoApply": true,
-  "aiTokenOptimizer.useVscodeStorage": true,
-  "aiTokenOptimizer.telemetryEnabled": true,
-  "aiTokenOptimizer.pricing": {
+  "tokenshield.enabled": true,
+  "tokenshield.profile": "full",
+  "tokenshield.autoApply": true,
+  "tokenshield.useVscodeStorage": true,
+  "tokenshield.telemetry.enabled": true,
+  "tokenshield.verbosityLevel": "full",
+  "tokenshield.activeStrategies": {
+    "codeGraph": true,
+    "outputCompression": true,
+    "verbosityControl": true,
+    "sessionManagement": true,
+    "semanticCache": true,
+    "astSkeleton": true,
+    "contextExclusion": true,
+    "diffOnlyOutput": true,
+    "agentGuardrails": true,
+    "smartModelRouting": true,
+    "gitDiffContext": true,
+    "kvCacheAlignment": true,
+    "commentStripper": true,
+    "testFailureIsolator": true,
+    "rangeSlicing": true,
+    "inlineChatScopePinning": true,
+    "copilotIgnoreGeneration": true,
+    "copilotEditsAwareness": true,
+    "threadResetTrigger": true
+  },
+  "tokenshield.guardrails": {
+    "maxRetries": 3,
+    "maxFilesPerTask": 10,
+    "maxFileReads": 2
+  },
+  "tokenshield.pricing": {
     "flagship": { "inputPerMillion": 15.0, "outputPerMillion": 75.0 },
     "standard": { "inputPerMillion": 3.0, "outputPerMillion": 15.0 },
     "lightweight": { "inputPerMillion": 0.15, "outputPerMillion": 0.60 }
-  },
-  "aiTokenOptimizer.guardrails": {
-    "maxRetries": 3,
-    "maxFilesPerTask": 10
   }
 }
 ```
@@ -211,11 +217,12 @@ Configure TokenShield via `.vscode/settings.json`:
 
 ## 🔒 100% Security & Privacy Guarantee
 
-- **Zero Cloud Leakage**: 100% on-device local execution. No code or telemetry ever leaves your computer.
-- **Offline & Air-Gapped Friendly**: Works without internet access.
-- **Zero Repo Clutter**: Configuration stored in `.vscode/` by default — never pollutes git commit history.
+- **Zero Cloud Leakage**: 100% on-device local execution. No source code or telemetry ever leaves your machine.
+- **Offline & Air-Gapped Friendly**: Fully functional without internet connectivity.
+- **Zero Repo Clutter**: Local configuration stored in `.vscode/` by default — never touches git tracking unless explicitly exported.
 
 ---
 
 ## 📄 License
-MIT License. Built for developers and enterprise engineering teams.
+MIT License. Built for developers and modern software engineering teams.
+

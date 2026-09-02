@@ -1,19 +1,21 @@
-# AI Token Optimizer — Architecture Document
+# TokenShield — Architecture Document
 
 **Version:** 0.1.0  
 **Date:** June 2026  
 **Type:** VS Code Extension  
 **Source:** `ai-token-optimizer-vscode/`
 
+This document describes the internal architecture, component interactions, data flows, and design decisions of the **TokenShield** extension.
+
 ---
 
 ## 1. Overview
 
-AI Token Optimizer is a VS Code extension that reduces LLM token consumption for Claude Code, GitHub Copilot, and OpenAI Codex. It operates through two complementary mechanisms:
+TokenShield is a VS Code extension that reduces LLM token consumption for Claude Code, GitHub Copilot, and OpenAI Codex. It operates through two complementary mechanisms:
 
 | Mechanism | How it works | Requires binary? |
 |---|---|---|
-| **Instruction file injection** | Writes CAP-1–4 rules into `.github/copilot-instructions.md`, `CLAUDE.md`, `.codex/instructions.md` | No |
+| **Instruction file injection** | Writes optimization rules into `.github/copilot-instructions.md`, `CLAUDE.md`, `.codex/instructions.md`, `AGENTS.md` | No |
 | **Tool integration** | Installs/configures CodeGraph (semantic indexing) and RTK (CLI output compression) | Yes |
 
 The instruction-file approach is the primary mechanism and works immediately on any workspace. Tool integration provides deeper savings when the binaries are available.
@@ -81,7 +83,7 @@ graph TB
 
     subgraph STRATEGIES["Strategies"]
         CG["strategies/codegraph.ts\n(File Watcher + Per-Project Reindex)"]
-        VAL["strategies/validator.ts\n(CAP-1–4 Validation Report)"]
+        VAL["strategies/validator.ts\n(Health Check Report)"]
     end
 
     subgraph UI["User Interface"]
@@ -165,32 +167,47 @@ flowchart TD
 
 | Command ID | Title |
 |---|---|
-| `aiTokenOptimizer.toggleAll` | Enable / Disable Plugin |
-| `aiTokenOptimizer.selectProfile` | Select Optimization Profile |
-| `aiTokenOptimizer.regenerateInstructions` | Regenerate Instruction Files |
-| `aiTokenOptimizer.showDashboard` | Show Savings Dashboard |
-| `aiTokenOptimizer.reindex` | Reindex CodeGraph |
-| `aiTokenOptimizer.validateIndex` | Validate CodeGraph Index |
-| `aiTokenOptimizer.validateAll` | **Validate All Strategies** (CAP-1–4) |
-| `aiTokenOptimizer.installTools` | Install Optimization Tools |
-| `aiTokenOptimizer.manageProjects` | Manage CodeGraph Projects |
-| `aiTokenOptimizer.configureMcp` | Configure MCP Servers |
+| `tokenshield.toggle` | Enable / Disable TokenShield |
+| `tokenshield.switchProfile` | Select Optimization Profile |
+| `tokenshield.regenerate` | Regenerate Instruction Files |
+| `tokenshield.dashboard` | Show Savings Dashboard |
+| `tokenshield.reindex` | Reindex CodeGraph |
+| `tokenshield.validateGraph` | Validate CodeGraph Index |
+| `tokenshield.healthCheck` | **Validate All Strategies** |
+| `tokenshield.setupTools` | Install Optimization Tools |
+| `tokenshield.manageProjects` | Manage CodeGraph Projects |
+| `tokenshield.configureMcp` | Configure MCP Servers |
 
 ---
 
 ## 5. Configuration & Profiles (`config.ts`)
 
-Four built-in profiles enforce the spec's quality-trade-off constraints. Strategies map directly to the four CAP categories:
+Four built-in profiles enforce quality-trade-off constraints across all **19 optimization strategies**:
 
-| Profile | CAP-1 CodeGraph | CAP-2 RTK Compression | CAP-3 Verbosity | CAP-4 Session |
-|---------|:-:|:-:|:-:|:-:|
-| **full** | ✓ | ✓ | ✓ | ✓ |
-| **debug** | ✓ | ✗ | ✓ | ✓ |
-| **planning** | ✓ | ✓ | ✗ | ✓ |
-| **review** | ✓ | ✓ | ✓ | ✗ |
-| **custom** | configurable | configurable | configurable | configurable |
+| # | Strategy Key | Feature Name | Full | Debug | Planning | Review |
+|---|---|---|:---:|:---:|:---:|:---:|
+| 1 | `codeGraph` | CodeGraph Pre-Indexing | ✓ | ✓ | ✓ | ✓ |
+| 2 | `outputCompression` | CLI Output Compression (RTK) | ✓ | ✗ | ✓ | ✓ |
+| 3 | `verbosityControl` | Concise AI Responses | ✓ | ✓ | ✗ | ✓ |
+| 4 | `sessionManagement` | Context Compaction & Session Hygiene | ✓ | ✓ | ✓ | ✗ |
+| 5 | `semanticCache` | Local Semantic Cache (`token-cache` MCP) | ✓ | ✓ | ✓ | ✓ |
+| 6 | `astSkeleton` | AST Skeleton Pruning (`skeleton_view` MCP) | ✓ | ✓ | ✓ | ✓ |
+| 7 | `contextExclusion` | Smart Context Exclusions | ✓ | ✓ | ✓ | ✓ |
+| 8 | `diffOnlyOutput` | Diff-Only Output | ✓ | ✗ | ✓ | ✓ |
+| 9 | `agentGuardrails` | Autonomous Loop Guardrails | ✓ | ✓ | ✗ | ✓ |
+| 10 | `smartModelRouting` | Smart Model Routing | ✓ | ✓ | ✓ | ✓ |
+| 11 | `gitDiffContext` | Git Diff Scoping | ✓ | ✓ | ✓ | ✓ |
+| 12 | `kvCacheAlignment` | Prompt Prefix Caching | ✓ | ✓ | ✓ | ✓ |
+| 13 | `commentStripper` | Comment & Header Stripping | ✓ | ✗ | ✓ | ✓ |
+| 14 | `testFailureIsolator` | Test Failure Isolator | ✓ | ✓ | ✗ | ✓ |
+| 15 | `rangeSlicing` | Windowed Range Slicing | ✓ | ✓ | ✓ | ✓ |
+| 16 | `inlineChatScopePinning` | Inline Chat Scope Lock | ✓ | ✓ | ✓ | ✓ |
+| 17 | `copilotIgnoreGeneration` | .copilotignore File Rules | ✓ | ✓ | ✓ | ✓ |
+| 18 | `copilotEditsAwareness` | Edit Session Awareness | ✓ | ✓ | ✓ | ✓ |
+| 19 | `threadResetTrigger` | Context Saturation Thread Reset | ✓ | ✗ | ✓ | ✓ |
 
-**`codeGraphProjects`** — array of `{ name, path, enabled }` objects in workspace settings. When empty, all workspace folders are indexed.
+- **`custom` profile**: User toggles each of the 19 strategies independently.
+- **`codeGraphProjects`** — array of `{ name, path, enabled }` objects in workspace settings. When empty, all workspace folders are indexed.
 
 ---
 
@@ -274,17 +291,17 @@ flowchart TD
 
 ## 8. Strategy Validation Flow (`strategies/validator.ts`)
 
-New in this version — validates all 4 CAP strategies are correctly configured and active:
+Validates all optimization strategies are correctly configured and active:
 
 ```mermaid
 flowchart TD
-    A([aiTokenOptimizer.validateAll]) --> B[validateAllStrategies]
+    A([tokenshield.healthCheck]) --> B[validateAllStrategies]
     B --> C[Show progress notification\nValidating all strategies...]
 
-    C --> D[validateCodeGraph\nCAP-1]
-    C --> E[validateRtk\nCAP-2]
-    C --> F[validateVerbosity\nCAP-3]
-    C --> G[validateSession\nCAP-4]
+    C --> D[validateCodeGraph\nCodeGraph]
+    C --> E[validateRtk\nRTK Compression]
+    C --> F[validateVerbosity\nVerbosity]
+    C --> G[validateSession\nSession]
 
     D --> D1{strategy enabled?}
     D1 -- No --> D2[Status: disabled]
@@ -302,16 +319,16 @@ flowchart TD
 
     F --> F1{strategy enabled?}
     F1 -- No --> F2[Status: disabled]
-    F1 -- Yes --> F3[Check each instruction file\nfor AI-TOKEN-OPTIMIZER:START + CAP-3]
+    F1 -- Yes --> F3[Check each instruction file\nfor TOKENSHIELD:START + Verbosity]
     F3 --> F4[Status: ok / warn / error]
 
     G --> G1{strategy enabled?}
     G1 -- No --> G2[Status: disabled]
-    G1 -- Yes --> G3[Check each instruction file\nfor AI-TOKEN-OPTIMIZER:START + CAP-4]
+    G1 -- Yes --> G3[Check each instruction file\nfor TOKENSHIELD:START + Session]
     G3 --> G4[Check CLAUDE.md for /compact /clear /model]
     G4 --> G5[Status: ok / warn / error]
 
-    D6 & E6 & F4 & G5 --> H[Print full report to Output channel\n══ CAP-1: ok / CAP-2: error...]\
+    D6 & E6 & F4 & G5 --> H[Print full report to Output channel\n══ Strategy Health Check Report]\
     H --> I[Summary: N ok · N disabled · N warn · N error]
     I --> J{All ok?}
     J -- Yes --> K[showInformationMessage ✓]
@@ -352,10 +369,10 @@ flowchart LR
         B --> D{outputCompression?}
         B --> E{verbosityControl?}
         B --> F{sessionManagement?}
-        C -- Yes --> G[getCodeGraphSection\nCAP-1 rules]
-        D -- Yes --> H[getCompressionSection\nCAP-2: real rtk commands\ngit/test/build savings]
-        E -- Yes --> I[getVerbositySection level\nCAP-3: light/full/ultra]
-        F -- Yes --> J[getSessionSection\nCAP-4: Claude /compact /clear /model]
+        C -- Yes --> G[getCodeGraphSection\nCodeGraph rules]
+        D -- Yes --> H[getCompressionSection\nCLI Compression: real rtk commands\ngit/test/build savings]
+        E -- Yes --> I[getVerbositySection level\nConcise Responses: light/full/ultra]
+        F -- Yes --> J[getSessionSection\nSession Hygiene: /compact /clear /model]
     end
 
     subgraph MergeLogic["Merge Logic (base.ts mergeContent)"]
@@ -380,21 +397,21 @@ flowchart LR
 # Your existing instructions       ← Always preserved
 Your custom rules here...
 
-<!-- AI-TOKEN-OPTIMIZER:START -->   ← Managed block begin
-<!-- Generated by AI Token Optimizer extension. Do not edit between these markers. -->
+<!-- TOKENSHIELD:START -->   ← Managed block begin
+<!-- TokenShield: AI Token & Cost Optimizer. Managed block - do not edit manually. -->
 
 ## Token Efficiency Standards
-### Search Before Synthesize (CAP-1: CodeGraph)
+### Search Before Synthesize (CodeGraph)
 ...
-### Output Compression (CAP-2: RTK)
+### Output Compression (RTK)
   rtk git status  → -80%   rtk pytest  → -90%
 ...
-### Response Verbosity (CAP-3: Caveman — full mode)
+### Concise Responses (full mode)
 ...
-### Context Management (CAP-4: Session Management)
+### Context Compaction & Session Hygiene
 ...
 
-<!-- AI-TOKEN-OPTIMIZER:END -->     ← Managed block end
+<!-- TOKENSHIELD:END -->     ← Managed block end
 
 # Your footer content              ← Always preserved
 ```
@@ -485,10 +502,10 @@ flowchart LR
     A([showDashboard]) --> B[DashboardPanel.show]
     B --> C{Panel already open?}
     C -- Yes --> D[Reveal + refresh]
-    C -- No --> E[Create WebviewPanel\nenableScripts: false]
+    C -- No --> E[Create WebviewPanel\nenableScripts: true]
     E --> F[Read live config\n+ getEffectiveStrategies]
-    F --> G[Calculate estimates\nCAP-1 CodeGraph: 25%\nCAP-2 RTK: 30%\nCAP-3 Verbosity: 20/35/50%\nCAP-4 Session: 15%\nTotal: capped at 90%]
-    G --> H[Build HTML\nVS Code CSS variables\n4-card grid\nbefore/after token table]
+    F --> G[Calculate estimates\nCodeGraph: 25%\nRTK: 30%\nVerbosity: 20/35/50%\nSession: 15%\nTotal: capped at 90%]
+    G --> H[Build HTML\nGlassmorphic UI\n19-feature cards\nlive activity log]
     H --> I([Rendered Dashboard])
 ```
 
@@ -500,36 +517,36 @@ flowchart LR
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
-│  $(zap) Full (4/4)               $(graph) CG:1 ✓                    │
-│  ^─ Profile indicator             ^─ CodeGraph index status          │
-│  Click → QuickPick                Click → validateIndex              │
+│  $(shield) TS: Full · 519.9k ↓ · $7.80       $(graph) CG:1 ✓         │
+│  ^─ Master Hub status bar                     ^─ CodeGraph index bar │
+│  Click → QuickPick hub                        Click → validateIndex  │
 │                                                                      │
 │  When disabled:                                                      │
-│  $(zap-off) Token Opt: OFF  [orange background]                     │
+│  $(shield) TS: OFF  [orange background]                              │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
 | Status Bar Item | All States |
 |---|---|
-| Profile bar | `$(zap) Full (4/4)` · `$(zap) Debug (3/4)` etc. · `$(zap-off) Token Opt: OFF` (orange) |
+| Profile / Savings bar | `$(shield) TS: Full · 519.9k ↓ · $7.80` · `$(shield) TS: OFF` (orange) |
 | CG index bar | `CG:N` idle · `CG:N ●` pending (orange) · `$(sync~spin) CG:N` indexing · `CG:N ✓` fresh · `CG:N ✗` error (red) · `CG:0 —` missing (orange) |
 
 ### QuickPick Menu Structure
 
 ```
-AI Token Optimizer
+TokenShield Command Center
 ──────────────────────────────────────────────
-  $(zap-off) Disable Plugin     Turn off all token optimizations
-  $(check-all) Validate All Strategies    Check CAP-1 through CAP-4
+  $(shield) Disable Plugin              Turn off all token optimizations
+  $(check-all) Health Check All Strategies
 ──────────────────────────────────────────────
-  ⚡ Full Profile (all 4 strategies)    (active)
+  ⚡ Full Profile (all strategies)       (active)
   🐛 Debug Profile (no compression)
   📋 Planning Profile (no verbosity)
   🔍 Review Profile (no session)
   ⚙️  Custom Profile
 ──────────────────────────────────────────────
   $(settings-gear) Toggle Individual Strategies...
-  $(dashboard) Show Savings Dashboard
+  $(dashboard) Open Savings Dashboard
   $(refresh) Regenerate Instruction Files
 ```
 
@@ -540,15 +557,15 @@ AI Token Optimizer
 ```
 <workspace-root>/
 ├── .github/
-│   └── copilot-instructions.md        ← Copilot reads automatically (CAP-1–4 injected)
-├── CLAUDE.md                           ← Claude Code reads automatically (CAP-1–4 injected)
+│   └── copilot-instructions.md        ← Copilot reads automatically (TokenShield injected)
+├── CLAUDE.md                           ← Claude Code reads automatically (TokenShield injected)
 ├── .codex/
-│   └── instructions.md                ← Codex reads automatically (CAP-1–4 injected)
-├── .cavemanrc                          ← Verbosity config (hints for future tooling)
+│   └── instructions.md                ← Codex reads automatically (TokenShield injected)
+├── AGENTS.md                           ← Antigravity / Agent tools (TokenShield injected)
 ├── .codegraph/                         ← CodeGraph semantic index (per project)
-│   └── codegraph.db                   ← SQLite: 12,438 nodes, 33,986 edges (wayfinder)
+│   └── codegraph.db                   ← SQLite index
 └── .vscode/
-    └── settings.json                   ← MCP: context7 + codegraph servers (project-scoped)
+    └── settings.json                   ← tokenshield settings & MCP configuration
 
 ~/.config/claude/
 └── mcp.json                            ← Claude Code MCP: context7 + codegraph (user-global)
@@ -573,14 +590,14 @@ AI Token Optimizer
 ```jsonc
 {
   // Core
-  "aiTokenOptimizer.enabled": true,              // Global on/off — also via status bar click
-  "aiTokenOptimizer.autoApply": true,
-  "aiTokenOptimizer.targetTools": ["copilot", "claude", "codex"],
+  "tokenshield.enabled": true,              // Global on/off — also via status bar click
+  "tokenshield.autoApply": true,
+  "tokenshield.targetTools": ["copilot", "claude", "codex"],
 
   // Profile & strategies
-  "aiTokenOptimizer.profile": "full",            // full | debug | planning | review | custom
-  "aiTokenOptimizer.verbosityLevel": "full",     // light (~20%) | full (~35%) | ultra (~50%)
-  "aiTokenOptimizer.activeStrategies": {         // Only used when profile = "custom"
+  "tokenshield.profile": "full",            // full | debug | planning | review | custom
+  "tokenshield.verbosityLevel": "full",     // light (~20%) | full (~35%) | ultra (~50%)
+  "tokenshield.activeStrategies": {         // Only used when profile = "custom"
     "codeGraph": true,
     "outputCompression": true,
     "verbosityControl": true,
@@ -588,12 +605,12 @@ AI Token Optimizer
   },
 
   // Behaviour
-  "aiTokenOptimizer.preserveExistingInstructions": true,
-  "aiTokenOptimizer.autoInstallTools": true,
-  "aiTokenOptimizer.configureMcpOnActivation": true,
+  "tokenshield.preserveExistingInstructions": true,
+  "tokenshield.autoInstallTools": true,
+  "tokenshield.configureMcpOnActivation": true,
 
   // Per-project CodeGraph indexing
-  "aiTokenOptimizer.codeGraphProjects": [
+  "tokenshield.codeGraphProjects": [
     { "name": "Wayfinder",  "path": "/Users/.../IMS_Workspace/wayfinder", "enabled": true },
     { "name": "SP API",     "path": "./de-ims-strategicplanner-api",       "enabled": true },
     { "name": "WF API",     "path": "./de-ims-wayfinder-api-multiprocess", "enabled": false }
@@ -608,10 +625,10 @@ AI Token Optimizer
 | Decision | Rationale |
 |---|---|
 | **File-based injection** over VS Code Language Model API | Works with all current tool versions without relying on unstable proposed APIs |
-| **Marker-based merge** (`AI-TOKEN-OPTIMIZER:START/END`) | Preserves user content across updates without destroying existing instructions |
+| **Marker-based merge** (`TOKENSHIELD:START/END`) | Preserves user content across updates without destroying existing instructions |
 | **Profile-based constraints** | Enforces spec requirement: strategies have quality trade-offs per task type (debug needs full output, planning needs verbosity) |
 | **Per-project CodeGraph indexing** | Multi-repo workspaces need selective indexing; monorepo components have independent change rates |
 | **RTK via hooks not MCP** | RTK intercepts bash tool calls via PreToolUse hooks — adding it as an MCP server would be wrong. The extension actively removes any stale `rtk` MCP entry |
-| **Graceful degradation** | When CodeGraph or RTK binaries are not installed, all 4 CAP rules are still injected via instruction files and the extension shows clear install guidance |
-| **Instruction-file approach for RTK compression** | Even without the RTK binary, the CAP-2 section in instruction files instructs the AI to use `rtk` commands directly (e.g. `rtk git status`, `rtk pytest`) |
+| **Graceful degradation** | When CodeGraph or RTK binaries are not installed, optimization rules are still injected via instruction files and the extension shows clear install guidance |
+| **Instruction-file approach for RTK compression** | Even without the RTK binary, the CLI Compression section in instruction files instructs the AI to use `rtk` commands directly (e.g. `rtk git status`, `rtk pytest`) |
 | **codegraph sync not index** | For existing indexes, `codegraph sync` is used (incremental update) rather than a full `codegraph index --force` — this is faster and CodeGraph's own file watcher handles most updates anyway |

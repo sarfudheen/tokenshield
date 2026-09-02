@@ -56,7 +56,7 @@ export function pruneContext(text: string, options: PruneOptions = {}): PruneRes
     }
   }
 
-  // 3. Condense or strip non-semantic comments if requested or in aggressive mode (CAP-13)
+  // 3. Condense or strip non-semantic comments if requested or in aggressive mode
   if (options.stripComments || options.aggressive) {
     result = stripCommentsAndHeaders(result);
   }
@@ -81,7 +81,7 @@ export function pruneContext(text: string, options: PruneOptions = {}): PruneRes
 }
 
 /**
- * CAP-13: Zero-Loss Comment & Header Stripper
+ * Comment & Header Stripper
  * Removes license preambles, verbose copyright notices, and inline comments
  * while preserving critical compiler annotations and type declarations.
  */
@@ -106,7 +106,7 @@ export function stripCommentsAndHeaders(code: string): string {
 }
 
 /**
- * CAP-11: Git Diff-Scoped Context Compressor
+ * Git Diff-Scoped Context Compressor
  * Strips git index metadata and retains modified chunks with minimal surrounding context.
  */
 export function compressGitDiff(diffText: string): PruneResult {
@@ -151,7 +151,7 @@ export function compressGitDiff(diffText: string): PruneResult {
 }
 
 /**
- * CAP-14: Test Output Failure Isolator
+ * Test Output Failure Isolator
  * Strips passing test suites, progress bars, and redundant stack frames,
  * isolating only the failing test name, expected vs actual diff, and failure line.
  */

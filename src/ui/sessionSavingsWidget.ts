@@ -11,7 +11,7 @@ let callLogWatcher: vscode.FileSystemWatcher | undefined;
 export function createSessionSavingsWidget(context: vscode.ExtensionContext): vscode.StatusBarItem {
   savingsStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 98);
   savingsStatusBarItem.name = 'TokenShield Session Savings';
-  savingsStatusBarItem.command = 'aiTokenOptimizer.showSessionBreakdown';
+  savingsStatusBarItem.command = 'tokenshield.sessionBreakdown';
 
   // Listen to in-memory tracker changes
   context.subscriptions.push(
@@ -23,7 +23,7 @@ export function createSessionSavingsWidget(context: vscode.ExtensionContext): vs
   // Register the breakdown picker command only — resetSession is owned by extension.ts
   // to ensure the full handler (archive + statusBar update + dashboard refresh) runs.
   context.subscriptions.push(
-    vscode.commands.registerCommand('aiTokenOptimizer.showSessionBreakdown', showSessionBreakdownQuickPick)
+    vscode.commands.registerCommand('tokenshield.sessionBreakdown', showSessionBreakdownQuickPick)
   );
 
   // Watch .aicache/call-log.json to capture live MCP calls from Antigravity/Claude
@@ -81,7 +81,7 @@ export async function updateSessionSavingsWidget(): Promise<void> {
     ? '<$0.0001'
     : `$${costSaved.toFixed(4)}`;
 
-  savingsStatusBarItem.text = `$(sparkle) S#${sessionNum}: ${formattedTokens} tok (${formattedCost})`;
+  savingsStatusBarItem.text = `$(pulse) #${sessionNum} \u00b7 ${formattedTokens} \u2193 ${formattedCost}`;
 
   const md = new vscode.MarkdownString();
   md.isTrusted = true;
@@ -104,7 +104,7 @@ export async function updateSessionSavingsWidget(): Promise<void> {
     md.appendMarkdown(`\n---\n\n`);
   }
 
-  md.appendMarkdown(`[🔄 Start New Session (Reset)](command:aiTokenOptimizer.resetSession) &nbsp;|&nbsp; [💬 Per-Chat History](command:aiTokenOptimizer.showSessionBreakdown) &nbsp;|&nbsp; [📊 ROI Dashboard](command:aiTokenOptimizer.showDashboard)`);
+  md.appendMarkdown(`[\ud83d\udd04 New Session](command:tokenshield.newSession) \u0026nbsp;|\u0026nbsp; [\ud83d\udcac Session History](command:tokenshield.sessionBreakdown) \u0026nbsp;|\u0026nbsp; [\ud83d\udcca Dashboard](command:tokenshield.dashboard)`);
 
   savingsStatusBarItem.tooltip = md;
   savingsStatusBarItem.show();
@@ -127,7 +127,7 @@ async function showSessionBreakdownQuickPick(): Promise<void> {
 
   items.push({
     label: `$(graph) Session #${sessionNum} Total: ~${totalTok.toLocaleString()} tokens ($${totalCost.toFixed(4)})`,
-    description: 'Click to open full graphical ROI Dashboard',
+    description: 'Click to open Savings Dashboard',
     detail: 'Aggregated across AST skeletons, semantic cache, context exclusions, and diff modifications.',
   });
 
@@ -169,16 +169,16 @@ async function showSessionBreakdownQuickPick(): Promise<void> {
   }
 
   const selected = await vscode.window.showQuickPick(items, {
-    placeHolder: `TokenShield — Session #${sessionNum} Savings Breakdown & Management`,
-    title: `Session #${sessionNum} Avoidance: ~${totalTok.toLocaleString()} tokens ($${totalCost.toFixed(4)})`,
+    placeHolder: `TokenShield — Session #${sessionNum} Savings Breakdown`,
+    title: `Session #${sessionNum} Savings: ~${totalTok.toLocaleString()} tokens ($${totalCost.toFixed(4)})`,
   });
 
   if (!selected) { return; }
 
   if (selected.label.includes('Start New Session')) {
-    vscode.commands.executeCommand('aiTokenOptimizer.resetSession');
-  } else if (selected.description === 'Click to open full graphical ROI Dashboard') {
-    vscode.commands.executeCommand('aiTokenOptimizer.showDashboard');
+    vscode.commands.executeCommand('tokenshield.newSession');
+  } else if (selected.description === 'Click to open Savings Dashboard') {
+    vscode.commands.executeCommand('tokenshield.dashboard');
   }
 }
 
@@ -193,7 +193,7 @@ function syncWithCallLog(wsPath: string): void {
       const delta = data.totalSavedTokens;
       if (delta > 0) {
         chatSavingsTracker.recordEvent(
-          'CAP-5: Semantic Cache',
+          'Semantic Cache',
           'token-cache MCP',
           delta,
           'Served cached answer from local disk without model query'

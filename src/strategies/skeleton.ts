@@ -338,7 +338,7 @@ function extractGenericSkeleton(code: string): string {
   if (lines.length <= 50) { return code; }
   return [
     ...lines.slice(0, 30),
-    `/* ... (${lines.length - 40} lines omitted by CAP-6 skeleton extractor) ... */`,
+    `/* ... (${lines.length - 40} lines omitted by TokenShield AST skeleton extractor) ... */`,
     ...lines.slice(-10),
   ].join('\n');
 }
