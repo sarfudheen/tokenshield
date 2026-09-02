@@ -1,7 +1,7 @@
 {
   "name": "tokenshield",
-  "displayName": "TokenShield — AI Token & Cost Optimizer",
-  "description": "Universal AI token & cost optimizer for GitHub Copilot, Claude Code, OpenAI Codex, and Antigravity. Real-time context pruning, AST skeletons, semantic caching, CLI output compression, and provable ROI reporting.",
+  "displayName": "TokenShield — AI Token & Cost Optimizer (Copilot & Claude)",
+  "description": "Save 60–90% AI token & LLM costs across GitHub Copilot, Claude Code, and Codex. Zero-latency context pruning, AST skeletons, semantic cache, and real-time savings tracking.",
   "version": "1.0.12",
   "publisher": "sarfudheen",
   "license": "MIT",
@@ -20,14 +20,22 @@
   "keywords": [
     "tokenshield",
     "token",
+    "token-optimizer",
+    "token-saver",
     "optimization",
     "cost",
-    "roi",
+    "savings",
     "copilot",
+    "github-copilot",
     "claude",
+    "claude-code",
     "codex",
     "antigravity",
-    "context-pruning"
+    "context-pruning",
+    "prompt-compression",
+    "context-window",
+    "llm",
+    "mcp"
   ],
   "activationEvents": [
     "*"
@@ -290,7 +298,7 @@
             "standard": { "inputPerMillion": 3.0, "outputPerMillion": 15.0 },
             "lightweight": { "inputPerMillion": 0.15, "outputPerMillion": 0.60 }
           },
-          "description": "Model pricing table in USD per 1M tokens (used for ROI dashboard calculations)."
+          "description": "Model pricing table in USD per 1M tokens (used for savings dashboard calculations)."
         },
         "tokenshield.guardrails": {
           "type": "object",
@@ -346,7 +354,7 @@
         "tokenshield.telemetry.enabled": {
           "type": "boolean",
           "default": true,
-          "description": "Enable 100% on-device ROI and token savings tracking."
+          "description": "Enable 100% on-device token and cost savings tracking."
         }
       }
     }
