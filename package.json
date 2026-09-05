@@ -165,7 +165,7 @@
           "default": "full",
           "description": "Active optimization profile. Profiles control which strategies are enabled.",
           "enumDescriptions": [
-            "All 19 strategies active — maximum enterprise token & cost savings",
+            "All 20 strategies active — maximum enterprise token & cost savings",
             "Disables output compression and diff-only for full log & test diagnostics",
             "Disables verbosity restrictions and guardrails for deep architectural reviews",
             "Preserves full context history for thorough code reviews",
@@ -262,6 +262,10 @@
             "threadResetTrigger": {
               "type": "boolean",
               "description": "Context saturation monitor (suggests fresh thread when conversation exceeds 40 messages)"
+            },
+            "headroomCompression": {
+              "type": "boolean",
+              "description": "Headroom reversible context compression & SmartCrusher (CCR with local retrieval)"
             }
           },
           "description": "Toggle individual optimization features (used when profile is 'custom')."

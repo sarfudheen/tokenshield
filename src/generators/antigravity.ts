@@ -128,6 +128,12 @@ export class AntigravityGenerator extends BaseInstructionGenerator {
 - Surface a fresh-thread prompt when conversation exceeds 40 messages.`);
     }
 
+    if (strategies.headroomCompression) {
+      sections.push(`### Headroom Reversible CCR & SmartCrusher
+- **MANDATORY**: Use Headroom context compression on bulky JSON/trace tool outputs; retrieve uncompressed sections via \`headroom_retrieve\`.
+- **FORBIDDEN**: Never ingest raw JSON dumps >50 items without schema compaction.`);
+    }
+
     return `${MARKER_START}
 ${MARKER_COMMENT}
 

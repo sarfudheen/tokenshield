@@ -40,6 +40,9 @@ suite('Claude Code MCP configuration (token-cache wiring)', () => {
       path.join('/ext/path', 'dist', 'cache-server.js'),
       wsPath,
     ]);
+    assert.ok(servers['headroom'], 'headroom entry missing from project mcpServers');
+    assert.strictEqual(servers['headroom'].command, 'headroom');
+    assert.deepStrictEqual(servers['headroom'].args, ['mcp']);
   });
 
   test('preserves unrelated top-level keys and other projects in ~/.claude.json', async () => {

@@ -24,6 +24,7 @@ export interface StrategyState {
   copilotIgnoreGeneration: boolean;  // .copilotignore file generation
   copilotEditsAwareness: boolean;    // Copilot Edits session awareness
   threadResetTrigger: boolean;       // Proactive thread reset nudge
+  headroomCompression: boolean;      // Reversible Headroom context compression (CCR)
 }
 
 export interface ModelPricing {
@@ -88,6 +89,7 @@ export const PROFILE_STRATEGIES: Record<Profile, StrategyState> = {
     testFailureIsolator: true, rangeSlicing: true,
     inlineChatScopePinning: true, copilotIgnoreGeneration: true,
     copilotEditsAwareness: true, threadResetTrigger: true,
+    headroomCompression: true,
   },
   debug: {
     codeGraph: true, outputCompression: false, verbosityControl: true,
@@ -98,6 +100,7 @@ export const PROFILE_STRATEGIES: Record<Profile, StrategyState> = {
     testFailureIsolator: true, rangeSlicing: true,
     inlineChatScopePinning: true, copilotIgnoreGeneration: true,
     copilotEditsAwareness: true, threadResetTrigger: false,
+    headroomCompression: false,
   },
   planning: {
     codeGraph: true, outputCompression: true, verbosityControl: false,
@@ -108,6 +111,7 @@ export const PROFILE_STRATEGIES: Record<Profile, StrategyState> = {
     testFailureIsolator: false, rangeSlicing: true,
     inlineChatScopePinning: true, copilotIgnoreGeneration: true,
     copilotEditsAwareness: true, threadResetTrigger: true,
+    headroomCompression: true,
   },
   review: {
     codeGraph: true, outputCompression: true, verbosityControl: true,
@@ -118,6 +122,7 @@ export const PROFILE_STRATEGIES: Record<Profile, StrategyState> = {
     testFailureIsolator: true, rangeSlicing: true,
     inlineChatScopePinning: true, copilotIgnoreGeneration: true,
     copilotEditsAwareness: true, threadResetTrigger: true,
+    headroomCompression: true,
   },
   custom: {
     codeGraph: true, outputCompression: true, verbosityControl: true,
@@ -128,6 +133,7 @@ export const PROFILE_STRATEGIES: Record<Profile, StrategyState> = {
     testFailureIsolator: true, rangeSlicing: true,
     inlineChatScopePinning: true, copilotIgnoreGeneration: true,
     copilotEditsAwareness: true, threadResetTrigger: true,
+    headroomCompression: true,
   },
 };
 

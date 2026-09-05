@@ -1,5 +1,11 @@
 import * as assert from 'assert';
-import { pruneContext, compressGitDiff, isolateTestFailures, stripCommentsAndHeaders } from '../../src/strategies/adaptivePruner';
+import {
+  pruneContext,
+  compressGitDiff,
+  isolateTestFailures,
+  stripCommentsAndHeaders,
+  smartCrushJson,
+} from '../../src/strategies/adaptivePruner';
 
 suite('Adaptive Context Pruner Tests', () => {
   test('prunes excessive blank lines and trailing spaces', () => {
@@ -48,5 +54,33 @@ suite('Adaptive Context Pruner Tests', () => {
     assert.ok(!res.prunedText.includes('PASS test/suite/a.test.ts'));
     assert.ok(res.prunedText.includes('FAIL test/suite/c.test.ts'));
     assert.ok(res.prunedText.includes('AssertionError'));
+  });
+
+  test('crushes uniform JSON arrays via SmartCrusher', () => {
+    const largeJson = JSON.stringify([
+      { id: 1, name: 'alpha', active: true },
+      { id: 2, name: 'beta', active: false },
+      { id: 3, name: 'gamma', active: true },
+      { id: 4, name: 'delta', active: true },
+      { id: 5, name: 'epsilon', active: false },
+    ]);
+    const crushed = smartCrushJson(largeJson);
+    assert.ok(crushed.includes('alpha'));
+    assert.ok(crushed.includes('beta'));
+    assert.ok(!crushed.includes('gamma'));
+    assert.ok(crushed.includes('Headroom SmartCrusher'));
+  });
+
+  test('pruneContext automatically invokes SmartCrusher for JSON payloads', () => {
+    const largeJson = JSON.stringify([
+      { item: 1, code: 'A1' },
+      { item: 2, code: 'A2' },
+      { item: 3, code: 'A3' },
+      { item: 4, code: 'A4' },
+      { item: 5, code: 'A5' },
+    ]);
+    const res = pruneContext(largeJson);
+    assert.ok(res.prunedText.includes('Headroom SmartCrusher'));
+    assert.ok(res.reductionPercent > 0);
   });
 });

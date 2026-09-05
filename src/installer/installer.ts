@@ -69,6 +69,9 @@ async function installTool(tool: ToolInstallEntry, outputChannel: vscode.OutputC
       if (tool.method === 'npm-global' && tool.npmPackage) {
         return installViaNpm(tool.name, tool.npmPackage, outputChannel, isInteractive);
       }
+      if (tool.method === 'pip' && tool.pipPackage) {
+        return installViaPip(tool.name, tool.pipPackage, outputChannel, isInteractive);
+      }
       if (tool.method === 'brew' || tool.method === 'shell-script') {
         return installViaBrewOrShell(tool, outputChannel, isInteractive);
       }
@@ -111,6 +114,64 @@ function installViaNpm(binaryName: string, npmPackage: string, outputChannel: vs
     outputChannel.appendLine(`[installer] ✗ ${binaryName} installation failed: ${errMsg}`);
     if (isInteractive) {
       vscode.window.showWarningMessage(`Could not auto-install ${binaryName}. Run manually: npm install -g ${npmPackage}`);
+    }
+    return { packageName: binaryName, installed: false, alreadyInstalled: false, error: errMsg };
+  } catch (e: any) {
+    outputChannel.appendLine(`[installer] ✗ ${binaryName} spawn failed: ${e.message}`);
+    return { packageName: binaryName, installed: false, alreadyInstalled: false, error: e.message };
+  }
+}
+
+function installViaPip(binaryName: string, pipPackage: string, outputChannel: vscode.OutputChannel, isInteractive: boolean): InstallResult {
+  outputChannel.appendLine(`[installer] Running pip installation for: ${pipPackage}`);
+  const isWindows = process.platform === 'win32';
+
+  let pipCmd = 'pip';
+  let pipArgs = ['install', '-U', pipPackage];
+
+  if (isBinaryAvailable('pip')) {
+    pipCmd = 'pip';
+    pipArgs = ['install', '-U', pipPackage];
+  } else if (isBinaryAvailable('pip3')) {
+    pipCmd = 'pip3';
+    pipArgs = ['install', '-U', pipPackage];
+  } else if (isBinaryAvailable('python')) {
+    pipCmd = 'python';
+    pipArgs = ['-m', 'pip', 'install', '-U', pipPackage];
+  } else if (isBinaryAvailable('python3')) {
+    pipCmd = 'python3';
+    pipArgs = ['-m', 'pip', 'install', '-U', pipPackage];
+  } else if (isWindows && isBinaryAvailable('py')) {
+    pipCmd = 'py';
+    pipArgs = ['-m', 'pip', 'install', '-U', pipPackage];
+  } else {
+    const errMsg = 'Neither pip nor python is available in PATH';
+    outputChannel.appendLine(`[installer] ✗ ${binaryName}: ${errMsg}`);
+    if (isInteractive) {
+      vscode.window.showWarningMessage(`Could not auto-install ${binaryName}. Run manually: pip install "${pipPackage}"`);
+    }
+    return { packageName: binaryName, installed: false, alreadyInstalled: false, error: errMsg };
+  }
+
+  try {
+    outputChannel.appendLine(`[installer] Running: ${pipCmd} ${pipArgs.join(' ')}`);
+    const result = spawnSync(pipCmd, pipArgs, {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      timeout: 120000,
+      encoding: 'utf-8',
+      shell: isWindows,
+    });
+    if (result.status === 0) {
+      outputChannel.appendLine(`[installer] ✓ ${binaryName} installed successfully`);
+      if (isInteractive) {
+        vscode.window.showInformationMessage(`TokenShield: ${binaryName} installed successfully.`);
+      }
+      return { packageName: binaryName, installed: true, alreadyInstalled: false };
+    }
+    const errMsg = result.stderr?.trim() || result.error?.message || 'pip install failed';
+    outputChannel.appendLine(`[installer] ✗ ${binaryName} installation failed: ${errMsg}`);
+    if (isInteractive) {
+      vscode.window.showWarningMessage(`Could not auto-install ${binaryName}. Run manually: pip install "${pipPackage}"`);
     }
     return { packageName: binaryName, installed: false, alreadyInstalled: false, error: errMsg };
   } catch (e: any) {

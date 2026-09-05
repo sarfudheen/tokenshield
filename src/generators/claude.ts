@@ -108,6 +108,12 @@ export class ClaudeGenerator extends BaseInstructionGenerator {
 - Surface a fresh-thread prompt when conversation exceeds 40 messages.`);
     }
 
+    if (strategies.headroomCompression) {
+      sections.push(`### Headroom Reversible CCR & SmartCrusher
+- **MANDATORY**: Route bulky bash/tool/JSON outputs through Headroom compression; fetch original chunks via \`headroom_retrieve\`.
+- **FORBIDDEN**: Never output or inspect uncompressed JSON traces exceeding 50 items.`);
+    }
+
     return `${MARKER_START}
 ${MARKER_COMMENT}
 

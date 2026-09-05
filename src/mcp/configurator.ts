@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { isBinaryAvailable } from '../installer/installer';
-import { MCP_CACHE_SERVER_NAME } from '../core/constants';
+import { MCP_CACHE_SERVER_NAME, HEADROOM_MCP_SERVER_NAME } from '../core/constants';
 
 export interface McpServerConfig {
   command: string;
@@ -153,6 +153,15 @@ async function configureVsCodeMcp(wsPath: string, languages: string[], outputCha
     outputChannel.appendLine('[mcp] Added Context7 MCP server for documentation lookup');
   }
 
+  if (!mcpServers[HEADROOM_MCP_SERVER_NAME]) {
+    mcpServers[HEADROOM_MCP_SERVER_NAME] = {
+      command: 'headroom',
+      args: ['mcp'],
+      type: 'stdio',
+    };
+    outputChannel.appendLine('[mcp] Added Headroom MCP server (reversible context compression & CCR)');
+  }
+
   mcpServers[MCP_CACHE_SERVER_NAME] = cacheServerEntry(extensionPath, wsPath);
   outputChannel.appendLine('[mcp] Added token-cache MCP server (local semantic cache, AST skeleton, adaptive pruner)');
 
@@ -199,6 +208,14 @@ export async function configureClaudeMcp(
     };
   }
 
+  if (!servers[HEADROOM_MCP_SERVER_NAME]) {
+    servers[HEADROOM_MCP_SERVER_NAME] = {
+      command: 'headroom',
+      args: ['mcp'],
+    };
+    outputChannel.appendLine(`[mcp] Added Headroom to Claude MCP config (project-scoped to ${wsPath})`);
+  }
+
   servers[MCP_CACHE_SERVER_NAME] = cacheServerEntry(extensionPath, wsPath) as unknown as McpServerConfig;
   outputChannel.appendLine(`[mcp] Added token-cache to Claude MCP config (project-scoped to ${wsPath})`);
 
@@ -240,6 +257,12 @@ export async function configureAntigravityMcp(
       }
       const mcpServers = (config['mcpServers'] as Record<string, unknown>) || {};
       mcpServers[MCP_CACHE_SERVER_NAME] = serverDef;
+      if (!mcpServers[HEADROOM_MCP_SERVER_NAME]) {
+        mcpServers[HEADROOM_MCP_SERVER_NAME] = {
+          command: 'headroom',
+          args: ['mcp'],
+        };
+      }
       config['mcpServers'] = mcpServers;
       fs.writeFileSync(filePath, JSON.stringify(config, null, 2), 'utf-8');
       outputChannel.appendLine(`[mcp] Updated ${label} with TokenShield MCP server for Antigravity`);

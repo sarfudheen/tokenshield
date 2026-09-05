@@ -108,6 +108,12 @@ export class CodexGenerator extends BaseInstructionGenerator {
 - Surface a fresh-thread prompt when conversation exceeds 40 messages.`);
     }
 
+    if (strategies.headroomCompression) {
+      sections.push(`### Headroom Reversible CCR & SmartCrusher
+- **MANDATORY**: Compress verbose JSON objects and multi-line tool outputs using Headroom before emitting into instructions.
+- Retrieve detailed records via \`headroom_retrieve\` when required.`);
+    }
+
     return `${MARKER_START}
 ${MARKER_COMMENT}
 

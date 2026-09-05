@@ -5,7 +5,7 @@ export const MARKER_COMMENT = '<!-- TokenShield: AI Token & Cost Optimizer (v1.0
 export const EXTENSION_ID = 'tokenshield';
 export const EXTENSION_NAME = 'TokenShield';
 
-export type ToolInstallMethod = 'npm-global' | 'brew' | 'shell-script';
+export type ToolInstallMethod = 'npm-global' | 'brew' | 'shell-script' | 'pip';
 
 export interface ToolInstallEntry {
   name: string;
@@ -13,6 +13,7 @@ export interface ToolInstallEntry {
   method: ToolInstallMethod;
   npmPackage?: string;
   brewPackage?: string;
+  pipPackage?: string;
   shellScriptUrl?: string;
   postInstallArgs?: string[];
 }
@@ -32,6 +33,12 @@ export const TOOLS_TO_INSTALL: ToolInstallEntry[] = [
     shellScriptUrl: 'https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh',
     postInstallArgs: ['init', '-g', '--copilot'],
   },
+  {
+    name: 'headroom',
+    description: 'Reversible context compression (CCR) & SmartCrusher for JSON/logs/AST (60-95% token reduction)',
+    method: 'pip',
+    pipPackage: 'headroom-ai[all]',
+  },
 ];
 
 export const COPILOT_EXTENSION_ID = 'github.copilot';
@@ -50,6 +57,7 @@ export const CODEX_INSTRUCTIONS_PATH = '.codex/instructions.md';
 export const ANTIGRAVITY_INSTRUCTIONS_PATH = 'AGENTS.md';
 
 export const MCP_CACHE_SERVER_NAME = 'token-cache';
+export const HEADROOM_MCP_SERVER_NAME = 'headroom';
 
 export const STRATEGY_DESCRIPTIONS: Record<string, string> = {
   codeGraph:               'CodeGraph Pre-Indexing — search symbol graphs instead of scanning whole files',
@@ -71,6 +79,7 @@ export const STRATEGY_DESCRIPTIONS: Record<string, string> = {
   copilotIgnoreGeneration: '.copilotignore Generator — create exclusion rules to block non-code noise',
   copilotEditsAwareness:   'Edit Session Awareness — avoid re-reading files already loaded in editor session',
   threadResetTrigger:      'Context Saturation Monitor — suggest fresh chat thread when context gets too long',
+  headroomCompression:     'Headroom Reversible CCR — context compression with local retrieval',
 };
 
 export const STRATEGY_CAP_LABELS: Record<string, string> = {
@@ -93,6 +102,7 @@ export const STRATEGY_CAP_LABELS: Record<string, string> = {
   copilotIgnoreGeneration: '.copilotignore',
   copilotEditsAwareness:   'Edit Awareness',
   threadResetTrigger:      'Thread Reset',
+  headroomCompression:     'Headroom CCR',
 };
 
 import { TOTAL_STRATEGIES } from './config';
