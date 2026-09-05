@@ -41,7 +41,7 @@ suite('Claude Code MCP configuration (token-cache wiring)', () => {
       wsPath,
     ]);
     assert.ok(servers['headroom'], 'headroom entry missing from project mcpServers');
-    assert.strictEqual(servers['headroom'].command, 'headroom');
+    assert.ok(servers['headroom'].command.includes('headroom'));
     assert.deepStrictEqual(servers['headroom'].args, ['mcp']);
   });
 

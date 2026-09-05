@@ -118,6 +118,22 @@ function cacheServerEntry(extensionPath: string, wsPath: string): Record<string,
   };
 }
 
+export function resolveHeadroomCommand(): string {
+  if (isBinaryAvailable('headroom')) {
+    return 'headroom';
+  }
+  if (process.platform === 'win32') {
+    const appData = process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming');
+    for (const pyVer of ['Python314', 'Python313', 'Python312', 'Python311', 'Python310']) {
+      const candidate = path.join(appData, 'Python', pyVer, 'Scripts', 'headroom.exe');
+      if (fs.existsSync(candidate)) {
+        return candidate;
+      }
+    }
+  }
+  return 'headroom';
+}
+
 async function configureVsCodeMcp(wsPath: string, languages: string[], outputChannel: vscode.OutputChannel, extensionPath: string): Promise<void> {
   const settingsPath = path.join(wsPath, '.vscode', 'settings.json');
   let settings: Record<string, unknown> = {};
@@ -155,7 +171,7 @@ async function configureVsCodeMcp(wsPath: string, languages: string[], outputCha
 
   if (!mcpServers[HEADROOM_MCP_SERVER_NAME]) {
     mcpServers[HEADROOM_MCP_SERVER_NAME] = {
-      command: 'headroom',
+      command: resolveHeadroomCommand(),
       args: ['mcp'],
       type: 'stdio',
     };
@@ -210,7 +226,7 @@ export async function configureClaudeMcp(
 
   if (!servers[HEADROOM_MCP_SERVER_NAME]) {
     servers[HEADROOM_MCP_SERVER_NAME] = {
-      command: 'headroom',
+      command: resolveHeadroomCommand(),
       args: ['mcp'],
     };
     outputChannel.appendLine(`[mcp] Added Headroom to Claude MCP config (project-scoped to ${wsPath})`);
@@ -259,7 +275,7 @@ export async function configureAntigravityMcp(
       mcpServers[MCP_CACHE_SERVER_NAME] = serverDef;
       if (!mcpServers[HEADROOM_MCP_SERVER_NAME]) {
         mcpServers[HEADROOM_MCP_SERVER_NAME] = {
-          command: 'headroom',
+          command: resolveHeadroomCommand(),
           args: ['mcp'],
         };
       }

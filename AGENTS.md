@@ -68,4 +68,8 @@
 ### Context Saturation Thread Reset
 - Surface a fresh-thread prompt when conversation exceeds 40 messages.
 
+### Headroom Reversible CCR & SmartCrusher
+- **MANDATORY**: Use Headroom context compression on bulky JSON/trace tool outputs; retrieve uncompressed sections via `headroom_retrieve`.
+- **FORBIDDEN**: Never ingest raw JSON dumps >50 items without schema compaction.
+
 <!-- TOKENSHIELD:END -->

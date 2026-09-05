@@ -41,4 +41,8 @@
 ### Smart Model Routing
 - Leverage fast Flash/Haiku models for simple non-reasoning steps.
 
+### Headroom Reversible CCR & SmartCrusher
+- **MANDATORY**: Use Headroom context compression on bulky JSON/trace tool outputs; retrieve uncompressed sections via `headroom_retrieve`.
+- **FORBIDDEN**: Never ingest raw JSON dumps >50 items without schema compaction.
+
 <!-- TOKENSHIELD:END -->

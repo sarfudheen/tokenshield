@@ -6,6 +6,12 @@
         "d:\\sarfu_works\\tokenshield\\dist\\cache-server.js",
         "d:\\sarfu_works\\tokenshield"
       ]
+    },
+    "headroom": {
+      "command": "C:\\Users\\A644097\\AppData\\Roaming\\Python\\Python314\\Scripts\\headroom.exe",
+      "args": [
+        "mcp"
+      ]
     }
   }
 }
