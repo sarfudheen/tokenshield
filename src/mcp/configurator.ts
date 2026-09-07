@@ -169,14 +169,9 @@ async function configureVsCodeMcp(wsPath: string, languages: string[], outputCha
   if ('codegraph' in mcpServers) {
     delete mcpServers['codegraph'];
   }
-
-  if (!mcpServers['context7']) {
-    mcpServers['context7'] = {
-      command: 'npx',
-      args: ['-y', '@context7/mcp-server'],
-      env: {},
-    };
-    outputChannel.appendLine('[mcp] Added Context7 MCP server for documentation lookup');
+  if ('context7' in mcpServers) {
+    delete mcpServers['context7'];
+    outputChannel.appendLine('[mcp] Removed Context7 (ensuring 100% on-device execution)');
   }
 
   mcpServers[HEADROOM_MCP_SERVER_NAME] = {
@@ -224,12 +219,8 @@ export async function configureClaudeMcp(
   if ('codegraph' in servers) {
     delete servers['codegraph'];
   }
-
-  if (!servers['context7']) {
-    servers['context7'] = {
-      command: 'npx',
-      args: ['-y', '@context7/mcp-server'],
-    };
+  if ('context7' in servers) {
+    delete servers['context7'];
   }
 
   servers[HEADROOM_MCP_SERVER_NAME] = {

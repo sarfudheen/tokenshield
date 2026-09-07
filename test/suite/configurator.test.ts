@@ -81,6 +81,18 @@ suite('Claude Code MCP configuration (token-cache wiring)', () => {
     assert.ok(!('rtk' in written.projects['/ws'].mcpServers));
   });
 
+  test('removes stale context7 MCP entry to ensure 100% on-device execution', async () => {
+    fs.writeFileSync(claudeConfigPath, JSON.stringify({
+      projects: { '/ws': { mcpServers: { context7: { command: 'npx', args: ['-y', '@context7/mcp-server'] } } } },
+    }), 'utf-8');
+    const { configureClaudeMcp } = require('../../src/mcp/configurator');
+
+    await configureClaudeMcp([], fakeOutputChannel, '/ext/path', '/ws', claudeConfigPath);
+
+    const written = JSON.parse(fs.readFileSync(claudeConfigPath, 'utf-8'));
+    assert.ok(!('context7' in written.projects['/ws'].mcpServers));
+  });
+
   test('always overwrites a stale token-cache entry (versioned extension path)', async () => {
     fs.writeFileSync(claudeConfigPath, JSON.stringify({
       projects: {

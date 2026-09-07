@@ -28,7 +28,7 @@ The instruction-file approach is the primary mechanism and works immediately on 
 |---|---|---|---|
 | **CodeGraph** | `npm install -g @colbymchenry/codegraph` | `codegraph` | Semantic code-graph index — 58% fewer AI tool calls, 22% faster answers. 56k ★ MIT |
 | **RTK** | `brew install rtk` or `curl \| sh` | `rtk` | CLI proxy — 60–90% token savings on git, test, build, ls, grep commands. 67k ★ Apache 2.0 |
-| **Context7** | `npx @context7/mcp-server` (MCP) | — | Documentation lookup via MCP |
+| **Headroom** | `pip install headroom-ai[all]` | `headroom` | Reversible context compression (CCR) & SmartCrusher for massive JSON/logs (100% local) |
 
 > **Note:** The earlier transcript referenced `codegraph`, `rtk-compress`, and `caveman` as npm package names. `rtk-compress` and `caveman` do not exist on npm. The real packages are `@colbymchenry/codegraph` and `rtk` (Rust binary via brew/curl).
 
@@ -78,7 +78,7 @@ graph TB
     end
 
     subgraph MCP["MCP Configurator"]
-        MCP_CFG["mcp/configurator.ts\n(Context7 + CodeGraph only — RTK uses hooks not MCP)"]
+        MCP_CFG["mcp/configurator.ts\n(100% On-Device: token-cache + headroom + codegraph)"]
     end
 
     subgraph STRATEGIES["Strategies"]
@@ -98,14 +98,15 @@ graph TB
         CL_FILE["CLAUDE.md"]
         CD_FILE[".codex/instructions.md"]
         CAV_FILE[".cavemanrc  (verbosity hints)"]
-        VS_SETTINGS[".vscode/settings.json\n(MCP: context7 + codegraph)"]
+        VS_SETTINGS[".vscode/settings.json\n(MCP: token-cache + headroom)"]
         CG_DIR[".codegraph/  (CodeGraph index)"]
     end
 
-    subgraph EXTERNAL["External Tools & Services"]
+    subgraph EXTERNAL["On-Device Tools & MCP Servers"]
         CODEGRAPH_BIN["codegraph v1.1.3\n(@colbymchenry/codegraph)\nSQLite knowledge graph"]
         RTK_BIN["rtk v0.43.0\n(brew install rtk)\nCLI output proxy — hooks not MCP"]
-        CONTEXT7_MCP["Context7 MCP Server\n(@context7/mcp-server)"]
+        HEADROOM_MCP["Headroom CCR\n(headroom mcp serve)"]
+        TOKEN_CACHE_MCP["Token-Cache MCP\n(dist/cache-server.js)"]
     end
 
     EXT --> CFG
@@ -131,7 +132,7 @@ graph TB
     INST --> RTK_BIN
 
     MCP_CFG --> VS_SETTINGS
-    MCP_CFG --> CONTEXT7_MCP
+    MCP_CFG --> TOKEN_CACHE_MCP & HEADROOM_MCP
     MCP_CFG --> CODEGRAPH_BIN
 
     CG --> CODEGRAPH_BIN
@@ -156,7 +157,7 @@ flowchart TD
     F -- No --> H
     F -- Yes --> G1[generateAllInstructions\ncopilot + claude + codex]
     G1 --> G2[installAllTools\ncodegraph npm · rtk brew/shell · .cavemanrc]
-    G2 --> G3[configureMcpServers\ncontext7 + codegraph entries\nremove stale rtk entry]
+    G2 --> G3[configureMcpServers\ntoken-cache + headroom entries\npurge rtk / cloud entries]
     G3 --> H{config.activeStrategies\n.codeGraph?}
     H -- Yes --> I[startCodeGraphWatcher\ncheck binary · file watcher · status bar]
     H -- No --> J
@@ -420,54 +421,46 @@ Your custom rules here...
 
 ## 11. MCP Configuration Flow (`mcp/configurator.ts`)
 
-RTK uses **PreToolUse hooks** (not MCP). Only CodeGraph and Context7 are wired as MCP servers.
+RTK uses **PreToolUse hooks** (not MCP). TokenShield configures **100% on-device MCP servers** (`token-cache`, `headroom`, and `codegraph`) and purges any cloud services (like `context7`) to guarantee zero cloud leakage and full air-gapped operation.
 
 ```mermaid
 flowchart TD
-    A([configureMcpServers]) --> B[Detect languages\nfrom package.json/pyproject.toml/go.mod/Cargo.toml]
+    A([configureMcpServers]) --> B[Detect workspace path]
     B --> C[configureVsCodeMcp\n→ .vscode/settings.json]
-    B --> D[configureClaudeMcp\n→ ~/.config/claude/mcp.json]
+    B --> D[configureClaudeMcp\n→ ~/.claude.json]
+    B --> E[configureAntigravityMcp\n→ .agents/mcp_config.json]
 
     C --> C1[Parse or create settings.json]
-    C1 --> C2{rtk key exists\nin mcp.servers?}
-    C2 -- Yes --> C3[DELETE mcpServers.rtk\nRTK uses hooks not MCP]
+    C1 --> C2{stale entries exist?\nrtk or context7}
+    C2 -- Yes --> C3[DELETE rtk / context7 entries]
     C2 -- No --> C4
-    C3 --> C4{context7 configured?}
-    C4 -- No --> C5[Add: npx @context7/mcp-server]
-    C5 --> C6{codegraph binary\navailable?}
-    C6 -- Yes, not set --> C7[Add: codegraph mcp\ntype: stdio]
-    C7 --> C8[Write settings.json]
-    C6 -- No or set --> C8
+    C3 --> C4[Add: token-cache\ndist/cache-server.js]
+    C4 --> C5[Add: headroom\nheadroom mcp serve]
+    C5 --> C6[Write settings.json]
 
-    D --> D1[Parse or create mcp.json]
-    D1 --> D2{rtk key exists?}
-    D2 -- Yes --> D3[DELETE config.servers.rtk]
+    D --> D1[Parse ~/.claude.json]
+    D1 --> D2{stale entries in project?\nrtk or context7}
+    D2 -- Yes --> D3[DELETE rtk / context7 from project]
     D2 -- No --> D4
-    D3 --> D4{context7 configured?}
-    D4 -- No --> D5[Add: npx @context7/mcp-server]
-    D5 --> D6{codegraph binary?}
-    D6 -- Yes, not set --> D7[Add: codegraph mcp]
-    D7 --> D8[Write mcp.json]
-    D6 -- No --> D8
+    D3 --> D4[Add: token-cache + headroom to project]
+    D4 --> D5[Write ~/.claude.json]
 ```
 
-### Resulting Config Files
-
-> The `codegraph` entry in both files **does not install CodeGraph** — it launches the already-installed binary (`codegraph mcp`) as a stdio subprocess so the AI can call `codegraph_explore`. See [Section 2 — Two Separate Roles](#codegraph-two-separate-roles).
+### Resulting Config Files (100% On-Device)
 
 **`.vscode/settings.json`** (VS Code Copilot MCP — project-scoped)
 ```json
 {
   "mcp": {
     "servers": {
-      "context7": {
-        "command": "npx",
-        "args": ["-y", "@context7/mcp-server"],
-        "env": {}
+      "headroom": {
+        "command": "headroom",
+        "args": ["mcp", "serve"],
+        "type": "stdio"
       },
-      "codegraph": {
-        "command": "codegraph",  // binary must already be on $PATH
-        "args": ["mcp"],         // starts codegraph in MCP server mode
+      "token-cache": {
+        "command": "node",
+        "args": ["/path/to/tokenshield/dist/cache-server.js", "/path/to/workspace"],
         "type": "stdio"
       }
     }
@@ -475,23 +468,27 @@ flowchart TD
 }
 ```
 
-**`~/.config/claude/mcp.json`** (Claude Code MCP — user-global)
+**`~/.claude.json`** (Claude Code MCP — project-scoped)
 ```json
 {
-  "servers": {
-    "context7": {
-      "command": "npx",
-      "args": ["-y", "@context7/mcp-server"]
-    },
-    "codegraph": {
-      "command": "codegraph",  // binary must already be on $PATH
-      "args": ["mcp"]          // starts codegraph in MCP server mode
+  "projects": {
+    "/path/to/workspace": {
+      "mcpServers": {
+        "headroom": {
+          "command": "headroom",
+          "args": ["mcp", "serve"]
+        },
+        "token-cache": {
+          "command": "node",
+          "args": ["/path/to/tokenshield/dist/cache-server.js", "/path/to/workspace"]
+        }
+      }
     }
   }
 }
 ```
 
-> **RTK is absent from both files** — it uses PreToolUse hooks (`~/.copilot/hooks/rtk-rewrite.json`), not MCP. The configurator deletes any stale `rtk` entry found.
+> **Zero Cloud Leakage Guarantee:** Third-party cloud servers (such as `context7`) and hooks-based tools (`rtk`) are intentionally excluded from MCP configurations, ensuring all MCP operations run locally via stdio.
 
 ---
 
@@ -567,8 +564,8 @@ TokenShield Command Center
 └── .vscode/
     └── settings.json                   ← tokenshield settings & MCP configuration
 
-~/.config/claude/
-└── mcp.json                            ← Claude Code MCP: context7 + codegraph (user-global)
+~/.claude.json
+└── projects[wsPath].mcpServers         ← Claude Code MCP: token-cache + headroom (project-scoped)
 
 ~/.config/rtk/
 └── config.toml                         ← RTK config (managed by rtk init, not this extension)

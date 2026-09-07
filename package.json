@@ -309,7 +309,7 @@
         "tokenshield.configureMcpOnActivation": {
           "type": "boolean",
           "default": true,
-          "description": "Automatically configure MCP servers (token-cache, Context7, CodeGraph) on activation."
+          "description": "Automatically configure 100% on-device MCP servers (token-cache, headroom, CodeGraph) on activation."
         },
         "tokenshield.pricing": {
           "type": "object",
