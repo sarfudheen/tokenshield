@@ -15,6 +15,10 @@ export interface DiskSavingsEvent {
   costSavedUsd: number;
   details: string;
   sessionNumber?: number;
+  beforeTokens?: number;
+  afterTokens?: number;
+  reductionPercent?: number;
+  modelName?: string;
 }
 
 interface EventsFileFormat {
@@ -24,7 +28,15 @@ interface EventsFileFormat {
 
 export function recordDiskEvent(
   workspaceRoot: string,
-  event: Omit<DiskSavingsEvent, 'id' | 'timestamp' | 'costSavedUsd'> & { costSavedUsd?: number }
+  event: Omit<DiskSavingsEvent, 'id' | 'timestamp' | 'costSavedUsd'> & {
+    id?: string;
+    timestamp?: string;
+    costSavedUsd?: number;
+    beforeTokens?: number;
+    afterTokens?: number;
+    reductionPercent?: number;
+    modelName?: string;
+  }
 ): DiskSavingsEvent {
   const cacheDir = path.join(workspaceRoot, CACHE_DIR);
   const filePath = path.join(cacheDir, EVENTS_FILE);
@@ -52,14 +64,18 @@ export function recordDiskEvent(
       : (event.tokensSaved / 1_000_000) * 0.15; // default lightweight tier rate ($0.15/1M)
 
     const newEvent: DiskSavingsEvent = {
-      id: `evt-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      timestamp: new Date().toISOString(),
+      id: event.id || `evt-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      timestamp: event.timestamp || new Date().toISOString(),
       directive: event.directive,
       source: event.source,
       tokensSaved: event.tokensSaved,
       costSavedUsd,
       details: event.details,
       sessionNumber: event.sessionNumber,
+      beforeTokens: event.beforeTokens,
+      afterTokens: event.afterTokens,
+      reductionPercent: event.reductionPercent,
+      modelName: event.modelName,
     };
 
     data.events.unshift(newEvent);

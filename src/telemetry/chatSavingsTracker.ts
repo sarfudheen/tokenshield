@@ -1,4 +1,7 @@
 import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
 import { spawnSync } from 'child_process';
 import { getConfig } from '../core/config';
 import { getActiveModel } from '../models/modelDetector';
@@ -13,6 +16,10 @@ export interface ChatSavingsEvent {
   tokensSaved: number;
   costSavedUsd: number;
   details: string;
+  beforeTokens?: number;
+  afterTokens?: number;
+  reductionPercent?: number;
+  modelName?: string;
 }
 
 export interface ArchivedSession {
@@ -62,6 +69,7 @@ class ChatSavingsTracker {
     if (!wsPath) { return; }
 
     this.syncRtkSavings(wsPath);
+    this.syncHeadroomSavings();
 
     const diskEvents = readDiskEvents(wsPath);
     let newEventsAdded = false;
@@ -69,6 +77,21 @@ class ChatSavingsTracker {
     for (const de of diskEvents) {
       if (!this.knownEventIds.has(de.id)) {
         const evTime = new Date(de.timestamp);
+
+        // Deduplicate against existing in-memory events to prevent double counting
+        const isDuplicate = this.events.some(
+          e => e.id === de.id || (
+            e.directive === de.directive &&
+            e.source === de.source &&
+            e.tokensSaved === de.tokensSaved &&
+            Math.abs(e.timestamp.getTime() - evTime.getTime()) < 4000
+          )
+        );
+        if (isDuplicate) {
+          this.knownEventIds.add(de.id);
+          continue;
+        }
+
         // Ingest events that belong to current session
         if (evTime.getTime() >= this.sessionStartedAt.getTime() - 5000) {
           this.knownEventIds.add(de.id);
@@ -80,6 +103,10 @@ class ChatSavingsTracker {
             tokensSaved: de.tokensSaved,
             costSavedUsd: de.costSavedUsd,
             details: de.details,
+            beforeTokens: de.beforeTokens,
+            afterTokens: de.afterTokens,
+            reductionPercent: de.reductionPercent,
+            modelName: de.modelName,
           };
           this.events.unshift(ev);
           this.totalTokensSaved += ev.tokensSaved;
@@ -115,23 +142,13 @@ class ChatSavingsTracker {
 
       const totalSaved = summary.total_saved;
       const totalCmds = summary.total_commands || 0;
-      const avgPct = summary.avg_savings_pct ? Math.round(summary.avg_savings_pct) : 87;
+      const avgPct = summary.avg_savings_pct ? Math.round(summary.avg_savings_pct) : 23;
 
       if (!this.rtkInitialized) {
+        // Baseline RTK counts on session start so lifetime history is not dumped as a new session event
         this.rtkInitialized = true;
         this.lastRtkSavedTokens = totalSaved;
         this.lastRtkCommandCount = totalCmds;
-
-        // Ingest workspace RTK command savings into active session
-        if (totalSaved > 0) {
-          this.recordEvent(
-            'CLI Output Compression',
-            'rtk CLI proxy',
-            totalSaved,
-            `Compressed ${totalCmds} shell command(s) (git/test/build) output by ~${avgPct}%`,
-            false
-          );
-        }
         return;
       }
 
@@ -142,16 +159,86 @@ class ChatSavingsTracker {
         this.lastRtkSavedTokens = totalSaved;
         this.lastRtkCommandCount = totalCmds;
 
+        const pct = avgPct > 0 && avgPct < 100 ? avgPct : 23;
+        const deltaInput = Math.max(deltaTokens + 1, Math.round(deltaTokens / (pct / 100)));
+        const deltaOutput = Math.max(0, deltaInput - deltaTokens);
+
         this.recordEvent(
           'CLI Output Compression',
           'rtk CLI proxy',
           deltaTokens,
-          `Compressed ${deltaCmds} shell command(s) (git/test/build) output by ~${avgPct}%`,
-          true
+          `Compressed ${deltaCmds} shell command(s) (git/test/build) output by ~${pct}%`,
+          true,
+          deltaInput,
+          deltaOutput,
+          pct
         );
       }
     } catch {
       // Non-fatal if RTK check fails
+    }
+  }
+
+  private syncHeadroomSavings(): void {
+    try {
+      const ledgerPath = path.join(os.homedir(), '.headroom', 'savings_events.jsonl');
+      if (!fs.existsSync(ledgerPath)) { return; }
+
+      const content = fs.readFileSync(ledgerPath, 'utf-8');
+      const lines = content.trim().split('\n');
+      let newEventsAdded = false;
+
+      for (const line of lines) {
+        if (!line.trim()) { continue; }
+        try {
+          const entry = JSON.parse(line);
+          const evTime = new Date(entry.ts);
+          const eventId = `headroom-${entry.ts}-${entry.saved}`;
+
+          if (!this.knownEventIds.has(eventId)) {
+            if (evTime.getTime() >= this.sessionStartedAt.getTime() - 5000) {
+              this.knownEventIds.add(eventId);
+              const savedTokens = typeof entry.saved === 'number' ? entry.saved : 0;
+              const costUsd = typeof entry.cost_usd === 'number' ? entry.cost_usd : 0;
+              const source = entry.client || entry.source || 'Headroom MCP';
+              const before = typeof entry.before === 'number' ? entry.before : undefined;
+              const after = typeof entry.after === 'number' ? entry.after : undefined;
+              const pct = before && after && before > 0 ? Math.round(((before - after) / before) * 100) : undefined;
+              const details = before !== undefined && after !== undefined
+                ? `Lossless compression (-${pct}% tokens: ${before} ➔ ${after} tok)`
+                : `Saved ${savedTokens} tokens via Headroom`;
+
+              const ev: ChatSavingsEvent = {
+                id: eventId,
+                timestamp: evTime,
+                directive: 'Headroom Reversible CCR',
+                source,
+                tokensSaved: savedTokens,
+                costSavedUsd: costUsd,
+                details,
+                beforeTokens: before,
+                afterTokens: after,
+                reductionPercent: pct,
+              };
+              this.events.unshift(ev);
+              this.totalTokensSaved += ev.tokensSaved;
+              this.totalCostSavedUsd += ev.costSavedUsd;
+              newEventsAdded = true;
+            }
+          }
+        } catch {
+          // ignore malformed line
+        }
+      }
+
+      if (newEventsAdded) {
+        if (this.events.length > 100) {
+          this.events = this.events.slice(0, 100);
+        }
+        this.notifyListeners();
+      }
+    } catch {
+      // Non-fatal if reading ledger fails
     }
   }
 
@@ -160,7 +247,10 @@ class ChatSavingsTracker {
     source: string,
     tokensSaved: number,
     details: string,
-    showToast: boolean = false
+    showToast: boolean = false,
+    beforeTokens?: number,
+    afterTokens?: number,
+    reductionPercent?: number
   ): Promise<ChatSavingsEvent> {
     const config = getConfig();
     const activeModel = await getActiveModel();
@@ -175,6 +265,10 @@ class ChatSavingsTracker {
       tokensSaved,
       costSavedUsd,
       details,
+      beforeTokens,
+      afterTokens,
+      reductionPercent,
+      modelName: activeModel.name,
     };
 
     this.knownEventIds.add(event.id);
@@ -186,16 +280,22 @@ class ChatSavingsTracker {
     this.totalTokensSaved += tokensSaved;
     this.totalCostSavedUsd += costSavedUsd;
 
-    // Persist to disk for MCP server coherence
+    // Persist to disk for MCP server coherence with aligned ID
     const wsPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
     if (wsPath) {
       recordDiskEvent(wsPath, {
+        id: event.id,
+        timestamp: event.timestamp.toISOString(),
         directive,
         source,
         tokensSaved,
         costSavedUsd,
         details,
         sessionNumber: this.currentSessionNumber,
+        beforeTokens,
+        afterTokens,
+        reductionPercent,
+        modelName: activeModel.name,
       });
     }
 

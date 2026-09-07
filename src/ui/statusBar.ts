@@ -3,6 +3,7 @@ import { getConfig, getEffectiveStrategies, countActiveStrategies, Profile, TOTA
 import { chatSavingsTracker } from '../telemetry/chatSavingsTracker';
 import { getActiveModel } from '../models/modelDetector';
 import { getCodeGraphState } from '../strategies/codegraph';
+import { formatCompactTokens, formatCost } from './formatters';
 
 let statusBarItem: vscode.StatusBarItem;
 
@@ -49,13 +50,8 @@ export async function updateStatusBar(): Promise<void> {
   const sessionNum = chatSavingsTracker.getSessionNumber();
   const cg = getCodeGraphState();
 
-  const formattedTokens = tokensSaved >= 1000
-    ? `${(tokensSaved / 1000).toFixed(1)}k`
-    : `${tokensSaved}`;
-
-  const formattedCost = costSaved < 0.0001 && costSaved > 0
-    ? '<$0.0001'
-    : `$${costSaved.toFixed(4)}`;
+  const formattedTokens = formatCompactTokens(tokensSaved);
+  const formattedCost = formatCost(costSaved);
 
   let cgBadge = '';
   if (cg.state === 'pending') {

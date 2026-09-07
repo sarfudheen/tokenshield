@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import { chatSavingsTracker } from '../telemetry/chatSavingsTracker';
 import { getConfig } from '../core/config';
 import { getActiveModel } from '../models/modelDetector';
+import { formatCompactTokens, formatCost } from './formatters';
 
 let savingsStatusBarItem: vscode.StatusBarItem | undefined;
 let callLogWatcher: vscode.FileSystemWatcher | undefined;
@@ -73,13 +74,8 @@ export async function updateSessionSavingsWidget(): Promise<void> {
   const sessionNum = chatSavingsTracker.getSessionNumber();
   const sessionStarted = chatSavingsTracker.getSessionStartedAt();
 
-  const formattedTokens = tokensSaved >= 1000
-    ? `${(tokensSaved / 1000).toFixed(1)}k`
-    : `${tokensSaved}`;
-
-  const formattedCost = costSaved < 0.0001 && costSaved > 0
-    ? '<$0.0001'
-    : `$${costSaved.toFixed(4)}`;
+  const formattedTokens = formatCompactTokens(tokensSaved);
+  const formattedCost = formatCost(costSaved);
 
   savingsStatusBarItem.text = `$(pulse) #${sessionNum} \u00b7 ${formattedTokens} \u2193 ${formattedCost}`;
 

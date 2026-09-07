@@ -1,0 +1,78 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      publish_marketplace:
+        description: 'Publish to VS Code Marketplace'
+        required: false
+        type: boolean
+        default: true
+      publish_ovsx:
+        description: 'Publish to Open VSX'
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build & Release Extension
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Compile TypeScript
+        run: npm run compile
+
+      - name: Build production bundle
+        run: npm run build
+
+      - name: Package extension (.vsix)
+        run: npx @vscode/vsce package --no-dependencies --no-yarn --allow-star-activation
+
+      - name: Locate VSIX artifact
+        id: vsix_path
+        run: |
+          VSIX_FILE=$(ls *.vsix | head -n 1)
+          echo "file=${VSIX_FILE}" >> "$GITHUB_OUTPUT"
+          echo "Found VSIX package: ${VSIX_FILE}"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.vsix_path.outputs.file }}
+          generate_release_notes: true
+          name: Release ${{ github.ref_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to VS Code Marketplace
+        if: ${{ env.VSCE_PAT != '' && (github.event_name != 'workflow_dispatch' || inputs.publish_marketplace) }}
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: npx @vscode/vsce publish --packagePath ${{ steps.vsix_path.outputs.file }} -p "$VSCE_PAT"
+
+      - name: Publish to Open VSX Registry
+        if: ${{ env.OVSX_PAT != '' && (github.event_name != 'workflow_dispatch' || inputs.publish_ovsx) }}
+        env:
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}
+        run: npx ovsx publish ${{ steps.vsix_path.outputs.file }} -p "$OVSX_PAT"

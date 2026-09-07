@@ -17,3 +17,7 @@ ai-token-optimizer-telemetry.json
 *.log
 scratch/**
 *.img
+dist/src/**
+dist/test/**
+dist/**/*.map
+.github/workflows/**

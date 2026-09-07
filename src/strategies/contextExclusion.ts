@@ -119,14 +119,8 @@ export function generateCopilotIgnore(
 ): void {
   const ignorePath = path.join(workspacePath, '.copilotignore');
 
-  const header = [
-    '# .copilotignore — Managed by TokenShield',
-    '# VS Code Copilot respects this file like .gitignore.',
-    '# Add your own patterns below the managed block.',
-    '# To regenerate: TokenShield: Configure Context Exclusions',
-    '',
-    '# --- TOKENSHIELD MANAGED ---',
-  ];
+  const MANAGED_START = '# --- TOKENSHIELD MANAGED ---';
+  const MANAGED_END = '# --- END TOKENSHIELD MANAGED ---';
 
   // Convert glob patterns to .gitignore-compatible lines
   const gitignoreLines = patterns.map(p =>
@@ -134,27 +128,43 @@ export function generateCopilotIgnore(
     p.endsWith('/**') ? p.slice(0, -3) + '/' : p
   );
 
-  const footer = ['# --- END TOKENSHIELD MANAGED ---', ''];
-
-  const managedBlock = [...header, ...gitignoreLines, ...footer].join('\n');
+  const managedBlock = [
+    MANAGED_START,
+    '# .copilotignore — Managed by TokenShield',
+    '# VS Code Copilot respects this file like .gitignore.',
+    '# Add your own patterns outside this managed block.',
+    '# To regenerate: TokenShield: Configure Context Exclusions',
+    '',
+    ...gitignoreLines,
+    MANAGED_END,
+  ].join('\n');
 
   if (!fs.existsSync(ignorePath)) {
-    fs.writeFileSync(ignorePath, managedBlock, 'utf-8');
+    fs.writeFileSync(ignorePath, managedBlock + '\n', 'utf-8');
     outputChannel.appendLine(`[cap-17] Created .copilotignore with ${patterns.length} exclusion patterns`);
     return;
   }
 
   // File exists — only replace managed block, preserve user lines outside it
   const existing = fs.readFileSync(ignorePath, 'utf-8');
-  const MANAGED_START = '# --- TOKENSHIELD MANAGED ---';
-  const MANAGED_END = '# --- END TOKENSHIELD MANAGED ---';
   const startIdx = existing.indexOf(MANAGED_START);
   const endIdx = existing.indexOf(MANAGED_END);
 
   if (startIdx !== -1 && endIdx !== -1) {
-    const before = existing.substring(0, startIdx);
-    const after = existing.substring(endIdx + MANAGED_END.length);
-    const updated = before + [...header, ...gitignoreLines, ...footer].join('\n') + after;
+    // Strip any legacy header comments that were placed above MANAGED_START
+    const headerMarker = '# .copilotignore — Managed by TokenShield';
+    const hIdx = existing.indexOf(headerMarker);
+    const actualStart = hIdx !== -1 && hIdx < startIdx ? hIdx : startIdx;
+
+    const before = existing.substring(0, actualStart).trimEnd();
+    const after = existing.substring(endIdx + MANAGED_END.length).trim();
+
+    const parts: string[] = [];
+    if (before) { parts.push(before); }
+    parts.push(managedBlock);
+    if (after) { parts.push(after); }
+
+    const updated = parts.join('\n\n') + '\n';
     if (updated !== existing) {
       fs.writeFileSync(ignorePath, updated, 'utf-8');
       outputChannel.appendLine(`[cap-17] Updated managed block in .copilotignore`);
@@ -163,7 +173,8 @@ export function generateCopilotIgnore(
     }
   } else {
     // No managed block — append to end, don't overwrite user content
-    const appended = existing.trimEnd() + '\n\n' + managedBlock;
+    const base = existing.trimEnd();
+    const appended = base ? `${base}\n\n${managedBlock}\n` : `${managedBlock}\n`;
     fs.writeFileSync(ignorePath, appended, 'utf-8');
     outputChannel.appendLine(`[cap-17] Appended managed block to existing .copilotignore`);
   }

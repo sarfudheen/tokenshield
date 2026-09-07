@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { getConfig } from '../core/config';
 import { getActiveModel } from '../models/modelDetector';
+import { formatCompactTokens, formatCost } from './formatters';
 
 let tokenStatusBarItem: vscode.StatusBarItem | undefined;
 let debounceTimer: NodeJS.Timeout | undefined;
@@ -68,13 +69,8 @@ export async function updateTokenBadge(editor: vscode.TextEditor | undefined): P
   const pricing = config.pricing[activeModel.tier] || config.pricing.standard;
   const cost = (tokenCount / 1_000_000) * pricing.inputPerMillion;
 
-  const formattedTokens = tokenCount >= 1000
-    ? `${(tokenCount / 1000).toFixed(1)}k`
-    : `${tokenCount}`;
-
-  const formattedCost = cost < 0.0001 && cost > 0
-    ? '<$0.0001'
-    : `$${cost.toFixed(4)}`;
+  const formattedTokens = formatCompactTokens(tokenCount);
+  const formattedCost = formatCost(cost);
 
   const md = new vscode.MarkdownString();
   md.isTrusted = true;

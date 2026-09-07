@@ -10,7 +10,7 @@ import { createSessionSavingsWidget } from './ui/sessionSavingsWidget';
 import { chatSavingsTracker } from './telemetry/chatSavingsTracker';
 import { pruneContext, compressGitDiff } from './strategies/adaptivePruner';
 import { showProfilePicker, showSingleFeatureToggle } from './ui/quickPick';
-import { DashboardPanel } from './ui/dashboard';
+import { DashboardPanel, registerDiffContentProvider } from './ui/dashboard';
 import { exportTelemetryCommand } from './ui/exportTelemetry';
 import { startCodeGraphWatcher, runCodeGraphReindex, validateIndex, disposeCodeGraphWatcher, validateAllStrategies, applyContextExclusions, removeContextExclusions, showExclusionPicker } from './strategies';
 import { SemanticCacheStore } from './cache/store';
@@ -122,6 +122,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   // Create unified TokenShield Master Hub and active editor token badge (clean 2-item layout)
   const statusBar = createStatusBar(context);
   const tokenBadge = createEditorTokenBadge(context);
+  registerDiffContentProvider(context);
   context.subscriptions.push(statusBar, tokenBadge);
 
   // Listen for config changes — hot-swap strategies without restart
