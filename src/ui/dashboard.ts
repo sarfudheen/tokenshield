@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { getConfig, getEffectiveStrategies, ExtensionConfig, StrategyState, countActiveStrategies, TOTAL_STRATEGIES } from '../core/config';
+import { getConfig, getEffectiveStrategies, ExtensionConfig, StrategyState, countActiveStrategies, TOTAL_STRATEGIES, updateStrategies } from '../core/config';
 import {
   measureRtk,
   measureCodeGraph,
@@ -14,6 +14,7 @@ import {
   measureDiffOnly,
   measureGuardrails,
   measureModelRouting,
+  measureHeadroom,
   Measurement,
 } from '../strategies';
 import { getRoiEngine } from '../telemetry/roiEngine';
@@ -41,10 +42,12 @@ interface DashboardMeasurements {
   diffOnlyOutput: Measurement;
   agentGuardrails: Measurement;
   smartModelRouting: Measurement;
+  headroomCompression: Measurement;
 }
 
 interface DirectiveCardData {
   id: string;
+  featureKey: string;
   tag: string;
   name: string;
   icon: string;
@@ -53,11 +56,15 @@ interface DirectiveCardData {
   howItSaves: string;
   whereItRan: string;
   tokensSavedBadge: string;
+  badgeClass?: string;
+  metricType?: 'measured' | 'policy' | 'standby' | 'disabled';
   measurement: Measurement;
   groupClass: string;
+  isEnabled: boolean;
 }
 
 function getFeatureCardState(
+  featureKey: string,
   tag: string,
   name: string,
   icon: string,
@@ -66,21 +73,26 @@ function getFeatureCardState(
   measurement: Measurement,
   events: ChatSavingsEvent[],
   sessionNum: number,
-  groupClass: string = 'cap-group-a'
+  groupClass: string = 'cap-group-a',
+  isDirectiveOnly: boolean = false
 ): DirectiveCardData {
   if (measurement.status === 'disabled') {
     return {
       id: name.toLowerCase().replace(/\s+/g, '-'),
+      featureKey,
       tag,
       name,
       icon,
       subtitle,
       liveMetric: 'Feature is currently disabled in your configuration profile',
       tokensSavedBadge: 'DISABLED',
+      badgeClass: 'badge-off',
+      metricType: 'disabled',
       whereItRan: 'Not active in AI prompts or tools.',
       howItSaves,
       measurement,
       groupClass,
+      isEnabled: false,
     };
   }
 
@@ -95,12 +107,15 @@ function getFeatureCardState(
     const formatted = capTokens >= 1000 ? `${(capTokens / 1000).toFixed(1)}k` : `${capTokens}`;
     return {
       id: name.toLowerCase().replace(/\s+/g, '-'),
+      featureKey,
       tag,
       name,
       icon,
       subtitle,
       liveMetric: `+${capTokens.toLocaleString()} tokens saved in Session #${sessionNum} (${capEvents.length} event${capEvents.length > 1 ? 's' : ''})`,
       tokensSavedBadge: `+${formatted} TOKENS`,
+      badgeClass: 'badge-measured',
+      metricType: 'measured',
       whereItRan: `Last ran on <code>${latest.source}</code>: ${latest.details}`,
       howItSaves,
       measurement: {
@@ -108,24 +123,52 @@ function getFeatureCardState(
         percent: measurement.percent || 75,
       },
       groupClass,
+      isEnabled: true,
+    };
+  }
+
+  if (isDirectiveOnly) {
+    return {
+      id: name.toLowerCase().replace(/\s+/g, '-'),
+      featureKey,
+      tag,
+      name,
+      icon,
+      subtitle,
+      liveMetric: `🛡️ POLICY ENFORCED · Active in system instructions & constraints`,
+      tokensSavedBadge: 'POLICY ENFORCED',
+      badgeClass: 'badge-policy',
+      metricType: 'policy',
+      whereItRan: `Enforced continuously across AI prompts to eliminate token burn before generation.`,
+      howItSaves,
+      measurement: {
+        ...measurement,
+        percent: measurement.percent || 85,
+      },
+      groupClass,
+      isEnabled: true,
     };
   }
 
   return {
     id: name.toLowerCase().replace(/\s+/g, '-'),
+    featureKey,
     tag,
     name,
     icon,
     subtitle,
-    liveMetric: `0 tokens in Session #${sessionNum} · Feature active & standing by`,
-    tokensSavedBadge: 'ACTIVE (0 TOK)',
-    whereItRan: `Active in AI instruction directives. Will record savings on your next assistant query.`,
+    liveMetric: `0 tokens in Session #${sessionNum} · Tool ready & standing by`,
+    tokensSavedBadge: 'STANDBY',
+    badgeClass: 'badge-standby',
+    metricType: 'standby',
+    whereItRan: `Tool registered in MCP/CLI. Will record real-time savings upon next invocation.`,
     howItSaves,
     measurement: {
       ...measurement,
       percent: 0,
     },
     groupClass,
+    isEnabled: true,
   };
 }
 
@@ -168,6 +211,26 @@ export class DashboardPanel {
     );
 
     DashboardPanel.currentPanel = new DashboardPanel(panel);
+
+    panel.webview.onDidReceiveMessage(
+      async (message) => {
+        if (message.command === 'toggleStrategy') {
+          await updateStrategies({ [message.key]: message.enabled });
+          await DashboardPanel.refreshCurrentPanel();
+          const label = message.name || message.key;
+          vscode.window.showInformationMessage(
+            `TokenShield: ${label} is now ${message.enabled ? 'ENABLED' : 'DISABLED'}`
+          );
+        } else if (message.command === 'deactivateCompletely') {
+          await vscode.commands.executeCommand('tokenshield.deactivateCompletely');
+        } else if (message.command === 'reactivate') {
+          await vscode.commands.executeCommand('tokenshield.reactivate');
+        }
+      },
+      null,
+      DashboardPanel.currentPanel.disposables
+    );
+
     await DashboardPanel.currentPanel.refresh();
   }
 
@@ -207,6 +270,7 @@ export class DashboardPanel {
           diffOnlyOutput: measureDiffOnly(strategies),
           agentGuardrails: measureGuardrails(strategies),
           smartModelRouting: measureModelRouting(strategies),
+          headroomCompression: measureHeadroom(strategies),
         };
         const active = await getActiveModel();
         const available = await discoverAvailableModels();
@@ -257,30 +321,38 @@ export class DashboardPanel {
     const percent = isMeasured && m.percent !== undefined ? m.percent : undefined;
     const barWidth = percent ? Math.max(0, Math.min(100, percent)) : 0;
 
-    let badgeHtml = `<span class="badge badge-measured">${card.tokensSavedBadge}</span>`;
-    if (m.status === 'disabled') {
-      badgeHtml = `<span class="badge badge-off">DISABLED</span>`;
+    let badgeClass = card.badgeClass || 'badge-measured';
+    if (!card.isEnabled) {
+      badgeClass = 'badge-off';
     }
 
+    const metricClass = card.metricType ? `metric-${card.metricType}` : '';
+
     return `
-    <div class="card ${card.groupClass || ''} ${m.status === 'disabled' ? 'cap-disabled' : ''}">
+    <div class="card ${card.groupClass || ''} ${!card.isEnabled ? 'cap-disabled' : ''}" id="card-${card.featureKey}">
       <div class="card-header">
         <div>
           <div class="cap-tag">${card.tag}</div>
           <h3 class="card-title">${card.icon} ${card.name}</h3>
           <div class="card-subtitle">${card.subtitle}</div>
         </div>
-        <div>${badgeHtml}</div>
+        <div class="card-header-controls">
+          <label class="switch" title="Turn ${card.name} ${card.isEnabled ? 'OFF' : 'ON'}">
+            <input type="checkbox" ${card.isEnabled ? 'checked' : ''} onchange="toggleStrategy('${card.featureKey}', '${card.name}', this.checked)">
+            <span class="slider round"></span>
+          </label>
+          <span class="badge ${badgeClass}">${card.tokensSavedBadge}</span>
+        </div>
       </div>
 
-      <div class="live-metric-box">
+      <div class="live-metric-box ${metricClass}">
         <div class="live-metric-title">📊 WORKSPACE SAVINGS:</div>
-        <div class="live-metric-val">${card.liveMetric}</div>
+        <div class="live-metric-val ${metricClass}">${card.liveMetric}</div>
       </div>
 
       ${barWidth > 0 ? `
       <div class="bar-container">
-        <div class="bar-track"><div class="bar" style="width: ${barWidth}%"></div></div>
+        <div class="bar-track"><div class="bar ${card.metricType === 'policy' ? 'bar-policy' : ''}" style="width: ${barWidth}%"></div></div>
       </div>` : ''}
 
       <div class="info-section">
@@ -314,6 +386,7 @@ export class DashboardPanel {
 
     const directiveCards: DirectiveCardData[] = [
       getFeatureCardState(
+        'codeGraph',
         'CODE SEARCH',
         'CodeGraph Pre-Indexing',
         '🔍',
@@ -322,9 +395,11 @@ export class DashboardPanel {
         measurements.codeGraph,
         recentEvents,
         sessionNum,
-        'cap-group-a'
+        'cap-group-a',
+        false
       ),
       getFeatureCardState(
+        'outputCompression',
         'TERMINAL',
         'CLI Output Compression',
         '⚡',
@@ -333,9 +408,11 @@ export class DashboardPanel {
         measurements.outputCompression,
         recentEvents,
         sessionNum,
-        'cap-group-a'
+        'cap-group-a',
+        false
       ),
       getFeatureCardState(
+        'verbosityControl',
         'PROMPT FILTER',
         'Concise AI Responses',
         '🗣️',
@@ -344,9 +421,11 @@ export class DashboardPanel {
         measurements.verbosityControl,
         recentEvents,
         sessionNum,
-        'cap-group-a'
+        'cap-group-a',
+        true
       ),
       getFeatureCardState(
+        'sessionManagement',
         'SESSION',
         'Context Compaction',
         '🧹',
@@ -355,9 +434,11 @@ export class DashboardPanel {
         measurements.sessionManagement,
         recentEvents,
         sessionNum,
-        'cap-group-a'
+        'cap-group-a',
+        true
       ),
       getFeatureCardState(
+        'semanticCache',
         'DISK CACHE',
         'Semantic Cache',
         '💾',
@@ -366,9 +447,11 @@ export class DashboardPanel {
         measurements.semanticCache,
         recentEvents,
         sessionNum,
-        'cap-group-b'
+        'cap-group-b',
+        false
       ),
       getFeatureCardState(
+        'astSkeleton',
         'AST PARSER',
         'AST Skeletons',
         '🌲',
@@ -377,9 +460,11 @@ export class DashboardPanel {
         measurements.astSkeleton,
         recentEvents,
         sessionNum,
-        'cap-group-b'
+        'cap-group-b',
+        false
       ),
       getFeatureCardState(
+        'contextExclusion',
         'EXCLUSIONS',
         'Smart Context Exclusions',
         '🚫',
@@ -388,9 +473,11 @@ export class DashboardPanel {
         measurements.contextExclusion,
         recentEvents,
         sessionNum,
-        'cap-group-b'
+        'cap-group-b',
+        true
       ),
       getFeatureCardState(
+        'diffOnlyOutput',
         'PATCH EDITING',
         'Diff-Only Output',
         '📝',
@@ -399,9 +486,11 @@ export class DashboardPanel {
         measurements.diffOnlyOutput,
         recentEvents,
         sessionNum,
-        'cap-group-b'
+        'cap-group-b',
+        false
       ),
       getFeatureCardState(
+        'agentGuardrails',
         'SAFETY',
         'Loop Guardrails',
         '🛡️',
@@ -410,9 +499,11 @@ export class DashboardPanel {
         measurements.agentGuardrails,
         recentEvents,
         sessionNum,
-        'cap-group-c'
+        'cap-group-c',
+        true
       ),
       getFeatureCardState(
+        'smartModelRouting',
         'ROUTING',
         'Smart Model Routing',
         '🚦',
@@ -421,9 +512,11 @@ export class DashboardPanel {
         measurements.smartModelRouting,
         recentEvents,
         sessionNum,
-        'cap-group-c'
+        'cap-group-c',
+        true
       ),
       getFeatureCardState(
+        'gitDiffContext',
         'GIT SCOPE',
         'Git Diff Scoping',
         '🔀',
@@ -432,9 +525,11 @@ export class DashboardPanel {
         { status: strategies.gitDiffContext ? 'measured' : 'disabled', percent: 85, detail: 'Scopes reviews to git diff hunks and direct AST dependencies' },
         recentEvents,
         sessionNum,
-        'cap-group-c'
+        'cap-group-c',
+        true
       ),
       getFeatureCardState(
+        'kvCacheAlignment',
         'CLOUD CACHE',
         'Prompt Prefix Caching',
         '⚡',
@@ -443,9 +538,11 @@ export class DashboardPanel {
         { status: strategies.kvCacheAlignment ? 'measured' : 'disabled', percent: 90, detail: 'Byte-aligned deterministic prefix blocks' },
         recentEvents,
         sessionNum,
-        'cap-group-c'
+        'cap-group-c',
+        true
       ),
       getFeatureCardState(
+        'commentStripper',
         'MINIFIER',
         'Comment & Header Stripper',
         '✂️',
@@ -454,9 +551,11 @@ export class DashboardPanel {
         { status: strategies.commentStripper ? 'measured' : 'disabled', percent: 30, detail: 'Removes boilerplate comments from source code' },
         recentEvents,
         sessionNum,
-        'cap-group-d'
+        'cap-group-d',
+        false
       ),
       getFeatureCardState(
+        'testFailureIsolator',
         'TEST RUNNER',
         'Test Failure Isolator',
         '🧪',
@@ -465,9 +564,11 @@ export class DashboardPanel {
         { status: strategies.testFailureIsolator ? 'measured' : 'disabled', percent: 95, detail: 'Extracts failing assertions from test runners' },
         recentEvents,
         sessionNum,
-        'cap-group-d'
+        'cap-group-d',
+        true
       ),
       getFeatureCardState(
+        'rangeSlicing',
         'RANGE SLICER',
         'Windowed Range Slicing',
         '🔍',
@@ -476,9 +577,11 @@ export class DashboardPanel {
         { status: strategies.rangeSlicing ? 'measured' : 'disabled', percent: 80, detail: 'Enforces 100-line window slicing on file reads' },
         recentEvents,
         sessionNum,
-        'cap-group-d'
+        'cap-group-d',
+        true
       ),
       getFeatureCardState(
+        'inlineChatScopePinning',
         'EDITOR SCOPE',
         'Inline Chat Scope Lock',
         '🎯',
@@ -487,9 +590,11 @@ export class DashboardPanel {
         { status: strategies.inlineChatScopePinning ? 'measured' : 'disabled', percent: 85, detail: 'Locks inline chat context to active selection' },
         recentEvents,
         sessionNum,
-        'cap-group-d'
+        'cap-group-d',
+        true
       ),
       getFeatureCardState(
+        'copilotIgnoreGeneration',
         'RULES',
         '.copilotignore Generator',
         '🛡️',
@@ -498,9 +603,11 @@ export class DashboardPanel {
         { status: strategies.copilotIgnoreGeneration ? 'measured' : 'disabled', percent: 90, detail: 'Enforces .copilotignore file exclusion rules' },
         recentEvents,
         sessionNum,
-        'cap-group-d'
+        'cap-group-a',
+        true
       ),
       getFeatureCardState(
+        'copilotEditsAwareness',
         'SESSION CACHE',
         'Edit Session Awareness',
         '🔄',
@@ -509,9 +616,11 @@ export class DashboardPanel {
         { status: strategies.copilotEditsAwareness ? 'measured' : 'disabled', percent: 75, detail: 'Avoids re-reading open edit session files' },
         recentEvents,
         sessionNum,
-        'cap-group-d'
+        'cap-group-b',
+        true
       ),
       getFeatureCardState(
+        'threadResetTrigger',
         'MONITOR',
         'Context Saturation Monitor',
         '💡',
@@ -520,7 +629,21 @@ export class DashboardPanel {
         { status: strategies.threadResetTrigger ? 'measured' : 'disabled', percent: 100, detail: 'Surfaces thread reset nudges on long conversations' },
         recentEvents,
         sessionNum,
-        'cap-group-d'
+        'cap-group-c',
+        true
+      ),
+      getFeatureCardState(
+        'headroomCompression',
+        'CCR LOSSLESS',
+        'Headroom Reversible CCR',
+        '🗜️',
+        'Lossless Context Compressor',
+        'Bidirectional context compressor & SmartCrusher for massive JSON, traces, and tool outputs.',
+        measurements.headroomCompression,
+        recentEvents,
+        sessionNum,
+        'cap-group-d',
+        false
       ),
     ];
 
@@ -918,6 +1041,16 @@ export class DashboardPanel {
       border: 1px solid rgba(0,255,163,0.25);
       animation: pulseGlow 3s ease infinite;
     }
+    .badge-policy {
+      background: rgba(0, 229, 255, 0.12);
+      color: var(--accent);
+      border: 1px solid rgba(0, 229, 255, 0.35);
+    }
+    .badge-standby {
+      background: rgba(148, 163, 184, 0.1);
+      color: #94a3b8;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+    }
     .badge-off { background: rgba(148, 163, 184, 0.1); color: var(--text-muted); }
 
     /* Live Metric Box */
@@ -928,6 +1061,15 @@ export class DashboardPanel {
       border-radius: 8px;
       padding: 12px 14px;
       margin: 8px 0 12px 10px;
+    }
+    .live-metric-box.metric-policy {
+      border-left: 3px solid var(--accent);
+    }
+    .live-metric-box.metric-standby {
+      border-left: 3px solid #64748b;
+    }
+    .live-metric-box.metric-disabled {
+      border-left: 3px solid rgba(148, 163, 184, 0.3);
     }
     .live-metric-title {
       font-size: 9.5px;
@@ -943,6 +1085,15 @@ export class DashboardPanel {
       color: var(--green);
       line-height: 1.4;
     }
+    .live-metric-val.metric-policy {
+      color: var(--accent);
+    }
+    .live-metric-val.metric-standby {
+      color: #94a3b8;
+    }
+    .live-metric-val.metric-disabled {
+      color: var(--text-muted);
+    }
 
     /* Progress Bars */
     .bar-container { margin: 4px 0 12px 10px; }
@@ -957,6 +1108,9 @@ export class DashboardPanel {
       border-radius: 2px;
       background: linear-gradient(90deg, var(--accent), var(--green));
       transition: width 0.8s ease;
+    }
+    .bar.bar-policy {
+      background: linear-gradient(90deg, #7928ca, var(--accent));
     }
 
     /* Card Footer */
@@ -990,9 +1144,130 @@ export class DashboardPanel {
     .donut-ring .ring-fill { fill: none; stroke-width: 4; stroke-linecap: round;
       stroke-dasharray: 251; animation: ringDraw 1s ease both; transform: rotate(-90deg); transform-origin: center; }
     .donut-ring .ring-label { fill: var(--text); font-size: 11px; font-weight: 800; text-anchor: middle; dominant-baseline: central; font-family: 'Inter', sans-serif; }
+
+    /* Header Controls & Toggle Switch */
+    .card-header-controls {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+    }
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 38px;
+      height: 22px;
+      margin-bottom: 2px;
+    }
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: rgba(255,255,255,0.12);
+      transition: .25s ease;
+      border-radius: 22px;
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 14px;
+      width: 14px;
+      left: 3px;
+      bottom: 3px;
+      background-color: #94a3b8;
+      transition: .25s ease;
+      border-radius: 50%;
+    }
+    input:checked + .slider {
+      background-color: rgba(0, 255, 163, 0.25);
+      border-color: var(--green);
+    }
+    input:checked + .slider:before {
+      transform: translateX(16px);
+      background-color: var(--green);
+      box-shadow: 0 0 8px rgba(0,255,163,0.6);
+    }
+
+    /* Deactivation Banner & Buttons */
+    .deactivated-banner {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.18) 0%, rgba(185, 28, 28, 0.08) 100%);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-bottom: 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+      animation: fadeInUp 0.4s ease;
+    }
+    .deactivated-banner h3 {
+      margin: 0 0 6px 0;
+      font-size: 16px;
+      color: #fca5a5;
+    }
+    .deactivated-banner p {
+      margin: 0;
+      font-size: 12.5px;
+      color: #cbd5e1;
+    }
+    .btn-reactivate {
+      background: linear-gradient(135deg, #10b981, #059669);
+      border: none;
+      color: #fff;
+      font-weight: 700;
+      padding: 8px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 12.5px;
+      white-space: nowrap;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-reactivate:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
+    }
+    .btn-danger-outline {
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
+      background: rgba(239, 68, 68, 0.08);
+      cursor: pointer;
+    }
+    .btn-danger-outline:hover {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: rgba(239, 68, 68, 0.6);
+      transform: translateY(-1px);
+    }
+    .section-note {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: -10px;
+      margin-bottom: 16px;
+    }
   </style>
 </head>
 <body>
+
+  ${!config.enabled ? `
+  <div class="deactivated-banner">
+    <div>
+      <h3>⚠️ TokenShield is Completely Deactivated</h3>
+      <p>All optimization directives, prompt policies, and file exclusions have been stripped from your workspace. AI assistants (Copilot, Claude, Antigravity) are operating in default unconstrained mode.</p>
+    </div>
+    <div>
+      <button class="btn-reactivate" onclick="reactivate()">▶ Reactivate TokenShield</button>
+    </div>
+  </div>` : ''}
 
   <div class="header">
     <div>
@@ -1000,6 +1275,11 @@ export class DashboardPanel {
       <div class="tagline">Real-time local token & cost optimization monitor (100% private & on-device)</div>
     </div>
     <div class="btn-group">
+      ${config.enabled ? `
+      <button class="btn btn-danger-outline" onclick="deactivateCompletely()">⚡ Deactivate Completely</button>
+      ` : `
+      <button class="btn-reactivate" onclick="reactivate()">▶ Reactivate</button>
+      `}
       <a class="btn" href="command:${REFRESH_COMMAND}">↻ Refresh Stats</a>
       <a class="btn" href="command:${RESET_COMMAND}">🔄 Reset / New Session</a>
       <a class="btn btn-primary" href="command:${EXPORT_COMMAND}">⬇ Export Savings Report</a>
@@ -1044,11 +1324,26 @@ export class DashboardPanel {
 
   ${pastSessionsHtml}
 
-  <h2>🛡️ Optimization Features (${TOTAL_STRATEGIES} Active)</h2>
+  <h2>⚙️ Optimization Features (${activeCount}/${TOTAL_STRATEGIES} Active)</h2>
+  <div class="section-note">Toggle each feature ON or OFF independently. Directives are hot-reloaded automatically.</div>
   <div class="grid">
     ${cardsHtml}
   </div>
 
+  <script>
+    const vscode = acquireVsCodeApi();
+    function toggleStrategy(key, name, enabled) {
+      vscode.postMessage({ command: 'toggleStrategy', key, name, enabled });
+    }
+    function deactivateCompletely() {
+      if (confirm('Deactivate TokenShield completely?\\n\\nThis will cleanly remove all optimization directives from AGENTS.md, CLAUDE.md, and Copilot files, and halt all background tasks.')) {
+        vscode.postMessage({ command: 'deactivateCompletely' });
+      }
+    }
+    function reactivate() {
+      vscode.postMessage({ command: 'reactivate' });
+    }
+  </script>
 </body>
 </html>`;
   }

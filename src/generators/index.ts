@@ -24,3 +24,7 @@ export async function generateAllInstructions(config: ExtensionConfig) {
 export async function exportInstructionsToRepo(config: ExtensionConfig) {
   return getInstructionEngine().exportToRepo(config);
 }
+
+export async function stripAllInstructions(config: ExtensionConfig) {
+  return getInstructionEngine().stripAll(config);
+}

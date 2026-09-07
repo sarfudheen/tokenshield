@@ -72,6 +72,11 @@
 ### Context Saturation Thread Reset
 - When a chat session exceeds 40 conversation turns, surface a clear recommendation to start a fresh chat thread to avoid attention degradation.
 
+### Headroom Context Compression (CCR & SmartCrusher)
+- **MANDATORY**: For bulky tool outputs, API responses, or JSON data (>50 items), apply Headroom context compression or SmartCrusher schema compaction before injecting into prompt.
+- Use `headroom_retrieve` whenever precise uncompressed segments are required.
+- **FORBIDDEN**: NEVER flood context with uncompressed raw JSON logs or multi-megabyte trace dumps.
+
 ## Diagnostic Exceptions
 - Always show complete error traces and assertion messages when diagnosing test/build failures.
 - Never compress security vulnerability findings or critical alerts.

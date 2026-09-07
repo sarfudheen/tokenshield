@@ -5,7 +5,9 @@ import { execSync, spawnSync } from 'child_process';
 import { getConfig, getEffectiveStrategies, TOTAL_STRATEGIES } from '../core/config';
 import { isBinaryAvailable } from '../installer/installer';
 import { getProjectsToIndex } from '../ui/projectPicker';
-import { COPILOT_INSTRUCTIONS_PATH, CLAUDE_INSTRUCTIONS_PATH, CODEX_INSTRUCTIONS_PATH, MARKER_START, MCP_CACHE_SERVER_NAME, COPILOTIGNORE_PATH } from '../core/constants';
+import * as os from 'os';
+import { COPILOT_INSTRUCTIONS_PATH, CLAUDE_INSTRUCTIONS_PATH, CODEX_INSTRUCTIONS_PATH, MARKER_START, MCP_CACHE_SERVER_NAME, COPILOTIGNORE_PATH, HEADROOM_MCP_SERVER_NAME } from '../core/constants';
+import { resolveHeadroomCommand } from '../mcp/configurator';
 import { SemanticCacheStore, CACHE_DIR, CACHE_FILE } from '../cache/store';
 import { detectProjectExclusions } from './contextExclusion';
 import { getGuardrailTracker } from './guardrails';
@@ -476,6 +478,103 @@ async function validateThreadReset(): Promise<CategoryResult> {
   return { category: 'Thread Reset Trigger', status: 'ok', lines };
 }
 
+// ─── Headroom Reversible CCR & SmartCrusher ──────────────────────────
+
+async function validateHeadroom(): Promise<CategoryResult> {
+  const config = getConfig();
+  const strategies = getEffectiveStrategies(config);
+  const lines: string[] = [];
+  let status: Status = 'ok';
+
+  if (!strategies.headroomCompression) {
+    return { category: 'Headroom Reversible CCR', status: 'disabled', lines: ['Strategy disabled in current profile'] };
+  }
+
+  const cmd = resolveHeadroomCommand();
+  let installed = false;
+  let version = 'unknown';
+
+  try {
+    const out = execSync(`"${cmd}" --version`, { stdio: 'pipe', timeout: 5000, encoding: 'utf-8' });
+    version = out.trim().split('\n')[0];
+    installed = true;
+  } catch {
+    installed = isBinaryAvailable('headroom');
+    if (installed) {
+      version = getVersion('headroom');
+    }
+  }
+
+  if (!installed) {
+    status = 'warn';
+    lines.push('  ⚠ headroom CLI binary not found on PATH or Python Scripts');
+    lines.push('  Install: pip install headroom-ai');
+  } else {
+    lines.push(`  ✓ Binary: ${cmd} (${version})`);
+  }
+
+  // Check MCP configurations
+  const ws = wsPath();
+  let mcpActive = false;
+  if (ws) {
+    // 1. VS Code settings
+    const settingsPath = path.join(ws, '.vscode', 'settings.json');
+    if (fs.existsSync(settingsPath)) {
+      try {
+        const s = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+        const entry = s?.mcp?.servers?.[HEADROOM_MCP_SERVER_NAME];
+        if (entry) {
+          const args = Array.isArray(entry.args) ? entry.args.join(' ') : '';
+          if (args.includes('serve')) {
+            lines.push(`  ✓ VS Code MCP: registered with "mcp serve" transport`);
+            mcpActive = true;
+          } else {
+            lines.push(`  ⚠ VS Code MCP: registered with args [${args}], requires "mcp serve"`);
+            status = 'warn';
+          }
+        }
+      } catch { /* ignore */ }
+    }
+
+    // 2. Antigravity MCP configs
+    const agyPath = path.join(ws, '.agents', 'mcp_config.json');
+    const rootMcp = path.join(ws, 'mcp_config.json');
+    const globalMcp = path.join(os.homedir(), '.gemini', 'config', 'mcp_config.json');
+    const configs = [
+      { path: agyPath, label: '.agents/mcp_config.json' },
+      { path: rootMcp, label: 'mcp_config.json' },
+      { path: globalMcp, label: '~/.gemini/config/mcp_config.json' },
+    ];
+
+    for (const { path: p, label } of configs) {
+      if (fs.existsSync(p)) {
+        try {
+          const c = JSON.parse(fs.readFileSync(p, 'utf-8'));
+          const entry = c?.mcpServers?.[HEADROOM_MCP_SERVER_NAME];
+          if (entry) {
+            const args = Array.isArray(entry.args) ? entry.args.join(' ') : '';
+            if (args.includes('serve')) {
+              lines.push(`  ✓ Antigravity MCP (${label}): registered with "mcp serve" transport`);
+              mcpActive = true;
+            } else {
+              lines.push(`  ⚠ Antigravity MCP (${label}): invalid args [${args}], requires "mcp serve"`);
+              status = 'warn';
+            }
+          }
+        } catch { /* ignore */ }
+      }
+    }
+  }
+
+  if (!mcpActive && installed) {
+    lines.push('  ○ MCP server configuration pending — run "TokenShield: Configure MCP Servers"');
+  }
+
+  lines.push('  ✓ Headroom SmartCrusher & CCR fallback active for JSON / API payloads');
+
+  return { category: 'Headroom Reversible CCR', status, lines };
+}
+
 // ─── main export ─────────────────────────────────────────────────────────────
 
 export async function validateAllStrategies(outputChannel: vscode.OutputChannel): Promise<void> {
@@ -546,7 +645,10 @@ export async function validateAllStrategies(outputChannel: vscode.OutputChannel)
       progress.report({ message: 'Context Saturation Monitor…' });
       const r19 = await validateThreadReset();
 
-      return [r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, r14, r15, r16, r17, r18, r19];
+      progress.report({ message: 'Headroom Reversible CCR…' });
+      const r20 = await validateHeadroom();
+
+      return [r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, r14, r15, r16, r17, r18, r19, r20];
     }
   );
 

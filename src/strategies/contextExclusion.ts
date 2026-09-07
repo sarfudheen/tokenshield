@@ -270,3 +270,61 @@ export async function showExclusionPicker(outputChannel: vscode.OutputChannel): 
   );
   outputChannel.appendLine(`[cap-7] User updated ${selectedPatterns.length} exclusion patterns`);
 }
+
+/**
+ * Remove all TokenShield-managed context exclusions on deactivation.
+ * Cleans up .vscode/settings.json and removes the managed block from .copilotignore.
+ */
+export async function removeContextExclusions(outputChannel: vscode.OutputChannel): Promise<void> {
+  const workspaceFolders = vscode.workspace.workspaceFolders;
+  if (!workspaceFolders) { return; }
+  const wsPath = workspaceFolders[0].uri.fsPath;
+
+  // 1. Clean .vscode/settings.json
+  try {
+    const settingsPath = path.join(wsPath, '.vscode', 'settings.json');
+    if (fs.existsSync(settingsPath)) {
+      const raw = fs.readFileSync(settingsPath, 'utf-8');
+      const settings = JSON.parse(raw);
+      if (settings['github.copilot.chat.codesearch.exclude']) {
+        delete settings['github.copilot.chat.codesearch.exclude'];
+        fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf-8');
+        outputChannel.appendLine('[exclusions] Cleared github.copilot.chat.codesearch.exclude from .vscode/settings.json');
+      }
+    }
+  } catch (err) {
+    outputChannel.appendLine(`[exclusions] Notice: could not clean .vscode/settings.json: ${err}`);
+  }
+
+  // 2. Clean .copilotignore
+  try {
+    const ignorePath = path.join(wsPath, '.copilotignore');
+    if (fs.existsSync(ignorePath)) {
+      const existing = fs.readFileSync(ignorePath, 'utf-8');
+      const MANAGED_START = '# --- TOKENSHIELD MANAGED ---';
+      const MANAGED_END = '# --- END TOKENSHIELD MANAGED ---';
+      const startIdx = existing.indexOf(MANAGED_START);
+      const endIdx = existing.indexOf(MANAGED_END);
+
+      if (startIdx !== -1 && endIdx !== -1) {
+        // Also strip header comments if present
+        const headerMarker = '# .copilotignore — Managed by TokenShield';
+        const hIdx = existing.indexOf(headerMarker);
+        const actualStart = hIdx !== -1 && hIdx < startIdx ? hIdx : startIdx;
+        const before = existing.substring(0, actualStart).trimEnd();
+        const after = existing.substring(endIdx + MANAGED_END.length).trimStart();
+        const remaining = (before && after) ? `${before}\n\n${after}\n` : (before || after ? `${before || after}\n` : '');
+
+        if (remaining.trim().length === 0) {
+          try { fs.unlinkSync(ignorePath); } catch {}
+          outputChannel.appendLine('[exclusions] Removed .copilotignore (contained only TokenShield managed rules)');
+        } else {
+          fs.writeFileSync(ignorePath, remaining, 'utf-8');
+          outputChannel.appendLine('[exclusions] Removed TokenShield block from .copilotignore');
+        }
+      }
+    }
+  } catch (err) {
+    outputChannel.appendLine(`[exclusions] Notice: could not clean .copilotignore: ${err}`);
+  }
+}

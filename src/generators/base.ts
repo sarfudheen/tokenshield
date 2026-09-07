@@ -85,6 +85,48 @@ export abstract class BaseInstructionGenerator {
     return trimmed + '\n\n' + section + '\n';
   }
 
+  public stripMarkedSection(content: string): string {
+    const startIdx = content.indexOf(MARKER_START);
+    const endIdx = content.indexOf(MARKER_END);
+    if (startIdx === -1 || endIdx === -1) {
+      return content;
+    }
+    const before = content.substring(0, startIdx).trimEnd();
+    const after = content.substring(endIdx + MARKER_END.length).trimStart();
+    if (before && after) {
+      return `${before}\n\n${after}\n`;
+    }
+    if (before) {
+      return `${before}\n`;
+    }
+    if (after) {
+      return `${after}\n`;
+    }
+    return '';
+  }
+
+  async strip(workspacePath: string): Promise<GenerationResult> {
+    const absPath = path.join(workspacePath, this.relativePath);
+    if (!fs.existsSync(absPath)) {
+      return { target: this.target, filePath: absPath, created: false, updated: false, skipped: true };
+    }
+    const existing = fs.readFileSync(absPath, 'utf-8');
+    const stripped = this.stripMarkedSection(existing);
+    if (stripped === existing) {
+      return { target: this.target, filePath: absPath, created: false, updated: false, skipped: true };
+    }
+    if (stripped.trim().length === 0) {
+      try {
+        fs.unlinkSync(absPath);
+      } catch {
+        fs.writeFileSync(absPath, '', 'utf-8');
+      }
+      return { target: this.target, filePath: absPath, created: false, updated: true, skipped: false };
+    }
+    fs.writeFileSync(absPath, stripped, 'utf-8');
+    return { target: this.target, filePath: absPath, created: false, updated: true, skipped: false };
+  }
+
   private extractMarkedSection(content: string): string {
     const startIdx = content.indexOf(MARKER_START);
     const endIdx = content.indexOf(MARKER_END);

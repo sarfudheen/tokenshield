@@ -35,8 +35,8 @@ export async function updateStatusBar(): Promise<void> {
 
   const config = getConfig();
   if (!config.enabled) {
-    statusBarItem.text = '$(shield) TokenShield: OFF';
-    statusBarItem.tooltip = new vscode.MarkdownString('**TokenShield is DISABLED**\n\nClick to enable optimization directives.');
+    statusBarItem.text = '$(circle-slash) TS: DEACTIVATED';
+    statusBarItem.tooltip = new vscode.MarkdownString('**🛡️ TokenShield is Completely DEACTIVATED**\n\nAll optimization directives and exclusions have been stripped from your workspace files.\n\nClick to Reactivate TokenShield.');
     statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
     return;
   }
@@ -139,17 +139,42 @@ async function buildMasterHubMarkdownTooltip(
   }
   md.appendMarkdown(`\n\n---\n\n`);
 
-  md.appendMarkdown(`[📊 Dashboard](command:tokenshield.dashboard) &nbsp;|&nbsp; [🔄 New Session](command:tokenshield.newSession) &nbsp;|&nbsp; [⚙️ Profile](command:tokenshield.switchProfile) &nbsp;|&nbsp; [⚡ Prune](command:tokenshield.pruneAndCopy)`);
+  md.appendMarkdown(`[📊 Dashboard](command:tokenshield.dashboard) &nbsp;|&nbsp; [🔄 New Session](command:tokenshield.newSession) &nbsp;|&nbsp; [⚙️ Toggle Features](command:tokenshield.toggleFeature) &nbsp;|&nbsp; [⚡ Prune](command:tokenshield.pruneAndCopy)`);
 
   return md;
 }
 
 async function showMasterHubQuickPick(): Promise<void> {
+  const config = getConfig();
+
+  if (!config.enabled) {
+    const items: vscode.QuickPickItem[] = [
+      {
+        label: `$(play) Reactivate TokenShield`,
+        description: 'Restore all optimization directives and tools',
+        detail: 'Re-injects managed blocks into instruction files, enables CodeGraph and exclusions.',
+      },
+      {
+        label: `$(graph) Open Savings Dashboard`,
+        description: 'View past sessions and optimization history',
+      },
+    ];
+    const selected = await vscode.window.showQuickPick(items, {
+      placeHolder: 'TokenShield is completely deactivated',
+      title: 'TokenShield Control Hub (DEACTIVATED)',
+    });
+    if (!selected) { return; }
+    if (selected.label.includes('Reactivate')) {
+      vscode.commands.executeCommand('tokenshield.reactivate');
+    } else {
+      vscode.commands.executeCommand('tokenshield.dashboard');
+    }
+    return;
+  }
+
   const sessionNum = chatSavingsTracker.getSessionNumber();
   const totalTok = chatSavingsTracker.getTotalTokensSaved();
   const totalCost = chatSavingsTracker.getTotalCostSavedUsd();
-  const config = getConfig();
-  const cg = getCodeGraphState();
 
   const items: vscode.QuickPickItem[] = [
     {
@@ -158,14 +183,14 @@ async function showMasterHubQuickPick(): Promise<void> {
       detail: 'View token and cost savings, live activity log, and feature metrics.',
     },
     {
+      label: `$(check) Toggle Individual Features (1-Click Switch)`,
+      description: 'Turn any of the 20 optimization features ON or OFF instantly',
+      detail: 'Fine-tune behavior without editing JSON settings.',
+    },
+    {
       label: `$(sync) Start New Session (Reset Current Counters)`,
       description: `Currently in Session #${sessionNum}`,
       detail: 'Archive current session savings to history and start counting from 0 tokens.',
-    },
-    {
-      label: `$(database) CodeGraph: ${cg.count} Indexed Graph(s) [Status: ${cg.state.toUpperCase()}]`,
-      description: 'Validate or reindex symbol graph',
-      detail: 'Run manual synchronization or project graph validation.',
     },
     {
       label: `$(settings-gear) Switch Optimization Profile (Current: ${config.profile.toUpperCase()})`,
@@ -173,14 +198,14 @@ async function showMasterHubQuickPick(): Promise<void> {
       detail: `Instantly toggle presets across all ${TOTAL_STRATEGIES} optimization features.`,
     },
     {
-      label: `$(filter) Configure Context Exclusions`,
-      description: 'Manage excluded build folders, lockfiles, and minified bundles',
-      detail: 'Block non-code artifacts from AI prompt ingestion.',
-    },
-    {
       label: `$(cloud-download) Export Savings Report`,
       description: 'CSV · JSON · Markdown',
       detail: 'Generate clean token and cost reduction reports.',
+    },
+    {
+      label: `$(circle-slash) Deactivate TokenShield Completely`,
+      description: 'Strip all directives from workspace files (100% unconstrained AI)',
+      detail: 'Removes managed blocks from AGENTS.md, CLAUDE.md, and Copilot files.',
     },
   ];
 
@@ -193,16 +218,16 @@ async function showMasterHubQuickPick(): Promise<void> {
 
   if (selected.label.includes('Open Savings Dashboard')) {
     vscode.commands.executeCommand('tokenshield.dashboard');
+  } else if (selected.label.includes('Toggle Individual Features')) {
+    vscode.commands.executeCommand('tokenshield.toggleFeature');
   } else if (selected.label.includes('Start New Session')) {
     vscode.commands.executeCommand('tokenshield.newSession');
-  } else if (selected.label.includes('CodeGraph')) {
-    vscode.commands.executeCommand('tokenshield.validateGraph');
   } else if (selected.label.includes('Switch Optimization Profile')) {
     vscode.commands.executeCommand('tokenshield.switchProfile');
-  } else if (selected.label.includes('Configure Context Exclusions')) {
-    vscode.commands.executeCommand('tokenshield.exclusions');
   } else if (selected.label.includes('Export Savings Report')) {
     vscode.commands.executeCommand('tokenshield.exportReport');
+  } else if (selected.label.includes('Deactivate TokenShield Completely')) {
+    vscode.commands.executeCommand('tokenshield.deactivateCompletely');
   }
 }
 

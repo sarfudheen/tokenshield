@@ -286,4 +286,57 @@ Read \`.github/instructions/tokenshield.instructions.md\` to apply active featur
 
     return results;
   }
+
+  async stripAll(config: ExtensionConfig): Promise<GenerationResult[]> {
+    const wsFolders = vscode.workspace.workspaceFolders;
+    if (!wsFolders || wsFolders.length === 0) { return []; }
+
+    const wsPath = wsFolders[0].uri.fsPath;
+    const results: GenerationResult[] = [];
+    const copilotGen = this.generators.get('copilot');
+
+    // 1. Strip Copilot instruction files across all common locations
+    const copilotTargets = [
+      path.join(wsPath, COPILOT_INSTRUCTIONS_SUBDIR_PATH),
+      path.join(wsPath, COPILOT_PROJECT_INSTRUCTIONS_SUBDIR_PATH),
+      path.join(wsPath, COPILOT_INSTRUCTIONS_PATH),
+      path.join(wsPath, '.vscode', 'copilot-instructions.md'),
+    ];
+
+    for (const targetPath of copilotTargets) {
+      if (fs.existsSync(targetPath)) {
+        const content = fs.readFileSync(targetPath, 'utf-8');
+        const stripped = copilotGen ? copilotGen.stripMarkedSection(content) : content;
+        if (stripped !== content) {
+          if (stripped.trim().length === 0) {
+            try { fs.unlinkSync(targetPath); } catch {}
+          } else {
+            fs.writeFileSync(targetPath, stripped, 'utf-8');
+          }
+          results.push({ target: 'copilot', filePath: targetPath, created: false, updated: true, skipped: false });
+        }
+      }
+    }
+
+    // Clean up .vscode/ codeGeneration instructions reference
+    try {
+      const wsConfig = vscode.workspace.getConfiguration('', wsFolders[0].uri);
+      const existing = wsConfig.get<any[]>('github.copilot.chat.codeGeneration.instructions') || [];
+      const filtered = existing.filter(e => !(typeof e === 'object' && e.file?.includes('tokenshield.instructions.md')));
+      if (filtered.length !== existing.length) {
+        await wsConfig.update('github.copilot.chat.codeGeneration.instructions', filtered, vscode.ConfigurationTarget.Workspace);
+      }
+    } catch {}
+
+    // 2. Strip non-copilot tools (Claude, Codex, Antigravity)
+    for (const tool of ['claude', 'codex', 'antigravity'] as TargetTool[]) {
+      const gen = this.generators.get(tool);
+      if (gen) {
+        const res = await gen.strip(wsPath);
+        results.push(res);
+      }
+    }
+
+    return results;
+  }
 }

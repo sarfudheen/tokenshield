@@ -12,10 +12,11 @@ export {
   measureDiffOnly,
   measureGuardrails,
   measureModelRouting,
+  measureHeadroom,
   Measurement,
   MeasurementStatus,
 } from './measurement';
-export { applyContextExclusions, detectProjectExclusions, showExclusionPicker, ExclusionStats } from './contextExclusion';
+export { applyContextExclusions, removeContextExclusions, detectProjectExclusions, showExclusionPicker, ExclusionStats } from './contextExclusion';
 export { GuardrailTracker, getGuardrailTracker, resetGuardrailTracker } from './guardrails';
 export { classifyTask, suggestLighterModel, getModelRoutingTracker, ModelRoutingTracker } from './modelRouting';
 export { extractCodeSkeleton, getFileSkeleton, SkeletonResult } from './skeleton';

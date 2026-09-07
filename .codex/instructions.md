@@ -66,4 +66,8 @@
 ### Context Saturation Thread Reset
 - Surface a fresh-thread prompt when conversation exceeds 40 messages.
 
+### Headroom Reversible CCR & SmartCrusher
+- **MANDATORY**: Compress verbose JSON objects and multi-line tool outputs using Headroom before emitting into instructions.
+- Retrieve detailed records via `headroom_retrieve` when required.
+
 <!-- TOKENSHIELD:END -->

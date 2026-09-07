@@ -47,7 +47,7 @@ export async function showProfilePicker(): Promise<void> {
   }
 
   if (selected.label.includes('Toggle Individual')) {
-    await showStrategyToggle();
+    await showSingleFeatureToggle();
     return;
   }
 
@@ -78,40 +78,38 @@ export async function showProfilePicker(): Promise<void> {
   }
 }
 
-const STRATEGY_KEYS = Object.keys(PROFILE_STRATEGIES.full) as (keyof StrategyState)[];
+export const STRATEGY_KEYS = Object.keys(PROFILE_STRATEGIES.full) as (keyof StrategyState)[];
 
-async function showStrategyToggle(): Promise<void> {
+export async function showSingleFeatureToggle(): Promise<void> {
   const config = getConfig();
   const strategies = getEffectiveStrategies(config);
 
-  const items: vscode.QuickPickItem[] = STRATEGY_KEYS.map((key) => {
+  const items: (vscode.QuickPickItem & { key: keyof StrategyState })[] = STRATEGY_KEYS.map((key) => {
+    const isEnabled = !!strategies[key];
     const parts = STRATEGY_DESCRIPTIONS[key].split(' — ');
+    const title = parts[0];
+    const desc = parts[1] || '';
     return {
-      label: `${strategies[key] ? '$(check)' : '$(circle-large-outline)'} ${parts[0]}`,
-      description: parts[1] || '',
-      picked: strategies[key],
+      key,
+      label: isEnabled ? `$(pass-filled) ${title}` : `$(circle-slash) ${title}`,
+      description: isEnabled ? '[ENABLED] — Click to turn OFF' : '[DISABLED] — Click to turn ON',
+      detail: desc,
     };
   });
 
   const selected = await vscode.window.showQuickPick(items, {
-    placeHolder: 'Toggle optimization features (modifications switch profile to Custom)',
-    title: 'TokenShield — Optimization Features',
-    canPickMany: true,
+    placeHolder: 'Click any feature to toggle it ON or OFF instantly',
+    title: 'TokenShield — 1-Click Feature Switch',
   });
 
-  if (!selected) {
-    return;
-  }
+  if (!selected) { return; }
 
-  const newStrategies: Record<string, boolean> = {};
-  for (const key of STRATEGY_KEYS) {
-    const featureName = STRATEGY_DESCRIPTIONS[key].split(' — ')[0];
-    newStrategies[key] = selected.some((i) => i.label.includes(featureName));
-  }
+  const currentVal = !!strategies[selected.key];
+  const newVal = !currentVal;
+  await updateStrategies({ [selected.key]: newVal });
 
-  await updateStrategies(newStrategies);
-  const activeCount = Object.values(newStrategies).filter(Boolean).length;
+  const featureName = STRATEGY_DESCRIPTIONS[selected.key].split(' — ')[0];
   vscode.window.showInformationMessage(
-    `TokenShield: ${activeCount}/${TOTAL_STRATEGIES} features active`
+    `TokenShield: ${featureName} is now ${newVal ? 'ENABLED' : 'DISABLED'}`
   );
 }

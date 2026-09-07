@@ -8,9 +8,10 @@
       ]
     },
     "headroom": {
-      "command": "C:\\Users\\A644097\\AppData\\Roaming\\Python\\Python314\\Scripts\\headroom.exe",
+      "command": "C:\\Users\\A644097\\.local\\bin\\headroom.exe",
       "args": [
-        "mcp"
+        "mcp",
+        "serve"
       ]
     }
   }

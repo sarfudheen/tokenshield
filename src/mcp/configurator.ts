@@ -119,17 +119,27 @@ function cacheServerEntry(extensionPath: string, wsPath: string): Record<string,
 }
 
 export function resolveHeadroomCommand(): string {
-  if (isBinaryAvailable('headroom')) {
-    return 'headroom';
-  }
+  const homedir = os.homedir();
   if (process.platform === 'win32') {
-    const appData = process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming');
+    const localBin = path.join(homedir, '.local', 'bin', 'headroom.exe');
+    if (fs.existsSync(localBin)) {
+      return localBin;
+    }
+    const appData = process.env.APPDATA || path.join(homedir, 'AppData', 'Roaming');
     for (const pyVer of ['Python314', 'Python313', 'Python312', 'Python311', 'Python310']) {
       const candidate = path.join(appData, 'Python', pyVer, 'Scripts', 'headroom.exe');
       if (fs.existsSync(candidate)) {
         return candidate;
       }
     }
+  } else {
+    const localBin = path.join(homedir, '.local', 'bin', 'headroom');
+    if (fs.existsSync(localBin)) {
+      return localBin;
+    }
+  }
+  if (isBinaryAvailable('headroom')) {
+    return 'headroom';
   }
   return 'headroom';
 }
@@ -169,14 +179,12 @@ async function configureVsCodeMcp(wsPath: string, languages: string[], outputCha
     outputChannel.appendLine('[mcp] Added Context7 MCP server for documentation lookup');
   }
 
-  if (!mcpServers[HEADROOM_MCP_SERVER_NAME]) {
-    mcpServers[HEADROOM_MCP_SERVER_NAME] = {
-      command: resolveHeadroomCommand(),
-      args: ['mcp'],
-      type: 'stdio',
-    };
-    outputChannel.appendLine('[mcp] Added Headroom MCP server (reversible context compression & CCR)');
-  }
+  mcpServers[HEADROOM_MCP_SERVER_NAME] = {
+    command: resolveHeadroomCommand(),
+    args: ['mcp', 'serve'],
+    type: 'stdio',
+  };
+  outputChannel.appendLine('[mcp] Configured Headroom MCP server (reversible context compression & CCR)');
 
   mcpServers[MCP_CACHE_SERVER_NAME] = cacheServerEntry(extensionPath, wsPath);
   outputChannel.appendLine('[mcp] Added token-cache MCP server (local semantic cache, AST skeleton, adaptive pruner)');
@@ -224,13 +232,11 @@ export async function configureClaudeMcp(
     };
   }
 
-  if (!servers[HEADROOM_MCP_SERVER_NAME]) {
-    servers[HEADROOM_MCP_SERVER_NAME] = {
-      command: resolveHeadroomCommand(),
-      args: ['mcp'],
-    };
-    outputChannel.appendLine(`[mcp] Added Headroom to Claude MCP config (project-scoped to ${wsPath})`);
-  }
+  servers[HEADROOM_MCP_SERVER_NAME] = {
+    command: resolveHeadroomCommand(),
+    args: ['mcp', 'serve'],
+  };
+  outputChannel.appendLine(`[mcp] Configured Headroom in Claude MCP config (project-scoped to ${wsPath})`);
 
   servers[MCP_CACHE_SERVER_NAME] = cacheServerEntry(extensionPath, wsPath) as unknown as McpServerConfig;
   outputChannel.appendLine(`[mcp] Added token-cache to Claude MCP config (project-scoped to ${wsPath})`);
@@ -273,12 +279,10 @@ export async function configureAntigravityMcp(
       }
       const mcpServers = (config['mcpServers'] as Record<string, unknown>) || {};
       mcpServers[MCP_CACHE_SERVER_NAME] = serverDef;
-      if (!mcpServers[HEADROOM_MCP_SERVER_NAME]) {
-        mcpServers[HEADROOM_MCP_SERVER_NAME] = {
-          command: resolveHeadroomCommand(),
-          args: ['mcp'],
-        };
-      }
+      mcpServers[HEADROOM_MCP_SERVER_NAME] = {
+        command: resolveHeadroomCommand(),
+        args: ['mcp', 'serve'],
+      };
       config['mcpServers'] = mcpServers;
       fs.writeFileSync(filePath, JSON.stringify(config, null, 2), 'utf-8');
       outputChannel.appendLine(`[mcp] Updated ${label} with TokenShield MCP server for Antigravity`);

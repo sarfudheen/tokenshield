@@ -16,6 +16,14 @@
           "d:\\sarfu_works\\tokenshield"
         ],
         "type": "stdio"
+      },
+      "headroom": {
+        "command": "C:\\Users\\A644097\\.local\\bin\\headroom.exe",
+        "args": [
+          "mcp",
+          "serve"
+        ],
+        "type": "stdio"
       }
     }
   },
@@ -42,5 +50,28 @@
     "yarn.lock": true,
     "pnpm-lock.yaml": true,
     ".yarn/**": true
-  }
+  },
+  "tokenshield.activeStrategies": {
+    "codeGraph": true,
+    "outputCompression": true,
+    "verbosityControl": true,
+    "sessionManagement": true,
+    "semanticCache": true,
+    "astSkeleton": true,
+    "contextExclusion": true,
+    "diffOnlyOutput": true,
+    "agentGuardrails": true,
+    "smartModelRouting": true,
+    "gitDiffContext": true,
+    "rangeSlicing": true,
+    "inlineChatScopePinning": true,
+    "kvCacheAlignment": true,
+    "headroomCompression": true,
+    "copilotEditsAwareness": true,
+    "testFailureIsolator": true,
+    "commentStripper": true,
+    "copilotIgnoreGeneration": true,
+    "threadResetTrigger": true
+  },
+  "tokenshield.profile": "full"
 }

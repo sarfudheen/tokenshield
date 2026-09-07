@@ -42,7 +42,7 @@ suite('Claude Code MCP configuration (token-cache wiring)', () => {
     ]);
     assert.ok(servers['headroom'], 'headroom entry missing from project mcpServers');
     assert.ok(servers['headroom'].command.includes('headroom'));
-    assert.deepStrictEqual(servers['headroom'].args, ['mcp']);
+    assert.deepStrictEqual(servers['headroom'].args, ['mcp', 'serve']);
   });
 
   test('preserves unrelated top-level keys and other projects in ~/.claude.json', async () => {
@@ -114,5 +114,45 @@ suite('Claude Code MCP configuration (token-cache wiring)', () => {
     assert.deepStrictEqual(written.projects['/ws'].allowedTools, ['Read']);
     assert.strictEqual(written.projects['/ws'].hasTrustDialogAccepted, true);
     assert.ok(written.projects['/ws'].mcpServers['token-cache']);
+  });
+});
+
+suite('Instruction Stripping on Deactivation', () => {
+  test('stripMarkedSection removes TOKENSHIELD managed block and preserves user content', () => {
+    const { ClaudeGenerator } = require('../../src/generators/claude');
+    const gen = new ClaudeGenerator();
+    const content = `# My Custom Project Rules
+Do not use any in TypeScript.
+
+<!-- TOKENSHIELD:START -->
+<!-- TokenShield: AI Token & Cost Optimizer (v1.0.0). Managed block - do not edit manually. -->
+
+# Antigravity TokenShield Optimizations
+### Code Search & Navigation (CodeGraph)
+- **MANDATORY**: Use CodeGraph.
+<!-- TOKENSHIELD:END -->
+
+# Additional Instructions
+Always write tests.`;
+
+    const stripped = gen.stripMarkedSection(content);
+    assert.ok(!stripped.includes('<!-- TOKENSHIELD:START -->'));
+    assert.ok(!stripped.includes('CodeGraph'));
+    assert.ok(stripped.includes('# My Custom Project Rules'));
+    assert.ok(stripped.includes('Do not use any in TypeScript.'));
+    assert.ok(stripped.includes('# Additional Instructions'));
+    assert.ok(stripped.includes('Always write tests.'));
+  });
+
+  test('stripMarkedSection returns empty string if file only contains managed block', () => {
+    const { ClaudeGenerator } = require('../../src/generators/claude');
+    const gen = new ClaudeGenerator();
+    const content = `<!-- TOKENSHIELD:START -->
+<!-- TokenShield: AI Token & Cost Optimizer (v1.0.0). Managed block - do not edit manually. -->
+Some rules
+<!-- TOKENSHIELD:END -->`;
+
+    const stripped = gen.stripMarkedSection(content);
+    assert.strictEqual(stripped.trim(), '');
   });
 });

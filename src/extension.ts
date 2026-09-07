@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { getConfig, getEffectiveStrategies, countActiveStrategies, TOTAL_STRATEGIES } from './core/config';
 import { showProjectPicker } from './ui/projectPicker';
-import { generateAllInstructions, exportInstructionsToRepo } from './generators';
+import { generateAllInstructions, exportInstructionsToRepo, stripAllInstructions } from './generators';
 import { installAllTools } from './installer';
 import { configureMcpServers } from './mcp';
 import { createStatusBar, updateStatusBar, disposeStatusBar } from './ui/statusBar';
@@ -9,10 +9,10 @@ import { createEditorTokenBadge } from './ui/editorTokenBadge';
 import { createSessionSavingsWidget } from './ui/sessionSavingsWidget';
 import { chatSavingsTracker } from './telemetry/chatSavingsTracker';
 import { pruneContext, compressGitDiff } from './strategies/adaptivePruner';
-import { showProfilePicker } from './ui/quickPick';
+import { showProfilePicker, showSingleFeatureToggle } from './ui/quickPick';
 import { DashboardPanel } from './ui/dashboard';
 import { exportTelemetryCommand } from './ui/exportTelemetry';
-import { startCodeGraphWatcher, runCodeGraphReindex, validateIndex, disposeCodeGraphWatcher, validateAllStrategies, applyContextExclusions, showExclusionPicker } from './strategies';
+import { startCodeGraphWatcher, runCodeGraphReindex, validateIndex, disposeCodeGraphWatcher, validateAllStrategies, applyContextExclusions, removeContextExclusions, showExclusionPicker } from './strategies';
 import { SemanticCacheStore } from './cache/store';
 import { CallLogStore } from './cache/callLog';
 import { startSession } from './session/tracker';
@@ -31,16 +31,19 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   const config = getConfig();
 
-  if (!config.enabled) {
-    outputChannel.appendLine('[activate] Extension disabled via settings');
-    return;
+  if (config.enabled) {
+    initSessionTracking();
+  } else {
+    outputChannel.appendLine('[activate] TokenShield is currently completely deactivated');
   }
-
-  initSessionTracking();
 
   // Register commands — original + new
   context.subscriptions.push(
     vscode.commands.registerCommand('tokenshield.toggle', toggleAllCommand),
+    vscode.commands.registerCommand('tokenshield.deactivateCompletely', deactivateCompletelyCommand),
+    vscode.commands.registerCommand('tokenshield.reactivate', reactivateCommand),
+    vscode.commands.registerCommand('tokenshield.toggleFeature', showSingleFeatureToggle),
+    vscode.commands.registerCommand('tokenshield.sessionBreakdown', () => DashboardPanel.show(context.extensionUri)),
     vscode.commands.registerCommand('tokenshield.switchProfile', showProfilePicker),
     vscode.commands.registerCommand('tokenshield.regenerate', regenerateCommand),
     vscode.commands.registerCommand('tokenshield.dashboard', () => DashboardPanel.show(context.extensionUri)),
@@ -278,19 +281,78 @@ async function autoApply(config: ReturnType<typeof getConfig>): Promise<void> {
   outputChannel.appendLine('[auto-apply] Complete');
 }
 
-async function toggleAllCommand(): Promise<void> {
+export async function deactivateCompletelyCommand(): Promise<void> {
   const config = getConfig();
   const wsConfig = vscode.workspace.getConfiguration('tokenshield');
-  const newEnabled = !config.enabled;
-  await wsConfig.update('enabled', newEnabled, vscode.ConfigurationTarget.Workspace);
-  updateStatusBar();
-  vscode.window.showInformationMessage(
-    `TokenShield: ${newEnabled ? 'Enabled' : 'Disabled'}`
-  );
+  await wsConfig.update('enabled', false, vscode.ConfigurationTarget.Workspace);
 
-  if (newEnabled) {
-    initSessionTracking();
-    await autoApply(getConfig());
+  // 1. Strip all instruction files
+  try {
+    const results = await stripAllInstructions(config);
+    outputChannel.appendLine(`[deactivate] Stripped directives from ${results.length} files`);
+  } catch (err) {
+    outputChannel.appendLine(`[deactivate] Error stripping directives: ${err}`);
+  }
+
+  // 2. Remove context exclusions (.vscode/settings.json, .copilotignore)
+  try {
+    await removeContextExclusions(outputChannel);
+  } catch (err) {
+    outputChannel.appendLine(`[deactivate] Error removing context exclusions: ${err}`);
+  }
+
+  // 3. Stop watchers
+  disposeCodeGraphWatcher();
+
+  // 4. Update status bar and dashboard
+  await updateStatusBar();
+  await DashboardPanel.refreshCurrentPanel();
+
+  vscode.window.showInformationMessage(
+    '🛡️ TokenShield: Completely deactivated. All optimization directives and exclusions were removed from your workspace.'
+  );
+}
+
+export async function reactivateCommand(): Promise<void> {
+  const wsConfig = vscode.workspace.getConfiguration('tokenshield');
+  await wsConfig.update('enabled', true, vscode.ConfigurationTarget.Workspace);
+  const config = getConfig();
+
+  initSessionTracking();
+
+  // 1. Auto-apply instructions
+  await autoApply(config);
+
+  // 2. Restart CodeGraph watcher
+  if (config.activeStrategies.codeGraph) {
+    startCodeGraphWatcher(outputChannel);
+  }
+
+  // 3. Apply context exclusions
+  const strategies = getEffectiveStrategies(config);
+  if (strategies.contextExclusion) {
+    try {
+      await applyContextExclusions(outputChannel);
+    } catch (err) {
+      outputChannel.appendLine(`[reactivate] Context exclusion failed: ${err}`);
+    }
+  }
+
+  // 4. Update status bar and dashboard
+  await updateStatusBar();
+  await DashboardPanel.refreshCurrentPanel();
+
+  vscode.window.showInformationMessage(
+    '🛡️ TokenShield: Reactivated! All optimization directives and tools have been restored.'
+  );
+}
+
+async function toggleAllCommand(): Promise<void> {
+  const config = getConfig();
+  if (config.enabled) {
+    await deactivateCompletelyCommand();
+  } else {
+    await reactivateCommand();
   }
 }
 

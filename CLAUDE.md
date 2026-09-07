@@ -111,6 +111,10 @@ This extension is **not in the LLM request path** — the actual model call and 
 ### Context Saturation Thread Reset
 - Surface a fresh-thread prompt when conversation exceeds 40 messages.
 
+### Headroom Reversible CCR & SmartCrusher
+- **MANDATORY**: Route bulky bash/tool/JSON outputs through Headroom compression; fetch original chunks via `headroom_retrieve`.
+- **FORBIDDEN**: Never output or inspect uncompressed JSON traces exceeding 50 items.
+
 <!-- TOKENSHIELD:END -->
 
 ` markers (`src/generators/base.ts` `mergeContent`). User content outside the markers must never be touched. If markers are absent, the block is appended; if `preserveExistingInstructions` is false, the whole file is overwritten.

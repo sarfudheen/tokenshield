@@ -41,6 +41,33 @@
 ### Smart Model Routing
 - Leverage fast Flash/Haiku models for simple non-reasoning steps.
 
+### Git Diff Context Scoping
+- **MANDATORY**: Scope review & test tasks strictly to `git diff` lines + 1-hop callers.
+
+### Deterministic Prefix Caching
+- Maintain stable instruction prefix order across turns to maximize KV cache hits.
+
+### Comment & Header Stripping
+- Strip copyright headers and filler comments on ingestion.
+
+### Test Failure Log Isolation
+- **MANDATORY**: Report only failing test lines, assertions, and line numbers.
+
+### Windowed Range Slicing
+- **MANDATORY**: Inspect 100-line windows around target symbols instead of full files.
+
+### Inline Chat Scope Pinning
+- **MANDATORY**: Restrict context to selected editor lines and direct references.
+
+### .copilotignore Compliance
+- **MANDATORY**: Never read or reference ignored paths.
+
+### Edit Session Awareness
+- **MANDATORY**: Do not re-read files already open in the active edit session.
+
+### Context Saturation Thread Reset
+- Surface a fresh-thread prompt when conversation exceeds 40 messages.
+
 ### Headroom Reversible CCR & SmartCrusher
 - **MANDATORY**: Use Headroom context compression on bulky JSON/trace tool outputs; retrieve uncompressed sections via `headroom_retrieve`.
 - **FORBIDDEN**: Never ingest raw JSON dumps >50 items without schema compaction.
