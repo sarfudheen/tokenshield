@@ -83,10 +83,14 @@ export async function updateSessionSavingsWidget(): Promise<void> {
   md.isTrusted = true;
   md.supportThemeIcons = true;
 
+  const lifetimeTok = chatSavingsTracker.getLifetimeTokensSaved();
+  const lifetimeCost = formatCost(chatSavingsTracker.getLifetimeCostSavedUsd());
+
   md.appendMarkdown(`### 💎 TokenShield Session #${sessionNum} Savings\n`);
   md.appendMarkdown(`- **Started At**: \`${sessionStarted.toLocaleTimeString()}\`\n`);
-  md.appendMarkdown(`- **Session Tokens Avoided**: ~\`${tokensSaved.toLocaleString()}\` tokens\n`);
-  md.appendMarkdown(`- **Session Cost Avoided**: \`${formattedCost}\` (Rate: \`${activeModel.name}\`)\n\n`);
+  md.appendMarkdown(`- **Session Tokens Avoided**: ~\`${tokensSaved.toLocaleString()}\` tokens (\`${formattedCost}\`)\n`);
+  md.appendMarkdown(`- **All-Time Lifetime Avoided**: ~\`${lifetimeTok.toLocaleString()}\` tokens (\`${lifetimeCost}\`)\n`);
+  md.appendMarkdown(`- **Active Engine**: \`${activeModel.name}\`\n\n`);
   md.appendMarkdown(`---\n\n`);
 
   const recent = chatSavingsTracker.getRecentEvents(4);
@@ -100,7 +104,7 @@ export async function updateSessionSavingsWidget(): Promise<void> {
     md.appendMarkdown(`\n---\n\n`);
   }
 
-  md.appendMarkdown(`[\ud83d\udd04 New Session](command:tokenshield.newSession) \u0026nbsp;|\u0026nbsp; [\ud83d\udcac Session History](command:tokenshield.sessionBreakdown) \u0026nbsp;|\u0026nbsp; [\ud83d\udcca Dashboard](command:tokenshield.dashboard)`);
+  md.appendMarkdown(`[🔄 New Session](command:tokenshield.newSession) &nbsp;|&nbsp; [💬 Session History](command:tokenshield.sessionBreakdown) &nbsp;|&nbsp; [📊 Dashboard](command:tokenshield.dashboard)`);
 
   savingsStatusBarItem.tooltip = md;
   savingsStatusBarItem.show();
@@ -112,6 +116,8 @@ async function showSessionBreakdownQuickPick(): Promise<void> {
   const totalCost = chatSavingsTracker.getTotalCostSavedUsd();
   const sessionNum = chatSavingsTracker.getSessionNumber();
   const pastSessions = chatSavingsTracker.getPastSessions();
+  const lifetimeTok = chatSavingsTracker.getLifetimeTokensSaved();
+  const lifetimeCost = chatSavingsTracker.getLifetimeCostSavedUsd();
 
   const items: vscode.QuickPickItem[] = [];
 
@@ -122,9 +128,15 @@ async function showSessionBreakdownQuickPick(): Promise<void> {
   });
 
   items.push({
+    label: `$(trash) Reset Complete Data (Wipe All History)`,
+    description: `All-Time: ~${lifetimeTok.toLocaleString()} tokens ($${lifetimeCost.toFixed(4)})`,
+    detail: 'Reset all lifetime statistics, past session archives, and event logs back to Session #1.',
+  });
+
+  items.push({
     label: `$(graph) Session #${sessionNum} Total: ~${totalTok.toLocaleString()} tokens ($${totalCost.toFixed(4)})`,
     description: 'Click to open Savings Dashboard',
-    detail: 'Aggregated across AST skeletons, semantic cache, context exclusions, and diff modifications.',
+    detail: `All-time accumulated savings: ~${lifetimeTok.toLocaleString()} tokens across all sessions.`,
   });
 
   items.push({
@@ -173,6 +185,8 @@ async function showSessionBreakdownQuickPick(): Promise<void> {
 
   if (selected.label.includes('Start New Session')) {
     vscode.commands.executeCommand('tokenshield.newSession');
+  } else if (selected.label.includes('Reset Complete Data')) {
+    vscode.commands.executeCommand('tokenshield.resetAllData');
   } else if (selected.description === 'Click to open Savings Dashboard') {
     vscode.commands.executeCommand('tokenshield.dashboard');
   }

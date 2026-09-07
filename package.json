@@ -2,7 +2,7 @@
   "name": "tokenshield",
   "displayName": "TokenShield — AI Token & Cost Optimizer (Copilot & Claude)",
   "description": "Save 60–90% AI token & LLM costs across GitHub Copilot, Claude Code, and Codex. Zero-latency context pruning, AST skeletons, semantic cache, and real-time savings tracking.",
-  "version": "1.0.16",
+  "version": "1.0.17",
   "publisher": "sarfudheen",
   "license": "MIT",
   "repository": {
@@ -119,6 +119,10 @@
       {
         "command": "tokenshield.newSession",
         "title": "TokenShield: Start New Session"
+      },
+      {
+        "command": "tokenshield.resetAllData",
+        "title": "TokenShield: Reset Complete Data (Wipe All History)"
       },
       {
         "command": "tokenshield.compressDiff",

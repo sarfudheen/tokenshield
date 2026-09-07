@@ -5,7 +5,8 @@ import * as os from 'os';
 import { spawnSync } from 'child_process';
 import { getConfig } from '../core/config';
 import { getActiveModel } from '../models/modelDetector';
-import { readDiskEvents, recordDiskEvent, DiskSavingsEvent } from '../cache/eventLog';
+import { readDiskEvents, recordDiskEvent, clearDiskEvents, DiskSavingsEvent } from '../cache/eventLog';
+import { readLifetimeData, saveLifetimeData, clearLifetimeData, ArchivedSessionRecord } from '../cache/lifetimeStore';
 import { isBinaryAvailable } from '../installer/installer';
 
 export interface ChatSavingsEvent {
@@ -35,14 +36,17 @@ export interface ArchivedSession {
 
 class ChatSavingsTracker {
   private events: ChatSavingsEvent[] = [];
-  private totalTokensSaved = 0;
-  private totalCostSavedUsd = 0;
+  private sessionTokensSaved = 0;
+  private sessionCostSavedUsd = 0;
+  private lifetimeTokensSaved = 0;
+  private lifetimeCostSavedUsd = 0;
   private currentSessionNumber = 1;
   private sessionStartedAt: Date = new Date();
   private pastSessions: ArchivedSession[] = [];
   private changeListeners: Array<() => void> = [];
   private knownEventIds: Set<string> = new Set();
   private syncTimer?: NodeJS.Timeout;
+  private initialized = false;
 
   private lastRtkCommandCount = 0;
   private lastRtkSavedTokens = 0;
@@ -51,10 +55,125 @@ class ChatSavingsTracker {
   constructor() {
     this.sessionStartedAt = new Date();
     this.events = [];
-    this.totalTokensSaved = 0;
-    this.totalCostSavedUsd = 0;
+    this.sessionTokensSaved = 0;
+    this.sessionCostSavedUsd = 0;
+    this.lifetimeTokensSaved = 0;
+    this.lifetimeCostSavedUsd = 0;
 
+    this.initFromDisk();
     this.startDiskSync();
+  }
+
+  private initFromDisk(): void {
+    const wsPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    if (!wsPath) { return; }
+
+    try {
+      const lifetime = readLifetimeData(wsPath);
+      this.lifetimeTokensSaved = lifetime.lifetimeTokensSaved;
+      this.lifetimeCostSavedUsd = lifetime.lifetimeCostSavedUsd;
+      this.currentSessionNumber = lifetime.currentSessionNumber;
+      this.pastSessions = (lifetime.pastSessions || []).map(ps => ({
+        sessionNumber: ps.sessionNumber,
+        startedAt: new Date(ps.startedAt),
+        endedAt: new Date(ps.endedAt),
+        totalTokensSaved: ps.totalTokensSaved,
+        totalCostSavedUsd: ps.totalCostSavedUsd,
+        eventsCount: ps.eventsCount,
+        modelName: ps.modelName,
+        events: (ps.events || []).map(e => ({
+          id: e.id,
+          timestamp: new Date(e.timestamp),
+          directive: e.directive,
+          source: e.source,
+          tokensSaved: e.tokensSaved,
+          costSavedUsd: e.costSavedUsd,
+          details: e.details,
+          beforeTokens: e.beforeTokens,
+          afterTokens: e.afterTokens,
+          reductionPercent: e.reductionPercent,
+          modelName: e.modelName,
+        })),
+      }));
+
+      // Ingest recent events from disk
+      const diskEvents = readDiskEvents(wsPath);
+      let diskSumTokens = 0;
+      let diskSumCost = 0;
+      for (const de of diskEvents) {
+        this.knownEventIds.add(de.id);
+        const evTime = new Date(de.timestamp);
+        const ev: ChatSavingsEvent = {
+          id: de.id,
+          timestamp: evTime,
+          directive: de.directive,
+          source: de.source,
+          tokensSaved: de.tokensSaved,
+          costSavedUsd: de.costSavedUsd,
+          details: de.details,
+          beforeTokens: de.beforeTokens,
+          afterTokens: de.afterTokens,
+          reductionPercent: de.reductionPercent,
+          modelName: de.modelName,
+        };
+        this.events.push(ev);
+        diskSumTokens += de.tokensSaved;
+        diskSumCost += de.costSavedUsd;
+
+        // If recorded during this active IDE window session
+        if (de.sessionNumber === this.currentSessionNumber && evTime.getTime() >= this.sessionStartedAt.getTime() - 60000) {
+          this.sessionTokensSaved += de.tokensSaved;
+          this.sessionCostSavedUsd += de.costSavedUsd;
+        }
+      }
+
+      // Ensure lifetime totals cover disk events
+      if (this.lifetimeTokensSaved < diskSumTokens) {
+        this.lifetimeTokensSaved = diskSumTokens;
+        this.lifetimeCostSavedUsd = diskSumCost;
+        this.persistLifetime();
+      }
+      this.initialized = true;
+    } catch {
+      // Non-fatal
+    }
+  }
+
+  private persistLifetime(): void {
+    const wsPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    if (!wsPath) { return; }
+
+    const pastRecords: ArchivedSessionRecord[] = this.pastSessions.map(ps => ({
+      sessionNumber: ps.sessionNumber,
+      startedAt: ps.startedAt.toISOString(),
+      endedAt: ps.endedAt.toISOString(),
+      totalTokensSaved: ps.totalTokensSaved,
+      totalCostSavedUsd: ps.totalCostSavedUsd,
+      eventsCount: ps.eventsCount,
+      modelName: ps.modelName,
+      events: (ps.events || []).map(e => ({
+        id: e.id,
+        timestamp: e.timestamp.toISOString(),
+        directive: e.directive,
+        source: e.source,
+        tokensSaved: e.tokensSaved,
+        costSavedUsd: e.costSavedUsd,
+        details: e.details,
+        beforeTokens: e.beforeTokens,
+        afterTokens: e.afterTokens,
+        reductionPercent: e.reductionPercent,
+        modelName: e.modelName,
+      })),
+    }));
+
+    saveLifetimeData(wsPath, {
+      version: 1,
+      currentSessionNumber: this.currentSessionNumber,
+      currentSessionStartedAt: this.sessionStartedAt.toISOString(),
+      lifetimeTokensSaved: this.lifetimeTokensSaved,
+      lifetimeCostSavedUsd: this.lifetimeCostSavedUsd,
+      pastSessions: pastRecords,
+    });
   }
 
   private startDiskSync(): void {
@@ -67,6 +186,10 @@ class ChatSavingsTracker {
   public syncFromDisk(): void {
     const wsPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
     if (!wsPath) { return; }
+
+    if (!this.initialized) {
+      this.initFromDisk();
+    }
 
     this.syncRtkSavings(wsPath);
     this.syncHeadroomSavings();
@@ -92,27 +215,30 @@ class ChatSavingsTracker {
           continue;
         }
 
-        // Ingest events that belong to current session
-        if (evTime.getTime() >= this.sessionStartedAt.getTime() - 5000) {
-          this.knownEventIds.add(de.id);
-          const ev: ChatSavingsEvent = {
-            id: de.id,
-            timestamp: evTime,
-            directive: de.directive,
-            source: de.source,
-            tokensSaved: de.tokensSaved,
-            costSavedUsd: de.costSavedUsd,
-            details: de.details,
-            beforeTokens: de.beforeTokens,
-            afterTokens: de.afterTokens,
-            reductionPercent: de.reductionPercent,
-            modelName: de.modelName,
-          };
-          this.events.unshift(ev);
-          this.totalTokensSaved += ev.tokensSaved;
-          this.totalCostSavedUsd += ev.costSavedUsd;
-          newEventsAdded = true;
+        this.knownEventIds.add(de.id);
+        const ev: ChatSavingsEvent = {
+          id: de.id,
+          timestamp: evTime,
+          directive: de.directive,
+          source: de.source,
+          tokensSaved: de.tokensSaved,
+          costSavedUsd: de.costSavedUsd,
+          details: de.details,
+          beforeTokens: de.beforeTokens,
+          afterTokens: de.afterTokens,
+          reductionPercent: de.reductionPercent,
+          modelName: de.modelName,
+        };
+        this.events.unshift(ev);
+
+        // If recorded during this active window session
+        if (de.sessionNumber === this.currentSessionNumber || evTime.getTime() >= this.sessionStartedAt.getTime() - 5000) {
+          this.sessionTokensSaved += ev.tokensSaved;
+          this.sessionCostSavedUsd += ev.costSavedUsd;
         }
+        this.lifetimeTokensSaved += ev.tokensSaved;
+        this.lifetimeCostSavedUsd += ev.costSavedUsd;
+        newEventsAdded = true;
       }
     }
 
@@ -120,6 +246,7 @@ class ChatSavingsTracker {
       if (this.events.length > 100) {
         this.events = this.events.slice(0, 100);
       }
+      this.persistLifetime();
       this.notifyListeners();
     }
   }
@@ -196,35 +323,39 @@ class ChatSavingsTracker {
           const eventId = `headroom-${entry.ts}-${entry.saved}`;
 
           if (!this.knownEventIds.has(eventId)) {
-            if (evTime.getTime() >= this.sessionStartedAt.getTime() - 5000) {
-              this.knownEventIds.add(eventId);
-              const savedTokens = typeof entry.saved === 'number' ? entry.saved : 0;
-              const costUsd = typeof entry.cost_usd === 'number' ? entry.cost_usd : 0;
-              const source = entry.client || entry.source || 'Headroom MCP';
-              const before = typeof entry.before === 'number' ? entry.before : undefined;
-              const after = typeof entry.after === 'number' ? entry.after : undefined;
-              const pct = before && after && before > 0 ? Math.round(((before - after) / before) * 100) : undefined;
-              const details = before !== undefined && after !== undefined
-                ? `Lossless compression (-${pct}% tokens: ${before} ➔ ${after} tok)`
-                : `Saved ${savedTokens} tokens via Headroom`;
+            this.knownEventIds.add(eventId);
+            const savedTokens = typeof entry.saved === 'number' ? entry.saved : 0;
+            const costUsd = typeof entry.cost_usd === 'number' ? entry.cost_usd : 0;
+            const source = entry.client || entry.source || 'Headroom MCP';
+            const before = typeof entry.before === 'number' ? entry.before : undefined;
+            const after = typeof entry.after === 'number' ? entry.after : undefined;
+            const pct = before && after && before > 0 ? Math.round(((before - after) / before) * 100) : undefined;
+            const details = before !== undefined && after !== undefined
+              ? `Lossless compression (-${pct}% tokens: ${before} ➔ ${after} tok)`
+              : `Saved ${savedTokens} tokens via Headroom`;
 
-              const ev: ChatSavingsEvent = {
-                id: eventId,
-                timestamp: evTime,
-                directive: 'Headroom Reversible CCR',
-                source,
-                tokensSaved: savedTokens,
-                costSavedUsd: costUsd,
-                details,
-                beforeTokens: before,
-                afterTokens: after,
-                reductionPercent: pct,
-              };
-              this.events.unshift(ev);
-              this.totalTokensSaved += ev.tokensSaved;
-              this.totalCostSavedUsd += ev.costSavedUsd;
-              newEventsAdded = true;
+            const ev: ChatSavingsEvent = {
+              id: eventId,
+              timestamp: evTime,
+              directive: 'Headroom Reversible CCR',
+              source,
+              tokensSaved: savedTokens,
+              costSavedUsd: costUsd,
+              details,
+              beforeTokens: before,
+              afterTokens: after,
+              reductionPercent: pct,
+            };
+            this.events.unshift(ev);
+
+            // Ingest to current window session if recorded after session start
+            if (evTime.getTime() >= this.sessionStartedAt.getTime() - 5000) {
+              this.sessionTokensSaved += ev.tokensSaved;
+              this.sessionCostSavedUsd += ev.costSavedUsd;
             }
+            this.lifetimeTokensSaved += ev.tokensSaved;
+            this.lifetimeCostSavedUsd += ev.costSavedUsd;
+            newEventsAdded = true;
           }
         } catch {
           // ignore malformed line
@@ -235,6 +366,7 @@ class ChatSavingsTracker {
         if (this.events.length > 100) {
           this.events = this.events.slice(0, 100);
         }
+        this.persistLifetime();
         this.notifyListeners();
       }
     } catch {
@@ -277,8 +409,10 @@ class ChatSavingsTracker {
       this.events.pop();
     }
 
-    this.totalTokensSaved += tokensSaved;
-    this.totalCostSavedUsd += costSavedUsd;
+    this.sessionTokensSaved += tokensSaved;
+    this.sessionCostSavedUsd += costSavedUsd;
+    this.lifetimeTokensSaved += tokensSaved;
+    this.lifetimeCostSavedUsd += costSavedUsd;
 
     // Persist to disk for MCP server coherence with aligned ID
     const wsPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
@@ -297,6 +431,7 @@ class ChatSavingsTracker {
         reductionPercent,
         modelName: activeModel.name,
       });
+      this.persistLifetime();
     }
 
     this.notifyListeners();
@@ -333,27 +468,51 @@ class ChatSavingsTracker {
     }
 
     const activeModel = await getActiveModel();
+    const sessionEvents = this.events.filter(e => e.timestamp >= this.sessionStartedAt);
     const archived: ArchivedSession = {
       sessionNumber: this.currentSessionNumber,
       startedAt: this.sessionStartedAt,
       endedAt: new Date(),
-      totalTokensSaved: this.totalTokensSaved,
-      totalCostSavedUsd: this.totalCostSavedUsd,
-      eventsCount: this.events.length,
+      totalTokensSaved: this.sessionTokensSaved,
+      totalCostSavedUsd: this.sessionCostSavedUsd,
+      eventsCount: sessionEvents.length,
       modelName: activeModel.name,
-      events: [...this.events],
+      events: [...sessionEvents],
     };
 
     this.pastSessions.unshift(archived);
     this.currentSessionNumber++;
     this.sessionStartedAt = new Date();
-    this.totalTokensSaved = 0;
-    this.totalCostSavedUsd = 0;
-    this.events = [];
-    this.knownEventIds.clear();
+    this.sessionTokensSaved = 0;
+    this.sessionCostSavedUsd = 0;
 
+    this.persistLifetime();
     this.notifyListeners();
     return archived;
+  }
+
+  async resetAllData(): Promise<void> {
+    const wsPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    if (wsPath) {
+      clearDiskEvents(wsPath);
+      clearLifetimeData(wsPath);
+    }
+
+    this.events = [];
+    this.knownEventIds.clear();
+    this.pastSessions = [];
+    this.currentSessionNumber = 1;
+    this.sessionStartedAt = new Date();
+    this.sessionTokensSaved = 0;
+    this.sessionCostSavedUsd = 0;
+    this.lifetimeTokensSaved = 0;
+    this.lifetimeCostSavedUsd = 0;
+    this.lastRtkCommandCount = 0;
+    this.lastRtkSavedTokens = 0;
+    this.rtkInitialized = false;
+
+    this.persistLifetime();
+    this.notifyListeners();
   }
 
   getSessionNumber(): number {
@@ -368,12 +527,29 @@ class ChatSavingsTracker {
     return this.pastSessions;
   }
 
+  getSessionTokensSaved(): number {
+    return this.sessionTokensSaved;
+  }
+
+  getSessionCostSavedUsd(): number {
+    return this.sessionCostSavedUsd;
+  }
+
+  getLifetimeTokensSaved(): number {
+    return this.lifetimeTokensSaved;
+  }
+
+  getLifetimeCostSavedUsd(): number {
+    return this.lifetimeCostSavedUsd;
+  }
+
+  // Returns current session tokens for status bar and widgets
   getTotalTokensSaved(): number {
-    return this.totalTokensSaved;
+    return this.sessionTokensSaved;
   }
 
   getTotalCostSavedUsd(): number {
-    return this.totalCostSavedUsd;
+    return this.sessionCostSavedUsd;
   }
 
   getRecentEvents(limit: number = 25): ChatSavingsEvent[] {

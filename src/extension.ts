@@ -89,6 +89,19 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         `🛡️ TokenShield: Started new Session #${chatSavingsTracker.getSessionNumber()}! Session #${archived.sessionNumber} archived (${archived.totalTokensSaved.toLocaleString()} tok, $${archived.totalCostSavedUsd.toFixed(4)} saved).`
       );
     }),
+    vscode.commands.registerCommand('tokenshield.resetAllData', async () => {
+      const confirm = await vscode.window.showWarningMessage(
+        'Are you sure you want to completely reset all TokenShield lifetime statistics, archived sessions, and event logs? This cannot be undone.',
+        { modal: true },
+        'Reset Complete Data'
+      );
+      if (confirm === 'Reset Complete Data') {
+        await chatSavingsTracker.resetAllData();
+        await updateStatusBar();
+        await DashboardPanel.refreshCurrentPanel();
+        vscode.window.showInformationMessage('🛡️ TokenShield: All lifetime statistics and session history have been reset to clean slate.');
+      }
+    }),
     vscode.commands.registerCommand('tokenshield.compressDiff', async () => {
       try {
         const { execSync } = require('child_process');

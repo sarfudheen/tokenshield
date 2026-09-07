@@ -69,6 +69,7 @@ const PRUNE_COMMAND = 'tokenshield.pruneAndCopy';
 const PROFILE_COMMAND = 'tokenshield.switchProfile';
 const EXCLUSIONS_COMMAND = 'tokenshield.exclusions';
 const RESET_COMMAND = 'tokenshield.newSession';
+const RESET_ALL_COMMAND = 'tokenshield.resetAllData';
 
 interface DashboardMeasurements {
   codeGraph: Measurement;
@@ -246,6 +247,7 @@ export class DashboardPanel {
           PROFILE_COMMAND,
           EXCLUSIONS_COMMAND,
           RESET_COMMAND,
+          RESET_ALL_COMMAND,
         ],
       }
     );
@@ -765,8 +767,10 @@ export class DashboardPanel {
     wsPath: string
   ): string {
     const activeCount = countActiveStrategies(strategies);
-    const totalTokensSaved = chatSavingsTracker.getTotalTokensSaved();
-    const totalCostSaved = chatSavingsTracker.getTotalCostSavedUsd();
+    const sessionTokensSaved = chatSavingsTracker.getSessionTokensSaved();
+    const sessionCostSaved = chatSavingsTracker.getSessionCostSavedUsd();
+    const lifetimeTokensSaved = chatSavingsTracker.getLifetimeTokensSaved();
+    const lifetimeCostSaved = chatSavingsTracker.getLifetimeCostSavedUsd();
     const sessionNum = chatSavingsTracker.getSessionNumber();
     const sessionStarted = chatSavingsTracker.getSessionStartedAt();
     const pastSessions = chatSavingsTracker.getPastSessions();
@@ -2051,25 +2055,31 @@ export class DashboardPanel {
       `}
       <a class="btn" href="command:${REFRESH_COMMAND}">↻ Refresh Stats</a>
       <a class="btn" href="command:${RESET_COMMAND}">🔄 Reset / New Session</a>
+      <a class="btn" href="command:${RESET_ALL_COMMAND}" style="border-color:rgba(239, 68, 68, 0.4); color:#fca5a5;">🗑️ Reset Complete Data</a>
       <a class="btn btn-primary" href="command:${EXPORT_COMMAND}">⬇ Export Savings Report</a>
     </div>
   </div>
 
   <div class="kpi-row">
     <div class="kpi-card">
-      <div class="kpi-val">+${totalTokensSaved >= 1_000_000 ? `${formatCompactTokens(totalTokensSaved)} <span style="font-size:16px; font-weight:600; opacity:0.75;">(${totalTokensSaved.toLocaleString()})</span>` : totalTokensSaved.toLocaleString()}</div>
+      <div class="kpi-val">+${sessionTokensSaved >= 1_000_000 ? `${formatCompactTokens(sessionTokensSaved)} <span style="font-size:16px; font-weight:600; opacity:0.75;">(${sessionTokensSaved.toLocaleString()})</span>` : sessionTokensSaved.toLocaleString()}</div>
       <div class="kpi-title">Session #${sessionNum} Tokens Saved</div>
-      <div class="kpi-desc">Active since <strong>${sessionStarted.toLocaleTimeString()}</strong> · Calculated across AST skeletons, exclusions, cache & diffs.</div>
+      <div class="kpi-desc">Active since <strong>${sessionStarted.toLocaleTimeString()}</strong> · Current window session.</div>
     </div>
     <div class="kpi-card">
-      <div class="kpi-val" style="color:var(--green);">$${totalCostSaved.toFixed(4)}</div>
+      <div class="kpi-val" style="color:var(--green);">$${sessionCostSaved.toFixed(4)}</div>
       <div class="kpi-title">Session #${sessionNum} Estimated Savings</div>
       <div class="kpi-desc">Calculated at $${config.pricing[activeModel.tier].inputPerMillion.toFixed(2)}/1M token rate for <strong>${activeModel.name}</strong>.</div>
     </div>
     <div class="kpi-card">
+      <div class="kpi-val" style="color:#38bdf8;">+${formatCompactTokens(lifetimeTokensSaved)} <span style="font-size:16px; font-weight:600; opacity:0.8;">($${lifetimeCostSaved.toFixed(4)})</span></div>
+      <div class="kpi-title">🌐 All-Time Lifetime Savings</div>
+      <div class="kpi-desc">~<strong>${lifetimeTokensSaved.toLocaleString()}</strong> tokens avoided across all sessions. Persisted across IDE restarts.</div>
+    </div>
+    <div class="kpi-card">
       <div class="kpi-val" style="color:var(--accent); font-size:24px; padding-top:4px;">${activeModel.name}</div>
       <div class="kpi-title">Active AI Assistant (${activeModel.tier.toUpperCase()} Tier)</div>
-      <div class="kpi-desc">Auto-detected Google Antigravity IDE host environment with lightweight fast pricing.</div>
+      <div class="kpi-desc">Auto-detected host environment with lightweight fast pricing rate.</div>
     </div>
   </div>
 

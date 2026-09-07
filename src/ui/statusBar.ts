@@ -100,7 +100,11 @@ async function buildMasterHubMarkdownTooltip(
 
   md.appendMarkdown(`### 🛡️ TokenShield Control Hub\n\n`);
 
-  md.appendMarkdown(`**💎 Session #${sessionNum} Savings**: ~\`${tokensSaved.toLocaleString()}\` tokens saved (\`${costSaved}\`)\n`);
+  const lifetimeTok = chatSavingsTracker.getLifetimeTokensSaved();
+  const lifetimeCost = formatCost(chatSavingsTracker.getLifetimeCostSavedUsd());
+
+  md.appendMarkdown(`- **💎 Session #${sessionNum} Savings**: ~\`${tokensSaved.toLocaleString()}\` tokens (\`${costSaved}\`)\n`);
+  md.appendMarkdown(`- **🌐 All-Time Lifetime Savings**: ~\`${lifetimeTok.toLocaleString()}\` tokens (\`${lifetimeCost}\`)\n`);
   md.appendMarkdown(`- **Active Engine**: \`${activeModel.name}\` (${activeModel.tier.toUpperCase()} Tier)\n`);
   md.appendMarkdown(`- **Session Started**: \`${sessionStarted.toLocaleTimeString()}\`\n`);
   md.appendMarkdown(`- **CodeGraph Status**: \`${cg.count}\` repository graph(s) indexed & active\n\n`);
@@ -189,6 +193,11 @@ async function showMasterHubQuickPick(): Promise<void> {
       detail: 'Archive current session savings to history and start counting from 0 tokens.',
     },
     {
+      label: `$(trash) Reset Complete Data (Wipe All History)`,
+      description: `All-Time: ~${chatSavingsTracker.getLifetimeTokensSaved().toLocaleString()} tokens saved`,
+      detail: 'Reset all lifetime statistics, past session archives, and event logs back to Session #1.',
+    },
+    {
       label: `$(settings-gear) Switch Optimization Profile (Current: ${config.profile.toUpperCase()})`,
       description: 'Full · Debug · Planning · Review · Custom',
       detail: `Instantly toggle presets across all ${TOTAL_STRATEGIES} optimization features.`,
@@ -218,6 +227,8 @@ async function showMasterHubQuickPick(): Promise<void> {
     vscode.commands.executeCommand('tokenshield.toggleFeature');
   } else if (selected.label.includes('Start New Session')) {
     vscode.commands.executeCommand('tokenshield.newSession');
+  } else if (selected.label.includes('Reset Complete Data')) {
+    vscode.commands.executeCommand('tokenshield.resetAllData');
   } else if (selected.label.includes('Switch Optimization Profile')) {
     vscode.commands.executeCommand('tokenshield.switchProfile');
   } else if (selected.label.includes('Export Savings Report')) {
