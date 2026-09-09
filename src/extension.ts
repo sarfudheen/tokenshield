@@ -6,7 +6,6 @@ import { installAllTools } from './installer';
 import { configureMcpServers } from './mcp';
 import { createStatusBar, updateStatusBar, disposeStatusBar } from './ui/statusBar';
 import { createEditorTokenBadge } from './ui/editorTokenBadge';
-import { createSessionSavingsWidget } from './ui/sessionSavingsWidget';
 import { chatSavingsTracker } from './telemetry/chatSavingsTracker';
 import { pruneContext, compressGitDiff } from './strategies/adaptivePruner';
 import { showProfilePicker, showSingleFeatureToggle } from './ui/quickPick';

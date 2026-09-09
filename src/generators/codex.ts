@@ -1,6 +1,7 @@
 import { TargetTool, StrategyState, ExtensionConfig } from '../core/config';
 import { MARKER_START, MARKER_END, MARKER_COMMENT, CODEX_INSTRUCTIONS_PATH } from '../core/constants';
 import { BaseInstructionGenerator } from './base';
+import { isHeadroomSdkAvailable } from '../strategies/adaptivePruner';
 
 export class CodexGenerator extends BaseInstructionGenerator {
   readonly target: TargetTool = 'codex';
@@ -39,12 +40,12 @@ export class CodexGenerator extends BaseInstructionGenerator {
     if (strategies.astSkeleton) {
       sections.push(`### AST Skeleton Pruning
 - **MANDATORY**: Use \`skeleton_view\` to inspect type definitions and structure.
-- **FORBIDDEN**: Never ingest full function bodies unless actively modifying them.`);
+- **PREFERRED**: Avoid ingesting full function bodies unless actively modifying them or tracing call-site logic.${strategies.rangeSlicing ? '\n- When full reads are needed, restrict to 100-line windows around target symbols.' : ''}`);
     }
 
     if (strategies.contextExclusion) {
       sections.push(`### Smart Context Exclusions
-- **MANDATORY**: Exclude build/dist artifacts, lockfiles, and minified bundles.`);
+- **MANDATORY**: Exclude build/dist artifacts, lockfiles, and minified bundles.${strategies.copilotIgnoreGeneration ? '\n- Enforce `.copilotignore` patterns to block non-source artifacts from AI context.' : ''}`);
     }
 
     if (strategies.diffOnlyOutput) {
@@ -74,8 +75,13 @@ export class CodexGenerator extends BaseInstructionGenerator {
     }
 
     if (strategies.commentStripper) {
-      sections.push(`### Comment & Header Stripping
+      if (config.commentStrippingMode === 'aggressive') {
+        sections.push(`### Comment & Header Stripping
 - Strip copyright headers and filler comments on ingestion.`);
+      } else if (config.commentStrippingMode !== 'off') {
+        sections.push(`### License Header Stripping
+- Strip copyright license headers and preamble blocks. Preserve inline comments.`);
+      }
     }
 
     if (strategies.testFailureIsolator) {
@@ -83,32 +89,13 @@ export class CodexGenerator extends BaseInstructionGenerator {
 - **MANDATORY**: Report only failing test lines, assertions, and line numbers.`);
     }
 
-    if (strategies.rangeSlicing) {
-      sections.push(`### Windowed Range Slicing
-- **MANDATORY**: Inspect 100-line windows around target symbols instead of full files.`);
-    }
+    // rangeSlicing merged into astSkeleton above
+    // inlineChatScopePinning removed: VS Code handles natively
+    // copilotIgnoreGeneration merged into contextExclusion above
+    // copilotEditsAwareness removed: modern agents already do this
+    // threadResetTrigger removed: agent hosts handle context limits
 
-    if (strategies.inlineChatScopePinning) {
-      sections.push(`### Inline Chat Scope Pinning
-- **MANDATORY**: Restrict context to selected editor lines and direct references.`);
-    }
-
-    if (strategies.copilotIgnoreGeneration) {
-      sections.push(`### .copilotignore Compliance
-- **MANDATORY**: Never read or reference ignored paths.`);
-    }
-
-    if (strategies.copilotEditsAwareness) {
-      sections.push(`### Edit Session Awareness
-- **MANDATORY**: Do not re-read files already open in the active edit session.`);
-    }
-
-    if (strategies.threadResetTrigger) {
-      sections.push(`### Context Saturation Thread Reset
-- Surface a fresh-thread prompt when conversation exceeds 40 messages.`);
-    }
-
-    if (strategies.headroomCompression) {
+    if (strategies.headroomCompression && isHeadroomSdkAvailable()) {
       sections.push(`### Headroom Reversible CCR & SmartCrusher
 - **MANDATORY**: Compress verbose JSON objects and multi-line tool outputs using Headroom before emitting into instructions.
 - Retrieve detailed records via \`headroom_retrieve\` when required.`);

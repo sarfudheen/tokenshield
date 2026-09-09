@@ -63,7 +63,7 @@ export class ModelRoutingTracker {
     return [...this.events];
   }
 
-  getStats(): {
+  getStats(pricing?: { flagship: { inputPerMillion: number }; lightweight: { inputPerMillion: number } }): {
     totalClassified: number;
     lightweight: number;
     fullPower: number;
@@ -82,8 +82,18 @@ export class ModelRoutingTracker {
       }
     }
 
-    // Estimate: lightweight tasks save ~$0.01 each if routed to a cheaper model
-    const estimatedCostSaved = lightweight * 0.01;
+    // Use actual pricing tiers if available; estimate ~2000 input tokens per lightweight task.
+    // Savings = tokens that would have been processed at flagship rate but ran at lightweight rate.
+    const avgTokensPerTask = 2000;
+    let estimatedCostSaved: number;
+    if (pricing) {
+      const flagshipCost = (avgTokensPerTask / 1_000_000) * pricing.flagship.inputPerMillion;
+      const lightweightCost = (avgTokensPerTask / 1_000_000) * pricing.lightweight.inputPerMillion;
+      estimatedCostSaved = lightweight * Math.max(0, flagshipCost - lightweightCost);
+    } else {
+      // Fallback: conservative estimate using default pricing ($15/M vs $0.15/M)
+      estimatedCostSaved = lightweight * (avgTokensPerTask / 1_000_000) * (15.0 - 0.15);
+    }
 
     return {
       totalClassified: this.events.length,

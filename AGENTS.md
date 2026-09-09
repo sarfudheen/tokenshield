@@ -26,10 +26,12 @@
 
 ### AST Skeleton Pruning
 - **MANDATORY**: Call `skeleton_view` MCP tool first when navigating files to load signatures only (~90% savings).
-- **FORBIDDEN**: Never ingest full function bodies unless actively modifying them.
+- **PREFERRED**: Avoid ingesting full function bodies unless actively modifying them or tracing call-site logic.
+- When full reads are needed, restrict to 100-line windows around target symbols.
 
 ### Smart Context Exclusions
 - **MANDATORY**: Exclude lock files (`*.lock`, `package-lock.json`), build outputs (`dist/`, `build/`), and minified assets.
+- Enforce `.copilotignore` patterns to block non-source artifacts from AI context.
 
 ### Unified Diff Formatting
 - **MANDATORY**: Always propose code edits as targeted unified diff chunks with ±3 lines of context.
@@ -47,29 +49,10 @@
 ### Deterministic Prefix Caching
 - Maintain stable instruction prefix order across turns to maximize KV cache hits.
 
-### Comment & Header Stripping
-- Strip copyright headers and filler comments on ingestion.
+### License Header Stripping
+- Strip copyright license headers and preamble blocks. Preserve inline comments.
 
 ### Test Failure Log Isolation
 - **MANDATORY**: Report only failing test lines, assertions, and line numbers.
-
-### Windowed Range Slicing
-- **MANDATORY**: Inspect 100-line windows around target symbols instead of full files.
-
-### Inline Chat Scope Pinning
-- **MANDATORY**: Restrict context to selected editor lines and direct references.
-
-### .copilotignore Compliance
-- **MANDATORY**: Never read or reference ignored paths.
-
-### Edit Session Awareness
-- **MANDATORY**: Do not re-read files already open in the active edit session.
-
-### Context Saturation Thread Reset
-- Surface a fresh-thread prompt when conversation exceeds 40 messages.
-
-### Headroom Reversible CCR & SmartCrusher
-- **MANDATORY**: Use Headroom context compression on bulky JSON/trace tool outputs; retrieve uncompressed sections via `headroom_retrieve`.
-- **FORBIDDEN**: Never ingest raw JSON dumps >50 items without schema compaction.
 
 <!-- TOKENSHIELD:END -->

@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import { TargetTool, StrategyState, ExtensionConfig } from '../core/config';
 import { MARKER_START, MARKER_END, MARKER_COMMENT, ANTIGRAVITY_INSTRUCTIONS_PATH } from '../core/constants';
 import { BaseInstructionGenerator, GenerationResult } from './base';
+import { isHeadroomSdkAvailable } from '../strategies/adaptivePruner';
 
 export class AntigravityGenerator extends BaseInstructionGenerator {
   readonly target: TargetTool = 'antigravity';
@@ -59,12 +60,12 @@ export class AntigravityGenerator extends BaseInstructionGenerator {
     if (strategies.astSkeleton) {
       sections.push(`### AST Skeleton Pruning
 - **MANDATORY**: Call \`skeleton_view\` MCP tool first when navigating files to load signatures only (~90% savings).
-- **FORBIDDEN**: Never ingest full function bodies unless actively modifying them.`);
+- **PREFERRED**: Avoid ingesting full function bodies unless actively modifying them or tracing call-site logic.${strategies.rangeSlicing ? '\n- When full reads are needed, restrict to 100-line windows around target symbols.' : ''}`);
     }
 
     if (strategies.contextExclusion) {
       sections.push(`### Smart Context Exclusions
-- **MANDATORY**: Exclude lock files (\`*.lock\`, \`package-lock.json\`), build outputs (\`dist/\`, \`build/\`), and minified assets.`);
+- **MANDATORY**: Exclude lock files (\`*.lock\`, \`package-lock.json\`), build outputs (\`dist/\`, \`build/\`), and minified assets.${strategies.copilotIgnoreGeneration ? '\n- Enforce `.copilotignore` patterns to block non-source artifacts from AI context.' : ''}`);
     }
 
     if (strategies.diffOnlyOutput) {
@@ -94,8 +95,13 @@ export class AntigravityGenerator extends BaseInstructionGenerator {
     }
 
     if (strategies.commentStripper) {
-      sections.push(`### Comment & Header Stripping
+      if (config.commentStrippingMode === 'aggressive') {
+        sections.push(`### Comment & Header Stripping
 - Strip copyright headers and filler comments on ingestion.`);
+      } else if (config.commentStrippingMode !== 'off') {
+        sections.push(`### License Header Stripping
+- Strip copyright license headers and preamble blocks. Preserve inline comments.`);
+      }
     }
 
     if (strategies.testFailureIsolator) {
@@ -103,32 +109,13 @@ export class AntigravityGenerator extends BaseInstructionGenerator {
 - **MANDATORY**: Report only failing test lines, assertions, and line numbers.`);
     }
 
-    if (strategies.rangeSlicing) {
-      sections.push(`### Windowed Range Slicing
-- **MANDATORY**: Inspect 100-line windows around target symbols instead of full files.`);
-    }
+    // rangeSlicing merged into astSkeleton above
+    // inlineChatScopePinning removed: VS Code handles natively
+    // copilotIgnoreGeneration merged into contextExclusion above
+    // copilotEditsAwareness removed: modern agents already do this
+    // threadResetTrigger removed: agent hosts handle context limits
 
-    if (strategies.inlineChatScopePinning) {
-      sections.push(`### Inline Chat Scope Pinning
-- **MANDATORY**: Restrict context to selected editor lines and direct references.`);
-    }
-
-    if (strategies.copilotIgnoreGeneration) {
-      sections.push(`### .copilotignore Compliance
-- **MANDATORY**: Never read or reference ignored paths.`);
-    }
-
-    if (strategies.copilotEditsAwareness) {
-      sections.push(`### Edit Session Awareness
-- **MANDATORY**: Do not re-read files already open in the active edit session.`);
-    }
-
-    if (strategies.threadResetTrigger) {
-      sections.push(`### Context Saturation Thread Reset
-- Surface a fresh-thread prompt when conversation exceeds 40 messages.`);
-    }
-
-    if (strategies.headroomCompression) {
+    if (strategies.headroomCompression && isHeadroomSdkAvailable()) {
       sections.push(`### Headroom Reversible CCR & SmartCrusher
 - **MANDATORY**: Use Headroom context compression on bulky JSON/trace tool outputs; retrieve uncompressed sections via \`headroom_retrieve\`.
 - **FORBIDDEN**: Never ingest raw JSON dumps >50 items without schema compaction.`);

@@ -351,21 +351,20 @@ async function validateKvCache(): Promise<CategoryResult> {
   return { category: 'Deterministic Prefix Caching', status: 'ok', lines };
 }
 
-// ─── Comment Stripper ────────────────────────────────────────────────
-
+// ─── License Header Stripper ──────────────────────────────────────────
 async function validateCommentStripper(): Promise<CategoryResult> {
   const config = getConfig();
   const strategies = getEffectiveStrategies(config);
   const lines: string[] = [];
 
   if (!strategies.commentStripper) {
-    return { category: 'Comment & Header Stripping', status: 'disabled', lines: ['Strategy disabled in current profile'] };
+    return { category: 'License Header Stripper', status: 'disabled', lines: ['Strategy disabled in current profile'] };
   }
 
-  lines.push('  ✓ strip_comments tool available in token-cache server');
-  lines.push('  ✓ Automatically removes license preambles and boilerplate comments on ingestion');
+  lines.push(`  ✓ Mode: ${config.commentStrippingMode} (safe license header stripping by default)`);
+  lines.push('  ✓ strip_comments tool available in token-cache server (preserves inline code comments)');
 
-  return { category: 'Comment & Header Stripping', status: 'ok', lines };
+  return { category: 'License Header Stripper', status: 'ok', lines };
 }
 
 // ─── Test Failure Isolator ───────────────────────────────────────────

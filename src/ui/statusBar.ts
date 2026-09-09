@@ -124,13 +124,14 @@ async function buildMasterHubMarkdownTooltip(
     { key: strategies.smartModelRouting, name: 'Model Routing' },
     { key: strategies.gitDiffContext, name: 'Git Diff Scoping' },
     { key: strategies.kvCacheAlignment, name: 'Prefix Caching' },
-    { key: strategies.commentStripper, name: 'Comment Stripper' },
+    { key: strategies.commentStripper, name: 'License Header Stripper' },
     { key: strategies.testFailureIsolator, name: 'Test Isolator' },
     { key: strategies.rangeSlicing, name: 'Range Slicing' },
     { key: strategies.inlineChatScopePinning, name: 'Inline Scope Lock' },
     { key: strategies.copilotIgnoreGeneration, name: '.copilotignore Rules' },
     { key: strategies.copilotEditsAwareness, name: 'Edit Session Awareness' },
     { key: strategies.threadResetTrigger, name: 'Context Saturation Monitor' },
+    { key: strategies.headroomCompression, name: 'Headroom Reversible CCR' },
   ];
 
   for (const r of rows) {

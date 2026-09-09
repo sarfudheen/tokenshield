@@ -28,10 +28,12 @@
 
 ### AST Skeleton Pruning (skeleton_view MCP)
 - **MANDATORY**: When exploring unfamiliar or large files (>100 lines), ALWAYS invoke `skeleton_view({ file: "path" })` first to inspect signatures, interfaces, and types.
-- **FORBIDDEN**: NEVER ingest full implementation bodies unless you are directly editing that exact function (~90% context savings).
+- **PREFERRED**: Avoid ingesting full implementation bodies unless you are directly editing that exact function or need to understand call-site logic (~90% context savings).
+- When full file reads are needed, restrict to 100-line windows around target symbols.
 
 ### Smart Context Exclusions
 - **MANDATORY**: Automatically omit lock files (`package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`), build outputs (`dist/`, `build/`, `.next/`, `out/`), minified files (`*.min.js`, `*.bundle.js`), and binary files from prompt context.
+- Enforce `.copilotignore` patterns to block build outputs, secrets, and non-source artifacts from AI context.
 
 ### Diff-Only Modifications
 - **MANDATORY**: For file edits, ALWAYS output changes as targeted unified diffs or focused modification blocks with ±3 lines of context.
@@ -51,31 +53,11 @@
 ### Prompt Prefix Caching
 - Maintain a deterministic, unchanging instruction prefix order across turns to maximize cloud KV-cache hit rates.
 
-### Comment & Header Stripping
-- Automatically strip copyright license headers and low-signal comments before ingesting files into context.
+### License Header Stripping
+- Strip copyright license headers and preamble blocks before ingesting files. Preserve inline comments (they aid comprehension).
 
 ### Test Failure Isolator
 - When executing test suites, filter terminal output to include ONLY failing assertion lines, file names, and stack traces. Omit passing tests.
-
-### Windowed Range Slicing
-- When inspecting large source files, restrict reads to 100-line windows around target symbols instead of loading the entire file.
-
-### Inline Chat Scope Pinning
-- Restrict VS Code inline chat context strictly to currently selected lines and their immediate 1-hop symbol references.
-
-### .copilotignore File Rules
-- Enforce `.copilotignore` patterns to block build outputs, secrets, environment files, and non-source artifacts from AI context.
-
-### Edit Session Awareness
-- Avoid re-reading or re-inspecting files that are already open and dirty in the active multi-file edit session.
-
-### Context Saturation Thread Reset
-- When a chat session exceeds 40 conversation turns, surface a clear recommendation to start a fresh chat thread to avoid attention degradation.
-
-### Headroom Context Compression (CCR & SmartCrusher)
-- **MANDATORY**: For bulky tool outputs, API responses, or JSON data (>50 items), apply Headroom context compression or SmartCrusher schema compaction before injecting into prompt.
-- Use `headroom_retrieve` whenever precise uncompressed segments are required.
-- **FORBIDDEN**: NEVER flood context with uncompressed raw JSON logs or multi-megabyte trace dumps.
 
 ## Diagnostic Exceptions
 - Always show complete error traces and assertion messages when diagnosing test/build failures.

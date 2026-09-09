@@ -231,17 +231,18 @@ function callTool(name: string, args: Record<string, unknown>): unknown {
       if (typeof args.code !== 'string') {
         throw new Error('strip_comments requires a "code" string');
       }
-      const pruned = stripCommentsAndHeaders(args.code);
+      const headersOnly = args.headersOnly !== false; // default to headers-only (safe mode)
+      const pruned = stripCommentsAndHeaders(args.code, headersOnly);
       const saved = Math.max(0, Math.ceil((args.code.length - pruned.length) / 3.8));
       if (saved > 0) {
         recordDiskEvent(workspaceRoot, {
           directive: 'Comment & Header Stripper',
           source: 'Source Code',
           tokensSaved: saved,
-          details: `Stripped license headers & filler comments (${args.code.length} B ➔ ${pruned.length} B)`,
+          details: `Stripped ${headersOnly ? 'license headers' : 'license headers & filler comments'} (${args.code.length} B ➔ ${pruned.length} B)`,
         });
       }
-      return { code: pruned, originalLength: args.code.length, prunedLength: pruned.length };
+      return { code: pruned, originalLength: args.code.length, prunedLength: pruned.length, mode: headersOnly ? 'headers-only' : 'aggressive' };
     }
     case 'isolate_test_failures': {
       if (typeof args.log !== 'string') {

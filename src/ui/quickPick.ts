@@ -41,7 +41,7 @@ export async function showProfilePicker(): Promise<void> {
     return;
   }
 
-  if (selected.label.includes('Validate All')) {
+  if (selected.label.includes('Health Check') || selected.label.includes('Validate All')) {
     await vscode.commands.executeCommand('tokenshield.healthCheck');
     return;
   }

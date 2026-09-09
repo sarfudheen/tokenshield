@@ -45,6 +45,10 @@
   "contributes": {
     "commands": [
       {
+        "command": "tokenshield.hub",
+        "title": "TokenShield: Open Control Hub"
+      },
+      {
         "command": "tokenshield.toggle",
         "title": "TokenShield: Toggle On/Off"
       },
@@ -111,10 +115,6 @@
       {
         "command": "tokenshield.pruneAndCopy",
         "title": "TokenShield: Prune & Copy to Clipboard"
-      },
-      {
-        "command": "tokenshield.sessionBreakdown",
-        "title": "TokenShield: Show Session Breakdown"
       },
       {
         "command": "tokenshield.newSession",
@@ -184,7 +184,7 @@
             "All 20 strategies active — maximum enterprise token & cost savings",
             "Disables output compression and diff-only for full log & test diagnostics",
             "Disables verbosity restrictions and guardrails for deep architectural reviews",
-            "Preserves full context history for thorough code reviews",
+            "Preserves full context history and comments for thorough code reviews",
             "Use custom strategy combination from activeStrategies setting"
           ]
         },
@@ -200,7 +200,17 @@
             "contextExclusion": true,
             "diffOnlyOutput": true,
             "agentGuardrails": true,
-            "smartModelRouting": true
+            "smartModelRouting": true,
+            "gitDiffContext": true,
+            "kvCacheAlignment": true,
+            "commentStripper": true,
+            "testFailureIsolator": true,
+            "rangeSlicing": true,
+            "inlineChatScopePinning": true,
+            "copilotIgnoreGeneration": true,
+            "copilotEditsAwareness": true,
+            "threadResetTrigger": true,
+            "headroomCompression": true
           },
           "properties": {
             "codeGraph": {
@@ -253,7 +263,7 @@
             },
             "commentStripper": {
               "type": "boolean",
-              "description": "Comment and header stripper (removes copyright preambles on ingestion)"
+              "description": "License header & comment stripper (removes copyright preambles on ingestion)"
             },
             "testFailureIsolator": {
               "type": "boolean",
@@ -295,6 +305,21 @@
           ],
           "default": "full",
           "description": "Verbosity reduction level: Light (~20%), Full (~35%), Ultra (~50%)."
+        },
+        "tokenshield.commentStrippingMode": {
+          "type": "string",
+          "enum": [
+            "headers-only",
+            "aggressive",
+            "off"
+          ],
+          "default": "headers-only",
+          "description": "Comment stripping mode: 'headers-only' (safe — strips only license/copyright blocks), 'aggressive' (strips all comments — may reduce LLM accuracy), 'off' (no comment stripping).",
+          "enumDescriptions": [
+            "Strip only license/copyright header blocks (safe, preserves inline comments for LLM comprehension)",
+            "Strip all comments including inline and block comments (saves more tokens but research shows up to 3x accuracy degradation)",
+            "Disable all comment stripping"
+          ]
         },
         "tokenshield.preserveExistingInstructions": {
           "type": "boolean",

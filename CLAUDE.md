@@ -69,10 +69,12 @@ This extension is **not in the LLM request path** — the actual model call and 
 
 ### AST Skeleton Pruning
 - **MANDATORY**: Call `skeleton_view` tool first when navigating large source files (>100 lines).
-- **FORBIDDEN**: Never ingest full function bodies unless actively modifying them (~90% context reduction).
+- **PREFERRED**: Avoid ingesting full function bodies unless actively modifying them or tracing call-site logic (~90% context reduction).
+- When full reads are needed, restrict to 100-line windows around target symbols.
 
 ### Smart Context Exclusions
 - **MANDATORY**: Exclude build/dist artifacts, lockfiles, and minified bundles.
+- Enforce `.copilotignore` patterns to block non-source artifacts from AI context.
 
 ### Unified Diff Formatting
 - **MANDATORY**: Always provide targeted unified diff chunks with ±3 lines of context.
@@ -90,34 +92,15 @@ This extension is **not in the LLM request path** — the actual model call and 
 ### Deterministic Prefix Caching
 - Maintain stable instruction prefix order across turns to maximize KV cache hits.
 
-### Comment & Header Stripping
-- Strip copyright headers and filler comments on ingestion.
+### License Header Stripping
+- Strip copyright license headers and preamble blocks. Preserve inline comments.
 
 ### Test Failure Log Isolation
 - **MANDATORY**: Report only failing test lines, assertions, and line numbers.
 
-### Windowed Range Slicing
-- **MANDATORY**: Inspect 100-line windows around target symbols instead of full files.
-
-### Inline Chat Scope Pinning
-- **MANDATORY**: Restrict context to selected editor lines and direct references.
-
-### .copilotignore Compliance
-- **MANDATORY**: Never read or reference ignored paths.
-
-### Edit Session Awareness
-- **MANDATORY**: Do not re-read files already open in the active edit session.
-
-### Context Saturation Thread Reset
-- Surface a fresh-thread prompt when conversation exceeds 40 messages.
-
-### Headroom Reversible CCR & SmartCrusher
-- **MANDATORY**: Route bulky bash/tool/JSON outputs through Headroom compression; fetch original chunks via `headroom_retrieve`.
-- **FORBIDDEN**: Never output or inspect uncompressed JSON traces exceeding 50 items.
-
 <!-- TOKENSHIELD:END -->
 
-` markers (`src/generators/base.ts` `mergeContent`). User content outside the markers must never be touched. If markers are absent, the block is appended; if `preserveExistingInstructions` is false, the whole file is overwritten.
+` markers (`src/generators/base.ts` `mergeContent`). User content outside the markers must never be touched. If markers are absent, the block is prepended at the top for KV-cache prefix alignment; if `preserveExistingInstructions` is false, the whole file is overwritten.
 - **Profiles gate strategies, not the other way around.** `full` / `debug` / `planning` / `review` / `custom` map to `{ codeGraph, outputCompression, verbosityControl, sessionManagement }` in `config.ts`. Debug disables output compression (need full logs), planning disables verbosity control (need full analysis), review disables session management (need full context history). Don't hardcode strategy behavior in generators — always go through `getEffectiveStrategies(profile)`.
 - **RTK is hooks, not MCP.** Never add an `rtk` entry to an MCP servers config; the configurator's job is partly to remove stray ones.
 - **CodeGraph install vs. MCP-expose are separate steps.** Installing the npm package puts the `codegraph` binary on `$PATH` (CLI). Adding the MCP server entry (`codegraph mcp` as a stdio subprocess) is what lets Copilot/Claude actually call `codegraph_explore`. Both must happen for AI tools to use it.

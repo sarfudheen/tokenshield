@@ -2,7 +2,7 @@
 name: tokenshield-optimize
 description: >
   Analyze current AI interaction patterns and suggest token/cost
-  optimizations using TokenShield's 19 optimization features.
+  optimizations using TokenShield's 20 optimization features.
 ---
 
 # TokenShield Optimization Skill

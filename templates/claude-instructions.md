@@ -43,10 +43,12 @@ A local `token-cache` MCP server caches answers on disk — cache hits cost zero
 
 ### AST Skeleton Pruning
 - **MANDATORY**: Call `skeleton_view` tool first when navigating large source files (>100 lines).
-- **FORBIDDEN**: Never ingest full function bodies unless actively modifying them (~90% context reduction).
+- **PREFERRED**: Avoid ingesting full function bodies unless actively modifying them or tracing call-site logic.
+- When full reads are needed, restrict to 100-line windows around target symbols.
 
 ### Smart Context Exclusions
 - **MANDATORY**: Exclude build/dist artifacts, lockfiles, and minified bundles.
+- Enforce `.copilotignore` patterns to block non-source artifacts from AI context.
 
 ### Unified Diff Formatting
 - **MANDATORY**: Always provide targeted unified diff chunks with ±3 lines of context.
@@ -64,26 +66,11 @@ A local `token-cache` MCP server caches answers on disk — cache hits cost zero
 ### Deterministic Prefix Caching
 - Maintain stable instruction prefix order across turns to maximize KV cache hits.
 
-### Comment & Header Stripping
-- Strip copyright headers and filler comments on ingestion.
+### License Header Stripping
+- Strip copyright license headers and preamble blocks on context ingestion. Preserve inline code comments.
 
 ### Test Failure Log Isolation
 - **MANDATORY**: Report only failing test lines, assertions, and line numbers.
-
-### Windowed Range Slicing
-- **MANDATORY**: Inspect 100-line windows around target symbols instead of full files.
-
-### Inline Chat Scope Pinning
-- **MANDATORY**: Restrict context to selected editor lines and direct references.
-
-### .copilotignore Compliance
-- **MANDATORY**: Never read or reference ignored paths.
-
-### Edit Session Awareness
-- **MANDATORY**: Do not re-read files already open in the active edit session.
-
-### Context Saturation Thread Reset
-- Surface a fresh-thread prompt when conversation exceeds 40 messages.
 
 ## Task-Type Routing
 

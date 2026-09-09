@@ -44,9 +44,12 @@ A local `token-cache` MCP server caches answers on disk — cache hits cost zero
 
 ### AST Skeleton Pruning (skeleton_view MCP)
 - Call `skeleton_view` before reading complete file contents to load signatures only.
+- Avoid ingesting full function bodies unless actively modifying them or tracing call-site logic.
+- When full reads are needed, restrict to 100-line windows around target symbols.
 
 ### Smart Context Exclusions
 - Exclude build bundles (dist/, build/), package lockfiles, and minified assets from AI prompt context.
+- Enforce `.copilotignore` patterns to block non-source artifacts from AI context.
 
 ### Unified Diff Output
 - Format code modifications as targeted unified diff chunks instead of whole-file rewrites.
@@ -63,26 +66,11 @@ A local `token-cache` MCP server caches answers on disk — cache hits cost zero
 ### Prompt Prefix Caching
 - Maintain deterministic, byte-identical prompt prefix blocks across turns to maximize cloud prompt caching discounts.
 
-### Comment & Header Stripper
-- Strip copyright headers, license preambles, and low-signal inline comments during context ingestion.
+### License Header Stripper
+- Strip copyright license headers and preamble blocks on context ingestion. Preserve inline code comments.
 
 ### Test Failure Log Isolation
 - Filter test suite logs to isolate failing assertions and line numbers, stripping out passing suites.
-
-### Windowed Range Slicing
-- Restrict file navigation to targeted 100-line slice windows around symbols.
-
-### Inline Chat Scope Pinning
-- Restrict VS Code inline chat context strictly to currently selected lines and their immediate 1-hop symbol references.
-
-### .copilotignore File Rules
-- Enforce `.copilotignore` patterns to block build outputs, secrets, environment files, and non-source artifacts from AI context.
-
-### Edit Session Awareness
-- Avoid re-reading or re-inspecting files that are already open and dirty in the active multi-file edit session.
-
-### Context Saturation Thread Reset
-- When a chat session exceeds 40 conversation turns, surface a clear recommendation to start a fresh chat thread to avoid attention degradation.
 
 ## Task-Specific Guidelines
 

@@ -3,7 +3,7 @@ name: "TokenShield Optimizer"
 description: >
   Token and cost optimization agent. Use this agent to analyze
   prompt efficiency, suggest context pruning, and enforce the
-  19 optimization features.
+  20 optimization features.
 tools:
   - search/codebase
   - terminal

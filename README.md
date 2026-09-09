@@ -56,7 +56,7 @@ TokenShield comes equipped with 20 modular optimizations, active right out of th
 | 10 | **Routing** | **Smart Model Routing** | Routes routine tasks (formatting, typos, minor edits) to lighter models | **Up to 99% cost reduction** |
 | 11 | **Git Scope** | **Git Diff Scoping** | Scopes code reviews and unit test generation strictly to git diff lines | **~85% context reduction** |
 | 12 | **Cloud Cache** | **Prompt Prefix Caching** | Maintains byte-stable instruction prefixes to unlock cloud KV cache hits | **Up to 90% cloud discounts** |
-| 13 | **Minifier** | **Comment & Header Stripper** | Strips license preambles and low-signal filler comments on file reads | **~30%** context reduction |
+| 13 | **Minifier** | **License Header Stripper** | Strips copyright & license preambles (safe mode); preserves code comments | **15–30%** context reduction |
 | 14 | **Test Runner** | **Test Failure Isolator** | Captures failing assertions and stack traces while stripping passing suites | **~95%** test log compression |
 | 15 | **Range Slicer** | **Windowed Range Slicing** | Restricts large file reads to 100-line windows around symbol targets | **~80%** reduction on file lookups |
 | 16 | **Editor Scope** | **Inline Chat Scope Lock** | Constrains inline editor chat strictly to selected lines and dependencies | **~85%** prompt reduction |
@@ -64,6 +64,10 @@ TokenShield comes equipped with 20 modular optimizations, active right out of th
 | 18 | **Session Cache** | **Edit Session Awareness** | Treats files open in multi-file edit sessions as already loaded | Avoids redundant tool re-reads |
 | 19 | **Monitor** | **Context Saturation Monitor** | Proactively suggests a fresh chat thread when conversation exceeds 40 turns | Prevents quality degradation |
 | 20 | **CCR Engine** | **Headroom Reversible CCR** | Reversible context compression & SmartCrusher for massive JSON/logs with local retrieval | **60–95%** context reduction |
+
+> [!TIP]
+> **Directive Compaction (Prompt ROI Optimization)**: While all 20 strategies remain individually configurable in TokenShield's engine, generated instruction files (`AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`) output a streamlined, consolidated directive set (~35% smaller prompt footprint). Native editor behaviors (inline chat scoping, edit-session awareness, context saturation) are delegated to the host IDE, and complementary directives (range slicing into AST skeletons, `.copilotignore` into context exclusions) are merged to maximize cloud KV-cache efficiency and eliminate prompt overhead.
+
 
 ---
 
@@ -194,7 +198,6 @@ All commands are registered under the clean `tokenshield.*` namespace:
 | **TokenShield: Deactivate Completely** | `tokenshield.deactivateCompletely` | Cleanly strip all TokenShield directives from `.github`, `CLAUDE.md`, `AGENTS.md` |
 | **TokenShield: Reactivate All Optimizations** | `tokenshield.reactivate` | Re-inject all optimization directives and re-enable active strategies |
 | **TokenShield: Start New Session** | `tokenshield.newSession` | Archive current session savings to lifetime store and reset active counters |
-| **TokenShield: Show Session Breakdown** | `tokenshield.sessionBreakdown` | QuickPick breakdown of per-query savings events in current session |
 | **TokenShield: Reset Complete Data (Wipe All History)** | `tokenshield.resetAllData` | Wipe all lifetime history, archived sessions, and event logs from disk |
 | **TokenShield: Edit Context Exclusions** | `tokenshield.exclusions` | Interactive picker for build folder, lockfile, and bundle exclusions |
 | **TokenShield: Configure MCP Servers** | `tokenshield.configureMcp` | Auto-discover and configure MCP servers for VS Code, Claude, and Antigravity |
@@ -229,6 +232,7 @@ Configure TokenShield via `.vscode/settings.json` or user settings under the `to
   "tokenshield.configureMcpOnActivation": true,
   "tokenshield.telemetry.enabled": true,
   "tokenshield.verbosityLevel": "full",
+  "tokenshield.commentStrippingMode": "headers-only",
   "tokenshield.activeStrategies": {
     "codeGraph": true,
     "outputCompression": true,

@@ -2,6 +2,7 @@ import { TargetTool, StrategyState, ExtensionConfig } from '../core/config';
 import { MARKER_START, MARKER_END, MARKER_COMMENT, COPILOT_INSTRUCTIONS_PATH } from '../core/constants';
 import { BaseInstructionGenerator } from './base';
 import { isBinaryAvailable } from '../installer/installer';
+import { isHeadroomSdkAvailable } from '../strategies/adaptivePruner';
 
 export class CopilotGenerator extends BaseInstructionGenerator {
   readonly target: TargetTool = 'copilot';
@@ -49,15 +50,17 @@ export class CopilotGenerator extends BaseInstructionGenerator {
 - **FORBIDDEN**: NEVER query the full model if a valid cached response is available locally (100% token savings).`);
     }
 
+    // AST Skeleton: PREFERRED instead of FORBIDDEN — merged with rangeSlicing hint
     if (strategies.astSkeleton) {
       sections.push(`### AST Skeleton Pruning (skeleton_view MCP)
 - **MANDATORY**: When exploring unfamiliar or large files (>100 lines), ALWAYS invoke \`skeleton_view({ file: "path" })\` first to inspect signatures, interfaces, and types.
-- **FORBIDDEN**: NEVER ingest full implementation bodies unless you are directly editing that exact function (~90% context savings).`);
+- **PREFERRED**: Avoid ingesting full implementation bodies unless you are directly editing that exact function or need to understand call-site logic (~90% context savings).${strategies.rangeSlicing ? '\n- When full file reads are needed, restrict to 100-line windows around target symbols.' : ''}`);
     }
 
+    // Context Exclusion: merged with .copilotignore hint
     if (strategies.contextExclusion) {
       sections.push(`### Smart Context Exclusions
-- **MANDATORY**: Automatically omit lock files (\`package-lock.json\`, \`yarn.lock\`, \`pnpm-lock.yaml\`), build outputs (\`dist/\`, \`build/\`, \`.next/\`, \`out/\`), minified files (\`*.min.js\`, \`*.bundle.js\`), and binary files from prompt context.`);
+- **MANDATORY**: Automatically omit lock files (\`package-lock.json\`, \`yarn.lock\`, \`pnpm-lock.yaml\`), build outputs (\`dist/\`, \`build/\`, \`.next/\`, \`out/\`), minified files (\`*.min.js\`, \`*.bundle.js\`), and binary files from prompt context.${strategies.copilotIgnoreGeneration ? '\n- Enforce `.copilotignore` patterns to block build outputs, secrets, and non-source artifacts from AI context.' : ''}`);
     }
 
     if (strategies.diffOnlyOutput) {
@@ -88,9 +91,15 @@ export class CopilotGenerator extends BaseInstructionGenerator {
 - Maintain a deterministic, unchanging instruction prefix order across turns to maximize cloud KV-cache hit rates.`);
     }
 
+    // Comment stripping: respects commentStrippingMode setting
     if (strategies.commentStripper) {
-      sections.push(`### Comment & Header Stripping
+      if (config.commentStrippingMode === 'aggressive') {
+        sections.push(`### Comment & Header Stripping
 - Automatically strip copyright license headers and low-signal comments before ingesting files into context.`);
+      } else if (config.commentStrippingMode !== 'off') {
+        sections.push(`### License Header Stripping
+- Strip copyright license headers and preamble blocks before ingesting files. Preserve inline comments (they aid comprehension).`);
+      }
     }
 
     if (strategies.testFailureIsolator) {
@@ -98,32 +107,14 @@ export class CopilotGenerator extends BaseInstructionGenerator {
 - When executing test suites, filter terminal output to include ONLY failing assertion lines, file names, and stack traces. Omit passing tests.`);
     }
 
-    if (strategies.rangeSlicing) {
-      sections.push(`### Windowed Range Slicing
-- When inspecting large source files, restrict reads to 100-line windows around target symbols instead of loading the entire file.`);
-    }
+    // rangeSlicing is now merged into astSkeleton directive above
+    // inlineChatScopePinning removed: VS Code already handles this natively
+    // copilotIgnoreGeneration is now merged into contextExclusion directive above
+    // copilotEditsAwareness removed: all modern agents avoid re-reading open files
+    // threadResetTrigger removed: agent hosts handle context limits
 
-    if (strategies.inlineChatScopePinning) {
-      sections.push(`### Inline Chat Scope Pinning
-- Restrict VS Code inline chat context strictly to currently selected lines and their immediate 1-hop symbol references.`);
-    }
-
-    if (strategies.copilotIgnoreGeneration) {
-      sections.push(`### .copilotignore File Rules
-- Enforce \`.copilotignore\` patterns to block build outputs, secrets, environment files, and non-source artifacts from AI context.`);
-    }
-
-    if (strategies.copilotEditsAwareness) {
-      sections.push(`### Edit Session Awareness
-- Avoid re-reading or re-inspecting files that are already open and dirty in the active multi-file edit session.`);
-    }
-
-    if (strategies.threadResetTrigger) {
-      sections.push(`### Context Saturation Thread Reset
-- When a chat session exceeds 40 conversation turns, surface a clear recommendation to start a fresh chat thread to avoid attention degradation.`);
-    }
-
-    if (strategies.headroomCompression) {
+    // Headroom: only emit directive if SDK is actually available
+    if (strategies.headroomCompression && isHeadroomSdkAvailable()) {
       sections.push(`### Headroom Context Compression (CCR & SmartCrusher)
 - **MANDATORY**: For bulky tool outputs, API responses, or JSON data (>50 items), apply Headroom context compression or SmartCrusher schema compaction before injecting into prompt.
 - Use \`headroom_retrieve\` whenever precise uncompressed segments are required.

@@ -71,6 +71,7 @@ export abstract class BaseInstructionGenerator {
     const section = this.extractMarkedSection(newOptimizationBlock);
 
     if (startIdx !== -1 && endIdx !== -1) {
+      // Replace existing TokenShield section in-place
       const before = existing.substring(0, startIdx).trimEnd();
       const after = existing.substring(endIdx + MARKER_END.length).trimStart();
       const prefix = before.length > 0 ? before + '\n\n' : '';
@@ -78,11 +79,13 @@ export abstract class BaseInstructionGenerator {
       return prefix + section + suffix;
     }
 
+    // No existing section: place TokenShield block at the TOP for KV-cache prefix alignment.
+    // Stable prefixes maximize cloud provider prompt caching (50-90% input cost savings).
     const trimmed = existing.trim();
     if (trimmed.length === 0) {
       return section + '\n';
     }
-    return trimmed + '\n\n' + section + '\n';
+    return section + '\n\n' + trimmed + '\n';
   }
 
   public stripMarkedSection(content: string): string {

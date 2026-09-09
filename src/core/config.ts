@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 export type Profile = 'full' | 'debug' | 'planning' | 'review' | 'custom';
 export type VerbosityLevel = 'light' | 'full' | 'ultra';
 export type TargetTool = 'copilot' | 'claude' | 'codex' | 'antigravity';
+export type CommentStrippingMode = 'headers-only' | 'aggressive' | 'off';
 
 export interface StrategyState {
   codeGraph: boolean;
@@ -71,6 +72,7 @@ export interface ExtensionConfig {
   useVscodeStorage: boolean;
   githubStructureMode: GithubStructureMode;
   generateAgentFiles: boolean;
+  commentStrippingMode: CommentStrippingMode;
 }
 
 export const DEFAULT_PRICING: PricingTable = {
@@ -85,7 +87,7 @@ export const PROFILE_STRATEGIES: Record<Profile, StrategyState> = {
     sessionManagement: true, semanticCache: true,
     astSkeleton: true, contextExclusion: true, diffOnlyOutput: true,
     agentGuardrails: true, smartModelRouting: true,
-    gitDiffContext: true, kvCacheAlignment: true, commentStripper: true,
+    gitDiffContext: true, kvCacheAlignment: true, commentStripper: true,  // mode controlled by commentStrippingMode setting
     testFailureIsolator: true, rangeSlicing: true,
     inlineChatScopePinning: true, copilotIgnoreGeneration: true,
     copilotEditsAwareness: true, threadResetTrigger: true,
@@ -107,7 +109,7 @@ export const PROFILE_STRATEGIES: Record<Profile, StrategyState> = {
     sessionManagement: true, semanticCache: true,
     astSkeleton: true, contextExclusion: true, diffOnlyOutput: true,
     agentGuardrails: false, smartModelRouting: true,
-    gitDiffContext: true, kvCacheAlignment: true, commentStripper: true,
+    gitDiffContext: true, kvCacheAlignment: true, commentStripper: true,  // mode controlled by commentStrippingMode setting
     testFailureIsolator: false, rangeSlicing: true,
     inlineChatScopePinning: true, copilotIgnoreGeneration: true,
     copilotEditsAwareness: true, threadResetTrigger: true,
@@ -118,7 +120,7 @@ export const PROFILE_STRATEGIES: Record<Profile, StrategyState> = {
     sessionManagement: false, semanticCache: true,
     astSkeleton: true, contextExclusion: true, diffOnlyOutput: true,
     agentGuardrails: true, smartModelRouting: true,
-    gitDiffContext: true, kvCacheAlignment: true, commentStripper: true,
+    gitDiffContext: true, kvCacheAlignment: true, commentStripper: false,  // disabled for review: reviewers need comments for intent
     testFailureIsolator: true, rangeSlicing: true,
     inlineChatScopePinning: true, copilotIgnoreGeneration: true,
     copilotEditsAwareness: true, threadResetTrigger: true,
@@ -162,6 +164,7 @@ export function getConfig(): ExtensionConfig {
     useVscodeStorage: config.get<boolean>('useVscodeStorage', true),
     githubStructureMode: config.get<GithubStructureMode>('githubStructureMode', 'auto'),
     generateAgentFiles: config.get<boolean>('generateAgentFiles', false),
+    commentStrippingMode: config.get<CommentStrippingMode>('commentStrippingMode', 'headers-only'),
   };
 }
 

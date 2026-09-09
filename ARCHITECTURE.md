@@ -1,9 +1,9 @@
 # TokenShield — Architecture Document
 
-**Version:** 0.1.0  
-**Date:** June 2026  
-**Type:** VS Code Extension  
-**Source:** `ai-token-optimizer-vscode/`
+**Version:** 1.0.17  
+**Date:** September 2026  
+**Type:** Universal AI Token & Cost Optimizer Extension  
+**Source:** `tokenshield/`
 
 This document describes the internal architecture, component interactions, data flows, and design decisions of the **TokenShield** extension.
 
@@ -11,14 +11,16 @@ This document describes the internal architecture, component interactions, data 
 
 ## 1. Overview
 
-TokenShield is a VS Code extension that reduces LLM token consumption for Claude Code, GitHub Copilot, and OpenAI Codex. It operates through two complementary mechanisms:
+TokenShield is an efficiency platform and IDE extension that reduces LLM token consumption across Google Antigravity IDE, GitHub Copilot, Cursor, Windsurf, Claude Code, and OpenAI Codex. It operates through three complementary mechanisms:
 
 | Mechanism | How it works | Requires binary? |
 |---|---|---|
-| **Instruction file injection** | Writes optimization rules into `.github/copilot-instructions.md`, `CLAUDE.md`, `.codex/instructions.md`, `AGENTS.md` | No |
-| **Tool integration** | Installs/configures CodeGraph (semantic indexing) and RTK (CLI output compression) | Yes |
+| **Instruction file injection** | Writes optimization rules into `AGENTS.md`, `.agents/rules/tokenshield.md`, `.github/copilot-instructions.md`, `CLAUDE.md`, `.codex/instructions.md` | No |
+| **Local MCP servers** | Configures 100% on-device MCP servers: `token-cache` (AST skeletons, semantic cache, context pruning), `headroom` (reversible CCR), `codegraph` (symbol exploration) | Node.js (for built-in server) |
+| **CLI tool integration** | Installs/configures CodeGraph (semantic indexing) and RTK (CLI output compression) | Yes |
 
-The instruction-file approach is the primary mechanism and works immediately on any workspace. Tool integration provides deeper savings when the binaries are available.
+The instruction-file approach is the primary zero-overhead mechanism and works immediately on any workspace. Local MCP and tool integration provide deeper structural and runtime savings.
+
 
 ---
 
@@ -69,6 +71,7 @@ graph TB
         GEN_CP["generators/copilot.ts\n(→ .github/copilot-instructions.md)"]
         GEN_CL["generators/claude.ts\n(→ CLAUDE.md)"]
         GEN_CD["generators/codex.ts\n(→ .codex/instructions.md)"]
+        GEN_AG["generators/antigravity.ts\n(→ AGENTS.md & .agents/rules/)"]
         GEN_BASE["generators/base.ts\n(Marker merge + abstract sections)"]
     end
 
@@ -97,6 +100,7 @@ graph TB
         CP_FILE[".github/copilot-instructions.md"]
         CL_FILE["CLAUDE.md"]
         CD_FILE[".codex/instructions.md"]
+        AG_FILE["AGENTS.md & .agents/rules/tokenshield.md"]
         CAV_FILE[".cavemanrc  (verbosity hints)"]
         VS_SETTINGS[".vscode/settings.json\n(MCP: token-cache + headroom)"]
         CG_DIR[".codegraph/  (CodeGraph index)"]
@@ -120,11 +124,12 @@ graph TB
     EXT --> DASH
     EXT --> PP
 
-    GEN_IDX --> GEN_CP & GEN_CL & GEN_CD
-    GEN_CP & GEN_CL & GEN_CD --> GEN_BASE
+    GEN_IDX --> GEN_CP & GEN_CL & GEN_CD & GEN_AG
+    GEN_CP & GEN_CL & GEN_CD & GEN_AG --> GEN_BASE
     GEN_CP --> CP_FILE
     GEN_CL --> CL_FILE
     GEN_CD --> CD_FILE
+    GEN_AG --> AG_FILE
 
     INST --> PM
     INST --> CAV_FILE
@@ -164,26 +169,29 @@ flowchart TD
     I --> J([Extension Ready])
 ```
 
-**11 registered commands:**
+**Core Registered Commands (`tokenshield.*`):**
 
-| Command ID | Title |
-|---|---|
-| `tokenshield.toggle` | Enable / Disable TokenShield |
-| `tokenshield.switchProfile` | Select Optimization Profile |
-| `tokenshield.regenerate` | Regenerate Instruction Files |
-| `tokenshield.dashboard` | Show Savings Dashboard |
-| `tokenshield.reindex` | Reindex CodeGraph |
-| `tokenshield.validateGraph` | Validate CodeGraph Index |
-| `tokenshield.healthCheck` | **Validate All Strategies** |
-| `tokenshield.setupTools` | Install Optimization Tools |
-| `tokenshield.manageProjects` | Manage CodeGraph Projects |
-| `tokenshield.configureMcp` | Configure MCP Servers |
+| Command ID | Title | Purpose |
+|---|---|---|
+| `tokenshield.hub` | Open Control Hub | QuickPick master control hub for profiles, toggles, and status |
+| `tokenshield.toggle` | Toggle On/Off | Globally enable or pause all TokenShield optimizations |
+| `tokenshield.toggleFeature` | Toggle Feature (1-Click Switch) | Interactive QuickPick to toggle any of the 20 features |
+| `tokenshield.switchProfile` | Select Optimization Profile | Switch between Full, Debug, Planning, Review, and Custom |
+| `tokenshield.dashboard` | Open Savings Dashboard | Webview dashboard with real-time tokens & spend saved |
+| `tokenshield.healthCheck` | Run Health Check | Diagnostic validation across all 20 strategies and local tools |
+| `tokenshield.regenerate` | Regenerate Instruction Files | Re-emit optimized directives to `AGENTS.md`, `CLAUDE.md`, `.github/` |
+| `tokenshield.exclusions` | Edit Context Exclusions | Interactive manager for `.copilotignore` and folder exclusions |
+| `tokenshield.newSession` | Start New Session | Archive current session savings to disk and reset active counters |
+| `tokenshield.setupTools` | Setup CLI Tools | Check and install companion binaries (`@colbymchenry/codegraph`, `rtk`) |
+| `tokenshield.configureMcp` | Configure MCP Servers | Wire on-device MCP servers in VS Code, Antigravity, and Claude |
+| `tokenshield.reindex` | Reindex Code Graph | Manually trigger AST symbol reindexing in `.codegraph/` |
+| `tokenshield.exportReport` | Export Savings Report | Export verified savings telemetry in Markdown, JSON, or CSV |
 
 ---
 
 ## 5. Configuration & Profiles (`config.ts`)
 
-Four built-in profiles enforce quality-trade-off constraints across all **19 optimization strategies**:
+Built-in profiles enforce quality-trade-off constraints across all **20 modular optimization strategies**:
 
 | # | Strategy Key | Feature Name | Full | Debug | Planning | Review |
 |---|---|---|:---:|:---:|:---:|:---:|
@@ -196,19 +204,43 @@ Four built-in profiles enforce quality-trade-off constraints across all **19 opt
 | 7 | `contextExclusion` | Smart Context Exclusions | ✓ | ✓ | ✓ | ✓ |
 | 8 | `diffOnlyOutput` | Diff-Only Output | ✓ | ✗ | ✓ | ✓ |
 | 9 | `agentGuardrails` | Autonomous Loop Guardrails | ✓ | ✓ | ✗ | ✓ |
-| 10 | `smartModelRouting` | Smart Model Routing | ✓ | ✓ | ✓ | ✓ |
+| 10 | `smartModelRouting` | Smart Model Routing (Dynamic Pricing) | ✓ | ✓ | ✓ | ✓ |
 | 11 | `gitDiffContext` | Git Diff Scoping | ✓ | ✓ | ✓ | ✓ |
-| 12 | `kvCacheAlignment` | Prompt Prefix Caching | ✓ | ✓ | ✓ | ✓ |
-| 13 | `commentStripper` | Comment & Header Stripping | ✓ | ✗ | ✓ | ✓ |
+| 12 | `kvCacheAlignment` | Prompt Prefix Caching (Top Placement) | ✓ | ✓ | ✓ | ✓ |
+| 13 | `commentStripper` | License Header / Comment Stripper | ✓ | ✗ | ✓ | ✗ |
 | 14 | `testFailureIsolator` | Test Failure Isolator | ✓ | ✓ | ✗ | ✓ |
 | 15 | `rangeSlicing` | Windowed Range Slicing | ✓ | ✓ | ✓ | ✓ |
 | 16 | `inlineChatScopePinning` | Inline Chat Scope Lock | ✓ | ✓ | ✓ | ✓ |
 | 17 | `copilotIgnoreGeneration` | .copilotignore File Rules | ✓ | ✓ | ✓ | ✓ |
 | 18 | `copilotEditsAwareness` | Edit Session Awareness | ✓ | ✓ | ✓ | ✓ |
 | 19 | `threadResetTrigger` | Context Saturation Thread Reset | ✓ | ✗ | ✓ | ✓ |
+| 20 | `headroomCompression` | Headroom Reversible CCR | ✓ | ✗ | ✓ | ✓ |
 
-- **`custom` profile**: User toggles each of the 19 strategies independently.
-- **`codeGraphProjects`** — array of `{ name, path, enabled }` objects in workspace settings. When empty, all workspace folders are indexed.
+- **`custom` profile**: User toggles each of the 20 strategies independently.
+- **`commentStrippingMode`**: Configured via `tokenshield.commentStrippingMode`:
+  - `'headers-only'` (Default): Strips copyright license headers and preambles only, preserving inline comments to protect LLM bug-fixing and code reasoning accuracy.
+  - `'aggressive'`: Strips both license headers and inline filler comments.
+  - `'off'`: Preserves all comments and headers.
+  - *Note for Review Profile*: Disabled by default (`✗`) because code reviewers require developer comments to understand intent.
+- **`codeGraphProjects`**: Array of `{ name, path, enabled }` objects in workspace settings. When empty, all workspace folders are indexed.
+
+### Directive Compaction & Prompt ROI Optimization
+
+To eliminate negative-ROI prompt bloat, the instruction generators (`copilot.ts`, `claude.ts`, `codex.ts`, `antigravity.ts`) do not emit raw 1:1 directive blocks for all 20 strategies. Instead, directives are consolidated to minimize instruction token overhead (~35% smaller):
+
+1. **Host-Delegated Directives (Omitted from prompt text)**:
+   - `inlineChatScopePinning`: Handled natively by VS Code / Cursor inline chat scoping.
+   - `copilotEditsAwareness`: Modern agent hosts natively track multi-file edit buffers.
+   - `threadResetTrigger`: Context saturation warnings are managed by host agent limits rather than static prompt directives.
+2. **Merged Directives**:
+   - `rangeSlicing`: Merged into `astSkeleton` guidance ("When full reads are needed, restrict to 100-line windows around target symbols").
+   - `copilotIgnoreGeneration`: Merged into `contextExclusion` guidance ("Enforce `.copilotignore` patterns...").
+3. **Softened Guidance**:
+   - `astSkeleton`: Changed from strict `FORBIDDEN` to `PREFERRED: Avoid ingesting full function bodies unless actively modifying them or tracing call-site logic`, preventing LLMs from refusing to read implementations during debugging.
+4. **Conditional Gating**:
+   - `headroomCompression`: Only emitted if `headroom-ai` SDK is verified installed via `isHeadroomSdkAvailable()`, preventing LLMs from attempting to call missing MCP tools.
+5. **Real Pricing Model**:
+   - `smartModelRouting`: Model savings in `getStats()` are computed using actual rates from `ExtensionConfig.pricing` (`PricingTable`) and estimated tokens per task, rather than hardcoded flat estimates.
 
 ---
 
@@ -382,8 +414,8 @@ flowchart LR
         K -- Yes --> M{preserveExisting?}
         M -- No --> N[Overwrite entire file]
         M -- Yes --> O{Markers found?}
-        O -- Yes --> P[Replace only the\nSTART…END block]
-        O -- No --> Q[Append marker block\nafter existing content]
+        O -- Yes --> P[Replace only the\nSTART…END block in-place]
+        O -- No --> Q[Prepend marker block at TOP\nfor KV-cache prefix alignment]
     end
 
     A --> B
@@ -392,13 +424,12 @@ flowchart LR
     P & Q & L & N --> S([File written])
 ```
 
-### Marker Format
+### Marker Format & KV-Cache Prefix Alignment
+
+When injecting into an existing instruction file that has no TokenShield markers, TokenShield places the managed block at the **TOP** of the file. Cloud LLM providers (Anthropic Claude, OpenAI, Google Gemini) match prompt cache prefixes from the first token forward. Maintaining a byte-stable prefix at the start of instruction files maximizes KV-cache hit rates (50–90% cost discounts) across all subsequent requests.
 
 ```
-# Your existing instructions       ← Always preserved
-Your custom rules here...
-
-<!-- TOKENSHIELD:START -->   ← Managed block begin
+<!-- TOKENSHIELD:START -->   ← Managed block at TOP for KV-cache prefix hits
 <!-- TokenShield: AI Token & Cost Optimizer. Managed block - do not edit manually. -->
 
 ## Token Efficiency Standards
@@ -414,7 +445,8 @@ Your custom rules here...
 
 <!-- TOKENSHIELD:END -->     ← Managed block end
 
-# Your footer content              ← Always preserved
+# Your existing instructions       ← Always preserved below prefix block
+Your custom rules here...
 ```
 
 ---

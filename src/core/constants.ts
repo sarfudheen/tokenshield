@@ -72,7 +72,7 @@ export const STRATEGY_DESCRIPTIONS: Record<string, string> = {
   smartModelRouting:       'Smart Model Routing — route routine edits to faster, cost-effective models',
   gitDiffContext:          'Git Diff Scoping — restrict review/test context to changed lines and callers',
   kvCacheAlignment:        'Prompt Prefix Caching — align stable system prompt prefixes for cloud KV caching',
-  commentStripper:         'Comment & Header Stripping — strip license headers and filler comments on ingestion',
+  commentStripper:         'License Header Stripper — strip copyright preambles while preserving inline code comments',
   testFailureIsolator:     'Test Failure Isolator — extract failing assertions and line numbers from test logs',
   rangeSlicing:            'Windowed Range Slicing — restrict file reads to 100-line windows around symbols',
   inlineChatScopePinning:  'Inline Chat Scope Lock — pin inline editor chat to active selection and 1-hop refs',
@@ -95,7 +95,7 @@ export const STRATEGY_CAP_LABELS: Record<string, string> = {
   smartModelRouting:       'Model Routing',
   gitDiffContext:          'Git Diff',
   kvCacheAlignment:        'Prefix Cache',
-  commentStripper:         'Comment Stripper',
+  commentStripper:         'Header Stripper',
   testFailureIsolator:     'Test Isolator',
   rangeSlicing:            'Range Slicing',
   inlineChatScopePinning:  'Inline Scope',
@@ -111,7 +111,7 @@ export const PROFILE_DESCRIPTIONS: Record<string, string> = {
   full: `$(zap) Full Optimization — all ${TOTAL_STRATEGIES} TokenShield strategies active`,
   debug: '$(bug) Debug Mode — output compression & diff-only disabled for full diagnostics',
   planning: '$(lightbulb) Planning Mode — verbosity & guardrails relaxed for deep architectural review',
-  review: '$(eye) Review Mode — session clearing preserved for full historical context',
+  review: '$(eye) Review Mode — session & comments preserved for complete context and review intent',
   custom: '$(gear) Custom — customized TokenShield strategy set',
 };
 

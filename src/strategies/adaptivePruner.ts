@@ -100,28 +100,35 @@ export function pruneContext(text: string, options: PruneOptions = {}): PruneRes
 
 /**
  * Comment & Header Stripper
- * Removes license preambles, verbose copyright notices, and inline comments
+ * Removes license preambles, verbose copyright notices, and optionally inline comments
  * while preserving critical compiler annotations and type declarations.
+ *
+ * @param headersOnly When true, only strips license/copyright header blocks.
+ *   Research shows full comment stripping can degrade LLM accuracy by up to 3x
+ *   on bug-fixing tasks (arXiv 2025). Default: false for backward compatibility.
  */
-export function stripCommentsAndHeaders(code: string): string {
+export function stripCommentsAndHeaders(code: string, headersOnly = false): string {
   if (!code) { return ''; }
 
   let output = code;
 
-  // 1. Strip top-level license & copyright blocks
+  // 1. Strip top-level license & copyright blocks (always safe)
   output = output.replace(/^\/\*[\s\S]*?(?:license|copyright|all rights reserved)[\s\S]*?\*\/\s*/im, '');
 
-  // 2. Strip standalone line comments (keep directives like @ts-, eslint, istanbul)
-  output = output.replace(/^\s*\/\/(?!\s*(?:@ts-|eslint-|istanbul|\/ <reference))\s+.*$/gm, '');
+  if (!headersOnly) {
+    // 2. Strip standalone line comments (keep directives like @ts-, eslint, istanbul)
+    output = output.replace(/^\s*\/\/(?!\s*(?:@ts-|eslint-|istanbul|\/ <reference))\s+.*$/gm, '');
 
-  // 3. Strip multi-line block comments that are not JSDoc type declarations
-  output = output.replace(/\/\*(?!\*|\s*@)[\s\S]*?\*\//g, '');
+    // 3. Strip multi-line block comments that are not JSDoc type declarations
+    output = output.replace(/\/\*(?!\*|\s*@)[\s\S]*?\*\//g, '');
 
-  // 4. Strip trailing line comments
-  output = output.replace(/\s*\/\/(?!\s*(?:@ts-|eslint-)).*$/gm, '');
+    // 4. Strip trailing line comments
+    output = output.replace(/\s*\/\/(?!\s*(?:@ts-|eslint-)).*$/gm, '');
+  }
 
   return output.replace(/\n{3,}/g, '\n\n').trim();
 }
+
 
 /**
  * Git Diff-Scoped Context Compressor
@@ -307,3 +314,16 @@ export function compressWithHeadroomSdk(text: string): string | null {
   return null;
 }
 
+/**
+ * Checks whether the headroom-ai SDK is available at runtime.
+ * Used by generators to avoid emitting Headroom directives that would cause
+ * the LLM to waste ~400 tokens per failed tool call when the SDK is absent.
+ */
+export function isHeadroomSdkAvailable(): boolean {
+  try {
+    require.resolve('headroom-ai');
+    return true;
+  } catch {
+    return false;
+  }
+}
