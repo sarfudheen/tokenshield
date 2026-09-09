@@ -16,8 +16,9 @@ Comprehensive installation, configuration, and verification guide for **TokenShi
 ---
 
 ## 📦 Method 1: Installing the Extension (VSIX)
-
-The extension bundle is distributed as a self-contained `.vsix` archive (e.g. `tokenshield-1.0.17.vsix`).
+ 
+The extension bundle is distributed as a self-contained `.vsix` archive (e.g. `tokenshield-1.0.17.vsix`), downloadable directly from:
+👉 **[GitHub Releases (Latest)](https://github.com/sarfudheen/tokenshield/releases/latest)** (expand **Assets** to download `.vsix`)
 
 ### A. Google Antigravity IDE
 

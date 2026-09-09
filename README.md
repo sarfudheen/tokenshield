@@ -71,9 +71,17 @@ TokenShield comes equipped with 20 modular optimizations, active right out of th
 
 For detailed step-by-step setup, companion tool installation, and team configuration, see the [Full Installation Guide](INSTALLATION.md).
 
-### Quick Install (VSIX)
+### 📥 Download VSIX
 
-The latest package is `tokenshield-1.0.17.vsix`:
+Download the latest `.vsix` binary from GitHub Releases (under **Assets**):
+
+👉 **[Download Latest VSIX Release](https://github.com/sarfudheen/tokenshield/releases/latest)**
+
+*(Or download specific versions from [All Releases](https://github.com/sarfudheen/tokenshield/releases).)*
+
+### ⚡ Quick Install (VSIX)
+
+Once downloaded, install the `.vsix` package into your editor:
 
 #### 1. Google Antigravity IDE
 1. Open Antigravity IDE.

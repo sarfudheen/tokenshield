@@ -70,6 +70,7 @@ const PROFILE_COMMAND = 'tokenshield.switchProfile';
 const EXCLUSIONS_COMMAND = 'tokenshield.exclusions';
 const RESET_COMMAND = 'tokenshield.newSession';
 const RESET_ALL_COMMAND = 'tokenshield.resetAllData';
+const HEALTH_COMMAND = 'tokenshield.healthCheck';
 
 interface DashboardMeasurements {
   codeGraph: Measurement;
@@ -248,6 +249,7 @@ export class DashboardPanel {
           EXCLUSIONS_COMMAND,
           RESET_COMMAND,
           RESET_ALL_COMMAND,
+          HEALTH_COMMAND,
         ],
       }
     );
@@ -589,13 +591,38 @@ export class DashboardPanel {
     const pct = reductionPercent || 25;
 
     if (directive === 'CLI Output Compression') {
+      let beforeContent = '';
+      let afterContent = '';
+      let explanation = '';
+      let language = 'shell';
+      const cmd = src.toLowerCase();
+
+      if (cmd.includes('diff')) {
+        language = 'diff';
+        explanation = `Filtered raw commit hashes, index lines, and unmodified context lines from ${src} (-${pct}% tokens avoided). Measured on-device by RTK.`;
+        beforeContent = `$ ${src} (unfiltered terminal stream)\ndiff --git a/src/index.ts b/src/index.ts\nindex 8a3f120..bc914e2 100644\n--- a/src/index.ts\n+++ b/src/index.ts\n// ... lines 1 to 140 unmodified context lines ...\n@@ -141,6 +141,8 @@ export function process() {\n-  const oldVal = 1;\n+  const newVal = 2;\n// ... 210 lines of trailing unmodified file context ...\n[... +${saved.toLocaleString()} tokens of raw commit hashes and unchanged diff context stripped ...]`;
+        afterContent = `$ ${src} [TokenShield RTK Active]\n--- a/src/index.ts\n+++ b/src/index.ts\n@@ -141,6 +141,8 @@\n-  const oldVal = 1;\n+  const newVal = 2;\n(${saved.toLocaleString()} unchanged context & index tokens stripped before prompt ingestion)`;
+      } else if (cmd.includes('status')) {
+        explanation = `Stripped git status guide hints, upstream tracking banners, and untracked noise from ${src} (-${pct}% tokens avoided). Measured on-device by RTK.`;
+        beforeContent = `$ ${src} (unfiltered terminal stream)\nOn branch master\nYour branch is up to date with 'origin/master'.\n\nChanges to be committed:\n  (use "git restore --staged <file>..." to unstage)\n\tmodified:   src/index.ts\n\nUntracked files:\n  (use "git add <file>..." to include in what will be committed)\n\t[... +${saved.toLocaleString()} tokens of untracked files & git instruction banners omitted ...]`;
+        afterContent = `$ ${src} [TokenShield RTK Active]\nM src/index.ts\n(Verbose git status instructions & untracked noise stripped before LLM ingestion)`;
+      } else if (cmd.includes('rg') || cmd.includes('grep')) {
+        explanation = `Stripped repetitive search output lines, ANSI highlights, and redundant file paths from ${src} (-${pct}% tokens avoided). Measured on-device by RTK.`;
+        beforeContent = `$ ${src} (unfiltered terminal stream)\n\\x1b[35msrc/core/config.ts\\x1b[0m:\\x1b[32m42\\x1b[0m: export function getConfig()\n\\x1b[35msrc/core/config.ts\\x1b[0m:\\x1b[32m89\\x1b[0m: const config = getConfig()\n[... +${saved.toLocaleString()} tokens of ANSI sequences and repeated file path headers omitted ...]`;
+        afterContent = `$ ${src} [TokenShield RTK Active]\nsrc/core/config.ts:42: export function getConfig()\nsrc/core/config.ts:89: const config = getConfig()\n(Stripped ANSI codes & path duplicates; +${saved.toLocaleString()} tokens avoided)`;
+      } else {
+        explanation = `Filtered terminal ANSI escape sequences, spinner progress junk, and non-failing test suites from ${src} (-${pct}% tokens avoided). Measured on-device by RTK.`;
+        beforeContent = `$ ${src} (unfiltered terminal stream)\n\\x1b[32m✔ Loaded test suites\\x1b[0m\n\\x1b[90m PASS \\x1b[0m test/suite/cache.test.ts (24ms)\n\\x1b[90m PASS \\x1b[0m test/suite/callLog.test.ts (18ms)\n\\x1b[90m PASS \\x1b[0m test/suite/session.test.ts (15ms)\n\\x1b[90m PASS \\x1b[0m test/suite/pruner.test.ts (19ms)\n[... +${saved.toLocaleString()} tokens of ANSI sequences, progress spinners, and passing suites omitted ...]\nTests: All passed\nTime: 1.42s`;
+        afterContent = `$ ${src} [TokenShield RTK Active]\n✓ Tests passed.\n(Terminal noise, progress spinners & ANSI sequences dropped before prompt ingestion)`;
+      }
+
       return {
         beforeTitle: `RAW TERMINAL STREAM (${beforeTokens.toLocaleString()} tok)`,
         afterTitle: `RTK FILTERED PROMPT (${afterTokens.toLocaleString()} tok)`,
-        language: 'shell',
-        explanation: `Filtered terminal ANSI escape sequences, spinner progress junk, and non-failing test suites before prompt ingestion (-${pct}% tokens avoided).`,
-        beforeContent: `$ ${src} (unfiltered terminal stream)\n\\x1b[32m✔ Loaded 14 test suites\\x1b[0m\n\\x1b[90m PASS \\x1b[0m test/suite/cache.test.ts (24ms)\n\\x1b[90m PASS \\x1b[0m test/suite/callLog.test.ts (18ms)\n\\x1b[90m PASS \\x1b[0m test/suite/session.test.ts (15ms)\n\\x1b[90m PASS \\x1b[0m test/suite/pruner.test.ts (19ms)\n\\x1b[90m PASS \\x1b[0m test/suite/strategies.test.ts (21ms)\n[... +${saved.toLocaleString()} tokens of ANSI sequences, progress spinners, and passing suites omitted ...]\nTest Suites: 14 passed, 14 total\nTests: 52 passed, 52 total\nTime: 1.42s`,
-        afterContent: `$ ${src} [TokenShield RTK Active]\n✓ All 14 test suites passed (52 tests) in 1.42s.\n(Terminal noise, progress spinners & ANSI sequences dropped before prompt ingestion)`
+        language,
+        explanation,
+        beforeContent,
+        afterContent
       };
     }
 
@@ -2054,6 +2081,7 @@ export class DashboardPanel {
       <button class="btn-reactivate" onclick="reactivate()">▶ Reactivate</button>
       `}
       <a class="btn" href="command:${REFRESH_COMMAND}">↻ Refresh Stats</a>
+      <a class="btn" href="command:${HEALTH_COMMAND}">🩺 Health Check</a>
       <a class="btn" href="command:${RESET_COMMAND}">🔄 Reset / New Session</a>
       <a class="btn" href="command:${RESET_ALL_COMMAND}" style="border-color:rgba(239, 68, 68, 0.4); color:#fca5a5;">🗑️ Reset Complete Data</a>
       <a class="btn btn-primary" href="command:${EXPORT_COMMAND}">⬇ Export Savings Report</a>

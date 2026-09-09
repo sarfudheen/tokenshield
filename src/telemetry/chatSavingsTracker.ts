@@ -50,6 +50,8 @@ class ChatSavingsTracker {
 
   private lastRtkCommandCount = 0;
   private lastRtkSavedTokens = 0;
+  private lastRtkTotalInput = 0;
+  private lastRtkTotalOutput = 0;
   private rtkInitialized = false;
 
   constructor() {
@@ -267,6 +269,8 @@ class ChatSavingsTracker {
       const summary = data?.summary;
       if (!summary || typeof summary.total_saved !== 'number') { return; }
 
+      const totalInput = typeof summary.total_input === 'number' ? summary.total_input : 0;
+      const totalOutput = typeof summary.total_output === 'number' ? summary.total_output : 0;
       const totalSaved = summary.total_saved;
       const totalCmds = summary.total_commands || 0;
       const avgPct = summary.avg_savings_pct ? Math.round(summary.avg_savings_pct) : 23;
@@ -276,25 +280,49 @@ class ChatSavingsTracker {
         this.rtkInitialized = true;
         this.lastRtkSavedTokens = totalSaved;
         this.lastRtkCommandCount = totalCmds;
+        this.lastRtkTotalInput = totalInput;
+        this.lastRtkTotalOutput = totalOutput;
         return;
       }
 
       const deltaTokens = totalSaved - this.lastRtkSavedTokens;
       const deltaCmds = totalCmds - this.lastRtkCommandCount;
+      const rawDeltaInput = totalInput - this.lastRtkTotalInput;
+      const rawDeltaOutput = totalOutput - this.lastRtkTotalOutput;
 
       if (deltaTokens > 0 && deltaCmds > 0) {
         this.lastRtkSavedTokens = totalSaved;
         this.lastRtkCommandCount = totalCmds;
+        this.lastRtkTotalInput = totalInput;
+        this.lastRtkTotalOutput = totalOutput;
+
+        let recentCmd = 'rtk CLI proxy';
+        try {
+          const histRes = spawnSync('rtk', ['gain', '-p', '-H'], {
+            cwd: wsPath,
+            encoding: 'utf-8',
+            timeout: 2000,
+            stdio: ['ignore', 'pipe', 'ignore'],
+          });
+          if (histRes.stdout) {
+            const match = histRes.stdout.match(/\d{2}-\d{2}\s+\d{2}:\d{2}\s+[^\s]+\s+(rtk[^\n\r]+?)\s+(-?\d+%)\s+\((\d+)\)/);
+            if (match && match[1]) {
+              recentCmd = match[1].trim();
+            }
+          }
+        } catch { /* fallback to default */ }
 
         const pct = avgPct > 0 && avgPct < 100 ? avgPct : 23;
-        const deltaInput = Math.max(deltaTokens + 1, Math.round(deltaTokens / (pct / 100)));
-        const deltaOutput = Math.max(0, deltaInput - deltaTokens);
+        const deltaInput = rawDeltaInput > 0 ? rawDeltaInput : Math.max(deltaTokens + 1, Math.round(deltaTokens / (pct / 100)));
+        const deltaOutput = rawDeltaOutput >= 0 ? rawDeltaOutput : Math.max(0, deltaInput - deltaTokens);
 
         this.recordEvent(
           'CLI Output Compression',
-          'rtk CLI proxy',
+          recentCmd,
           deltaTokens,
-          `Compressed ${deltaCmds} shell command(s) (git/test/build) output by ~${pct}%`,
+          deltaCmds === 1
+            ? `Compressed output of ${recentCmd} by ~${pct}%`
+            : `Compressed ${deltaCmds} shell command(s) (${recentCmd}) output by ~${pct}%`,
           true,
           deltaInput,
           deltaOutput,

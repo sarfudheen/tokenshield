@@ -139,7 +139,7 @@ async function buildMasterHubMarkdownTooltip(
   }
   md.appendMarkdown(`\n\n---\n\n`);
 
-  md.appendMarkdown(`[📊 Dashboard](command:tokenshield.dashboard) &nbsp;|&nbsp; [🔄 New Session](command:tokenshield.newSession) &nbsp;|&nbsp; [⚙️ Toggle Features](command:tokenshield.toggleFeature) &nbsp;|&nbsp; [⚡ Prune](command:tokenshield.pruneAndCopy)`);
+  md.appendMarkdown(`[📊 Dashboard](command:tokenshield.dashboard) &nbsp;|&nbsp; [🔄 New Session](command:tokenshield.newSession) &nbsp;|&nbsp; [⚙️ Toggle Features](command:tokenshield.toggleFeature) &nbsp;|&nbsp; [🩺 Health Check](command:tokenshield.healthCheck) &nbsp;|&nbsp; [⚡ Prune](command:tokenshield.pruneAndCopy)`);
 
   return md;
 }
@@ -158,6 +158,10 @@ async function showMasterHubQuickPick(): Promise<void> {
         label: `$(graph) Open Savings Dashboard`,
         description: 'View past sessions and optimization history',
       },
+      {
+        label: `$(pulse) Run Health Check`,
+        description: 'Verify tools, environment and directive status',
+      },
     ];
     const selected = await vscode.window.showQuickPick(items, {
       placeHolder: 'TokenShield is completely deactivated',
@@ -166,6 +170,8 @@ async function showMasterHubQuickPick(): Promise<void> {
     if (!selected) { return; }
     if (selected.label.includes('Reactivate')) {
       vscode.commands.executeCommand('tokenshield.reactivate');
+    } else if (selected.label.includes('Run Health Check')) {
+      vscode.commands.executeCommand('tokenshield.healthCheck');
     } else {
       vscode.commands.executeCommand('tokenshield.dashboard');
     }
@@ -188,6 +194,11 @@ async function showMasterHubQuickPick(): Promise<void> {
       detail: 'Fine-tune behavior without editing JSON settings.',
     },
     {
+      label: `$(pulse) Run Health Check (Validate 20 Strategies)`,
+      description: 'Verify tools, MCP servers, CodeGraph & directives',
+      detail: 'Runs diagnostics across all 20 strategies and outputs report.',
+    },
+    {
       label: `$(sync) Start New Session (Reset Current Counters)`,
       description: `Currently in Session #${sessionNum}`,
       detail: 'Archive current session savings to history and start counting from 0 tokens.',
@@ -201,11 +212,6 @@ async function showMasterHubQuickPick(): Promise<void> {
       label: `$(settings-gear) Switch Optimization Profile (Current: ${config.profile.toUpperCase()})`,
       description: 'Full · Debug · Planning · Review · Custom',
       detail: `Instantly toggle presets across all ${TOTAL_STRATEGIES} optimization features.`,
-    },
-    {
-      label: `$(cloud-download) Export Savings Report`,
-      description: 'CSV · JSON · Markdown',
-      detail: 'Generate clean token and cost reduction reports.',
     },
     {
       label: `$(circle-slash) Deactivate TokenShield Completely`,
@@ -225,14 +231,14 @@ async function showMasterHubQuickPick(): Promise<void> {
     vscode.commands.executeCommand('tokenshield.dashboard');
   } else if (selected.label.includes('Toggle Individual Features')) {
     vscode.commands.executeCommand('tokenshield.toggleFeature');
+  } else if (selected.label.includes('Run Health Check')) {
+    vscode.commands.executeCommand('tokenshield.healthCheck');
   } else if (selected.label.includes('Start New Session')) {
     vscode.commands.executeCommand('tokenshield.newSession');
   } else if (selected.label.includes('Reset Complete Data')) {
     vscode.commands.executeCommand('tokenshield.resetAllData');
   } else if (selected.label.includes('Switch Optimization Profile')) {
     vscode.commands.executeCommand('tokenshield.switchProfile');
-  } else if (selected.label.includes('Export Savings Report')) {
-    vscode.commands.executeCommand('tokenshield.exportReport');
   } else if (selected.label.includes('Deactivate TokenShield Completely')) {
     vscode.commands.executeCommand('tokenshield.deactivateCompletely');
   }

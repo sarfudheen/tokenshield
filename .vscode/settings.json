@@ -1,14 +1,6 @@
 {
   "mcp": {
     "servers": {
-      "context7": {
-        "command": "npx",
-        "args": [
-          "-y",
-          "@context7/mcp-server"
-        ],
-        "env": {}
-      },
       "token-cache": {
         "command": "node",
         "args": [
