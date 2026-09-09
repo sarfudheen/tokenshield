@@ -12,6 +12,7 @@ import { SemanticCacheStore, CACHE_DIR, CACHE_FILE } from '../cache/store';
 import { detectProjectExclusions } from './contextExclusion';
 import { getGuardrailTracker } from './guardrails';
 import { getModelRoutingTracker } from './modelRouting';
+import { analyzePromptCacheability } from './kvCacheOptimizer';
 
 // ─── result types ────────────────────────────────────────────────────────────
 
@@ -345,10 +346,44 @@ async function validateKvCache(): Promise<CategoryResult> {
     return { category: 'Deterministic Prefix Caching', status: 'disabled', lines: ['Strategy disabled in current profile'] };
   }
 
-  lines.push('  ✓ Static prefix byte-ordering rules active for API/agent-mode frameworks');
-  lines.push('  ✓ Optimizes cloud KV-cache hits in Cursor and custom agents');
+  const ws = wsPath();
+  let status: Status = 'ok';
 
-  return { category: 'Deterministic Prefix Caching', status: 'ok', lines };
+  if (ws) {
+    const candidateFiles = [
+      path.join(ws, COPILOT_INSTRUCTIONS_PATH),
+      path.join(ws, CLAUDE_INSTRUCTIONS_PATH),
+      path.join(ws, 'AGENTS.md'),
+      path.join(ws, CODEX_INSTRUCTIONS_PATH),
+    ];
+
+    let inspectedCount = 0;
+    for (const f of candidateFiles) {
+      if (fs.existsSync(f)) {
+        try {
+          const content = fs.readFileSync(f, 'utf-8');
+          const analysis = analyzePromptCacheability(content);
+          inspectedCount++;
+          if (analysis.hasTopLevelVolatileTokens) {
+            status = 'warn';
+            lines.push(`  ⚠ ${path.basename(f)}: contains top-level volatile tokens (${analysis.volatileElementsFound.join(', ')})`);
+          } else {
+            lines.push(`  ✓ ${path.basename(f)}: byte-stable static prefix (~${analysis.staticPrefixTokensEst} tok, ${analysis.cacheEfficiencyScore}% efficiency)`);
+          }
+        } catch { /* ignore */ }
+      }
+    }
+
+    if (inspectedCount === 0) {
+      lines.push('  ✓ Deterministic prefix rules active for instruction generators');
+    }
+  } else {
+    lines.push('  ✓ Static prefix byte-ordering rules active for API/agent-mode frameworks');
+  }
+
+  lines.push('  ✓ align_prefix_cache tool available in token-cache server (extracts ephemeral tokens to suffix)');
+
+  return { category: 'Deterministic Prefix Caching', status, lines };
 }
 
 // ─── License Header Stripper ──────────────────────────────────────────

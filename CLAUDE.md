@@ -90,7 +90,8 @@ This extension is **not in the LLM request path** — the actual model call and 
 - **MANDATORY**: Scope review & test tasks strictly to `git diff` lines + 1-hop callers.
 
 ### Deterministic Prefix Caching
-- Maintain stable instruction prefix order across turns to maximize KV cache hits.
+- Maintain a stable, byte-exact instruction prefix across turns to maximize cloud KV-cache hits (75–90% cost reduction).
+- Sink ephemeral turn metadata (timestamps, turn counters, run UUIDs) to the message suffix.
 
 ### License Header Stripping
 - Strip copyright license headers and preamble blocks. Preserve inline comments.

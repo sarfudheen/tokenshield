@@ -574,9 +574,11 @@ export class DashboardPanel {
       case 'Context Compaction':
         howItAvoided = 'Pruned multi-turn conversation memory, purging stale intermediate tool outputs while retaining task decisions.';
         break;
+      case 'Prefix Cache':
       case 'Prompt Prefix Caching':
       case 'Deterministic KV-Cache':
-        howItAvoided = 'Maintained deterministic instruction prefix order across turns to maximize cloud provider KV-cache hit rate.';
+      case 'Deterministic Prefix Caching':
+        howItAvoided = 'Aligned static instructions into byte-exact prefix blocks and moved volatile timestamps to suffix, unlocking 75–90% cloud KV-cache discounts.';
         break;
       case 'Windowed Range Slicing':
         howItAvoided = 'Constrained file reads to targeted 100-line slice windows around symbol declarations instead of loading full files.';
@@ -928,7 +930,7 @@ export class DashboardPanel {
       };
     }
 
-    if (directive === 'Prompt Prefix Caching' || directive === 'Deterministic KV-Cache') {
+    if (directive === 'Prompt Prefix Caching' || directive === 'Deterministic KV-Cache' || directive === 'Prefix Cache' || directive === 'Deterministic Prefix Caching') {
       return {
         beforeTitle: `UNALIGNED SYSTEM PROMPT (${beforeTokens.toLocaleString()} tok)`,
         afterTitle: `KV-CACHE ALIGNED PREFIX (${afterTokens.toLocaleString()} tok)`,

@@ -540,7 +540,20 @@ class ChatSavingsTracker {
     if (wsPath) {
       clearDiskEvents(wsPath);
       clearLifetimeData(wsPath);
+      try {
+        const callLogPath = path.join(wsPath, '.aicache', 'call-log.json');
+        if (fs.existsSync(callLogPath)) {
+          fs.unlinkSync(callLogPath);
+        }
+      } catch { /* ignore non-fatal filesystem error */ }
     }
+
+    try {
+      const headroomLedger = path.join(os.homedir(), '.headroom', 'savings_events.jsonl');
+      if (fs.existsSync(headroomLedger)) {
+        fs.writeFileSync(headroomLedger, '', 'utf-8');
+      }
+    } catch { /* ignore non-fatal filesystem error */ }
 
     this.events = [];
     this.knownEventIds.clear();

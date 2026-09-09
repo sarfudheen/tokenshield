@@ -9,9 +9,10 @@ import { CallLogStore } from '../cache/callLog';
 import { recordDiskEvent } from '../cache/eventLog';
 import { getFileSkeleton } from '../strategies/skeleton';
 import { pruneContext, compressGitDiff, isolateTestFailures, stripCommentsAndHeaders } from '../strategies/adaptivePruner';
+import { normalizePromptForCache, padToCacheBoundary } from '../strategies/kvCacheOptimizer';
 
 const SERVER_NAME = 'token-cache';
-const SERVER_VERSION = '0.4.0';
+const SERVER_VERSION = '0.5.0';
 const PROTOCOL_VERSION = '2024-11-05';
 
 const workspaceRoot = process.argv[2] || process.cwd();
@@ -129,6 +130,21 @@ const TOOL_DEFINITIONS = [
         log: { type: 'string', description: 'Raw terminal test runner output' },
       },
       required: ['log'],
+    },
+  },
+  {
+    name: 'align_prefix_cache',
+    description:
+      'Normalize system prompts and instructions for 75–90% cloud KV-cache discounts. ' +
+      'Extracts volatile timestamps, turn counters, and ephemeral UUIDs from the top of the context ' +
+      'and relocates them to the suffix, guaranteeing a 100% byte-stable static prefix.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        text: { type: 'string', description: 'The prompt or system instructions to normalize for prefix caching' },
+        padToBlock: { type: 'boolean', description: 'Whether to pad the static prefix to 1,024-token cache block boundary' },
+      },
+      required: ['text'],
     },
   },
 ];
@@ -303,6 +319,31 @@ function callTool(name: string, args: Record<string, unknown>): unknown {
           reductionPercent: result.reductionPercent,
           beforeContent: args.log,
           afterContent: result.prunedText,
+        });
+      }
+      return result;
+    }
+    case 'align_prefix_cache': {
+      if (typeof args.text !== 'string') {
+        throw new Error('align_prefix_cache requires a "text" string');
+      }
+      const result = normalizePromptForCache(args.text);
+      if (args.padToBlock) {
+        result.normalizedText = padToCacheBoundary(result.normalizedText, 1024);
+      }
+      const cachedTokens = result.staticPrefixTokensEst;
+      const discountTokens = Math.round(cachedTokens * 0.9);
+      if (result.volatileElementsExtracted.length > 0 || result.isCacheThresholdMet) {
+        recordDiskEvent(workspaceRoot, {
+          directive: 'Prefix Cache',
+          source: 'Prompt KV-Cache',
+          tokensSaved: discountTokens,
+          details: `Aligned ${cachedTokens} tokens for KV-cache (-${result.estimatedDiscountPct}% cached token rate; ${result.volatileElementsExtracted.length} ephemeral items sunk to suffix)`,
+          beforeTokens: result.originalTokensEst,
+          afterTokens: Math.max(1, result.originalTokensEst - discountTokens),
+          reductionPercent: result.estimatedDiscountPct,
+          beforeContent: args.text,
+          afterContent: result.normalizedText,
         });
       }
       return result;

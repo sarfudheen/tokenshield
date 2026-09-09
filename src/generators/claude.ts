@@ -71,7 +71,8 @@ export class ClaudeGenerator extends BaseInstructionGenerator {
 
     if (strategies.kvCacheAlignment) {
       sections.push(`### Deterministic Prefix Caching
-- Maintain stable instruction prefix order across turns to maximize KV cache hits.`);
+- Maintain a stable, byte-exact instruction prefix across turns to maximize cloud KV-cache hits (75–90% cost reduction).
+- Sink ephemeral turn metadata (timestamps, turn counters, run UUIDs) to the message suffix.`);
     }
 
     if (strategies.commentStripper) {

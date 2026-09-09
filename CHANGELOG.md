@@ -5,6 +5,15 @@ All notable changes to the "TokenShield" extension will be documented in this fi
 ## [1.0.17] - 2026-09-09
 
 ### Added
+- **KV-Cache Hit Maximizer & Prompt Normalizer (`align_prefix_cache`)**:
+  - Added new MCP tool `align_prefix_cache` to `token-cache` server (v0.5.0).
+  - Scans prompt contexts to extract volatile elements (ISO timestamps, turn counters, ephemeral session UUIDs) and relocates them to the suffix under `<!-- TOKENSHIELD:EPHEMERAL_SUFFIX -->`, guaranteeing a byte-stable static prefix for 75–90% cloud KV-cache discounts.
+  - Added optional 1,024-token cache block boundary padding (`padToBlock`).
+  - Added prompt cacheability analyzer and health check verification (`analyzePromptCacheability`) in `TokenShield: Health Check`.
+  - Mapped `Prefix Cache` savings events to the real-time Dashboard visualizer and activity feed.
+- **Headroom Zero-Telemetry Air-Gap Safeguard**:
+  - Injected `HEADROOM_BEACON='off'`, `HEADROOM_TELEMETRY='off'`, `HEADROOM_OFFLINE='1'`, and `DO_NOT_TRACK='1'` into all Headroom MCP configurations across VS Code (`.vscode/settings.json`), Claude Code (`~/.claude.json`), and Antigravity (`.agents/mcp_config.json`, `~/.gemini/config/mcp_config.json`).
+  - Enforced zero-telemetry process environment guard on extension activation in `src/extension.ts` to ensure 100% on-device air-gapped operation.
 - **Safe Comment Stripping Modes (`tokenshield.commentStrippingMode`)**:
   - `'headers-only'` mode (default): Strips copyright license headers and preambles while preserving inline code comments, preventing degradation of LLM bug-fixing and code reasoning accuracy (addressing findings from arXiv 2025 research).
   - `'aggressive'` mode: Strips both headers and inline filler comments.

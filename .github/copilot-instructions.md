@@ -53,7 +53,8 @@
 - **MANDATORY**: When reviewing code, generating pull request summaries, or writing tests, scope file context strictly to lines changed in `git diff` plus direct 1-hop AST callers/callees.
 
 ### Prompt Prefix Caching
-- Maintain a deterministic, unchanging instruction prefix order across turns to maximize cloud KV-cache hit rates.
+- **MANDATORY**: Maintain a deterministic, byte-stable instruction prefix across turns to maximize cloud KV-cache hit rates (75–90% cost savings).
+- **MANDATORY**: Sink ephemeral turn metadata (timestamps, turn counters, run UUIDs) to the very bottom of the prompt suffix. Never prepend dynamic tokens before static rules.
 
 ### License Header Stripping
 - Strip copyright license headers and preamble blocks before ingesting files. Preserve inline comments (they aid comprehension).

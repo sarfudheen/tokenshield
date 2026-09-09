@@ -46,6 +46,7 @@
 
 ### Deterministic Prefix Caching
 - Maintain stable instruction prefix order across turns to maximize KV cache hits.
+- Sink volatile turn metadata (timestamps, turn counters, ephemeral run IDs) to message suffix.
 
 ### License Header Stripping
 - Strip copyright license headers and preamble blocks. Preserve inline comments.

@@ -71,7 +71,8 @@ export class CodexGenerator extends BaseInstructionGenerator {
 
     if (strategies.kvCacheAlignment) {
       sections.push(`### Deterministic Prefix Caching
-- Maintain stable instruction prefix order across turns to maximize KV cache hits.`);
+- Maintain stable instruction prefix order across turns to maximize KV cache hits.
+- Sink volatile turn metadata (timestamps, turn counters, ephemeral run IDs) to message suffix.`);
     }
 
     if (strategies.commentStripper) {

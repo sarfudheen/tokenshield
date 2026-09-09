@@ -88,7 +88,8 @@ export class CopilotGenerator extends BaseInstructionGenerator {
 
     if (strategies.kvCacheAlignment) {
       sections.push(`### Prompt Prefix Caching
-- Maintain a deterministic, unchanging instruction prefix order across turns to maximize cloud KV-cache hit rates.`);
+- **MANDATORY**: Maintain a deterministic, byte-stable instruction prefix across turns to maximize cloud KV-cache hit rates (75–90% cost savings).
+- **MANDATORY**: Sink ephemeral turn metadata (timestamps, turn counters, run UUIDs) to the very bottom of the prompt suffix. Never prepend dynamic tokens before static rules.`);
     }
 
     // Comment stripping: respects commentStrippingMode setting

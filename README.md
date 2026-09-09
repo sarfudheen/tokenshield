@@ -55,7 +55,7 @@ TokenShield comes equipped with 20 modular optimizations, active right out of th
 | 9 | **Safety** | **Loop Guardrails** | Halts runaway retry loops after 3 consecutive autonomous failures | Prevents runaway credit burn |
 | 10 | **Routing** | **Smart Model Routing** | Routes routine tasks (formatting, typos, minor edits) to lighter models | **Up to 99% cost reduction** |
 | 11 | **Git Scope** | **Git Diff Scoping** | Scopes code reviews and unit test generation strictly to git diff lines | **~85% context reduction** |
-| 12 | **Cloud Cache** | **Prompt Prefix Caching** | Maintains byte-stable instruction prefixes to unlock cloud KV cache hits | **Up to 90% cloud discounts** |
+| 12 | **Cloud Cache** | **Prompt Prefix Caching** | Normalizes prompt prefixes and sinks volatile tokens to suffix (`align_prefix_cache`) | **Up to 90% cloud discounts** |
 | 13 | **Minifier** | **License Header Stripper** | Strips copyright & license preambles (safe mode); preserves code comments | **15–30%** context reduction |
 | 14 | **Test Runner** | **Test Failure Isolator** | Captures failing assertions and stack traces while stripping passing suites | **~95%** test log compression |
 | 15 | **Range Slicer** | **Windowed Range Slicing** | Restricts large file reads to 100-line windows around symbol targets | **~80%** reduction on file lookups |
@@ -157,8 +157,8 @@ TokenShield automatically configures and maintains Model Context Protocol (MCP) 
 - **Claude Code:** Configures `~/.claude.json`.
 
 ### Configured On-Device Servers (100% Local):
-1. **`token-cache`** *(Built-in)*: On-device semantic cache (`cache_lookup`, `cache_store`), AST signature extraction (`skeleton_view`), adaptive context pruning (`prune_context`).
-2. **`headroom`** *(Reversible CCR)*: Local reversible context compression and SmartCrusher (`headroom_compress`, `headroom_retrieve`).
+1. **`token-cache`** *(Built-in)*: On-device semantic cache (`cache_lookup`, `cache_store`), AST signature extraction (`skeleton_view`), adaptive context pruning (`prune_context`), prompt KV-cache alignment (`align_prefix_cache`).
+2. **`headroom`** *(Reversible CCR)*: Local reversible context compression and SmartCrusher (`headroom_compress`, `headroom_retrieve`) with air-gapped zero-telemetry enforcement.
 3. **`codegraph`** *(Semantic Graph)*: Local AST symbol graph query integration (`codegraph_explore`).
 
 > [!NOTE]

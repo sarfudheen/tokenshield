@@ -20,3 +20,10 @@ export { applyContextExclusions, removeContextExclusions, detectProjectExclusion
 export { GuardrailTracker, getGuardrailTracker, resetGuardrailTracker } from './guardrails';
 export { classifyTask, suggestLighterModel, getModelRoutingTracker, ModelRoutingTracker } from './modelRouting';
 export { extractCodeSkeleton, getFileSkeleton, SkeletonResult } from './skeleton';
+export {
+  analyzePromptCacheability,
+  normalizePromptForCache,
+  padToCacheBoundary,
+  CacheabilityAnalysis,
+  PromptCacheNormalizationResult,
+} from './kvCacheOptimizer';
