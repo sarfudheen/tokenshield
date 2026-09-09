@@ -28,6 +28,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   outputChannel.appendLine('[activate] TokenShield starting...');
   extensionPath = context.extensionPath;
 
+  // Enforce zero cloud leakage & disable Headroom external telemetry beacon
+  process.env.HEADROOM_BEACON = 'off';
+  process.env.HEADROOM_TELEMETRY = 'off';
+  process.env.HEADROOM_OFFLINE = '1';
+  process.env.DO_NOT_TRACK = '1';
+
   const config = getConfig();
 
   if (config.enabled) {

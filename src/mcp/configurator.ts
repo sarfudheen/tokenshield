@@ -11,6 +11,13 @@ export interface McpServerConfig {
   env?: Record<string, string>;
 }
 
+export const HEADROOM_MCP_ENV: Record<string, string> = {
+  HEADROOM_BEACON: 'off',
+  HEADROOM_TELEMETRY: 'off',
+  HEADROOM_OFFLINE: '1',
+  DO_NOT_TRACK: '1',
+};
+
 export function detectExistingMcpConfig(workspacePath: string): { vscode: boolean; claude: boolean; antigravity: boolean } {
   const vscodeMcp = hasVsCodeMcpConfig(workspacePath);
   const claudeMcp = hasClaudeMcpConfig();
@@ -178,6 +185,7 @@ async function configureVsCodeMcp(wsPath: string, languages: string[], outputCha
     command: resolveHeadroomCommand(),
     args: ['mcp', 'serve'],
     type: 'stdio',
+    env: HEADROOM_MCP_ENV,
   };
   outputChannel.appendLine('[mcp] Configured Headroom MCP server (reversible context compression & CCR)');
 
@@ -226,6 +234,7 @@ export async function configureClaudeMcp(
   servers[HEADROOM_MCP_SERVER_NAME] = {
     command: resolveHeadroomCommand(),
     args: ['mcp', 'serve'],
+    env: HEADROOM_MCP_ENV,
   };
   outputChannel.appendLine(`[mcp] Configured Headroom in Claude MCP config (project-scoped to ${wsPath})`);
 
@@ -273,6 +282,7 @@ export async function configureAntigravityMcp(
       mcpServers[HEADROOM_MCP_SERVER_NAME] = {
         command: resolveHeadroomCommand(),
         args: ['mcp', 'serve'],
+        env: HEADROOM_MCP_ENV,
       };
       config['mcpServers'] = mcpServers;
       fs.writeFileSync(filePath, JSON.stringify(config, null, 2), 'utf-8');

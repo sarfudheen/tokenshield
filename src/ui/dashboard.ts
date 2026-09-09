@@ -1382,6 +1382,12 @@ export class DashboardPanel {
       </div>`;
     }
 
+    const safeEventsJson = JSON.stringify(allEventsMap)
+      .replace(/</g, '\\u003c')
+      .replace(/>/g, '\\u003e')
+      .replace(/\u2028/g, '\\u2028')
+      .replace(/\u2029/g, '\\u2029');
+
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2468,52 +2474,77 @@ export class DashboardPanel {
     </div>
   </div>
 
+  <script type="application/json" id="tokenshield-events-data">
+${safeEventsJson}
+  </script>
   <script>
     const vscode = acquireVsCodeApi();
-    const eventsMap = ${JSON.stringify(allEventsMap)};
+    let eventsMap = {};
+    try {
+      const dataEl = document.getElementById('tokenshield-events-data');
+      if (dataEl && dataEl.textContent) {
+        eventsMap = JSON.parse(dataEl.textContent);
+      }
+    } catch (e) {
+      console.error('TokenShield: Failed to parse events data:', e);
+    }
     let activeModalEvent = null;
 
     function openEventModal(eventId) {
-      const ev = eventsMap[eventId];
-      if (!ev) { return; }
-      activeModalEvent = ev;
+      try {
+        const ev = eventsMap[eventId];
+        if (!ev) {
+          console.warn('TokenShield: Event not found for id:', eventId);
+          return;
+        }
+        activeModalEvent = ev;
 
-      document.getElementById('m-directive-badge').textContent = ev.directive.toUpperCase();
-      document.getElementById('m-directive-title').textContent = ev.directive;
-      document.getElementById('m-source-code').textContent = ev.source;
-      document.getElementById('m-time').textContent = ev.timestampStr + ' · ' + ev.modelName;
+        const setTxt = (id, txt) => {
+          const el = document.getElementById(id);
+          if (el) el.textContent = txt;
+        };
 
-      document.getElementById('m-before-tokens').textContent = Number(ev.beforeTokens).toLocaleString() + ' tok';
-      document.getElementById('m-before-cost').textContent = '$' + Number(ev.costWithoutUsd).toFixed(5) + ' est. baseline';
+        setTxt('m-directive-badge', ev.directive ? ev.directive.toUpperCase() : 'DIRECTIVE');
+        setTxt('m-directive-title', ev.directive || 'Optimization Directive');
+        setTxt('m-source-code', ev.source || 'workspace');
+        setTxt('m-time', (ev.timestampStr || '') + ' · ' + (ev.modelName || 'Model'));
 
-      document.getElementById('m-after-tokens').textContent = Number(ev.afterTokens).toLocaleString() + ' tok';
-      document.getElementById('m-after-cost').textContent = '$' + Number(ev.costWithUsd).toFixed(5) + ' with TokenShield';
+        setTxt('m-before-tokens', Number(ev.beforeTokens || 0).toLocaleString() + ' tok');
+        setTxt('m-before-cost', '$' + Number(ev.costWithoutUsd || 0).toFixed(5) + ' est. baseline');
 
-      document.getElementById('m-reduction-pct').textContent = '-' + ev.reductionPercent + '%';
-      document.getElementById('m-tokens-saved').textContent = '+' + Number(ev.tokensSaved).toLocaleString() + ' tokens';
-      document.getElementById('m-cost-saved').textContent = '$' + Number(ev.costSavedUsd).toFixed(5) + ' USD';
+        setTxt('m-after-tokens', Number(ev.afterTokens || 0).toLocaleString() + ' tok');
+        setTxt('m-after-cost', '$' + Number(ev.costWithUsd || 0).toFixed(5) + ' with TokenShield');
 
-      document.getElementById('m-formula').textContent = 
-        'Tokens Avoided = ' + Number(ev.beforeTokens).toLocaleString() + ' - ' + Number(ev.afterTokens).toLocaleString() + ' = +' + Number(ev.tokensSaved).toLocaleString() + ' tok';
+        setTxt('m-reduction-pct', '-' + (ev.reductionPercent || 0) + '%');
+        setTxt('m-tokens-saved', '+' + Number(ev.tokensSaved || 0).toLocaleString() + ' tokens');
+        setTxt('m-cost-saved', '$' + Number(ev.costSavedUsd || 0).toFixed(5) + ' USD');
 
-      document.getElementById('m-rate-formula').textContent = 
-        'Cost Avoided = (' + Number(ev.tokensSaved).toLocaleString() + ' / 1,000,000) × $' + Number(ev.pricingRate).toFixed(2) + ' (' + ev.modelName + ')';
+        setTxt('m-formula', 
+          'Tokens Avoided = ' + Number(ev.beforeTokens || 0).toLocaleString() + ' - ' + Number(ev.afterTokens || 0).toLocaleString() + ' = +' + Number(ev.tokensSaved || 0).toLocaleString() + ' tok');
 
-      document.getElementById('m-how').textContent = ev.howItAvoided;
-      document.getElementById('m-details').textContent = ev.details;
+        setTxt('m-rate-formula', 
+          'Cost Avoided = (' + Number(ev.tokensSaved || 0).toLocaleString() + ' / 1,000,000) × $' + Number(ev.pricingRate || 0).toFixed(2) + ' (' + (ev.modelName || 'Model') + ')');
 
-      // Populate Visual Payload Diff
-      const diff = ev.payloadDiff;
-      if (diff) {
-        document.getElementById('m-diff-explanation').textContent = diff.explanation;
-        document.getElementById('m-diff-before-title').textContent = '🔴 ' + diff.beforeTitle;
-        document.getElementById('m-diff-before-code').textContent = diff.beforeContent;
-        document.getElementById('m-diff-after-title').textContent = '🟢 ' + diff.afterTitle;
-        document.getElementById('m-diff-after-code').textContent = diff.afterContent;
+        setTxt('m-how', ev.howItAvoided || '');
+        setTxt('m-details', ev.details || '');
+
+        // Populate Visual Payload Diff
+        const diff = ev.payloadDiff;
+        if (diff) {
+          setTxt('m-diff-explanation', diff.explanation || '');
+          setTxt('m-diff-before-title', '🔴 ' + (diff.beforeTitle || 'WITHOUT TOKENSHIELD (RAW)'));
+          setTxt('m-diff-before-code', diff.beforeContent || '(No before content recorded)');
+          setTxt('m-diff-after-title', '🟢 ' + (diff.afterTitle || 'WITH TOKENSHIELD (OPTIMIZED)'));
+          setTxt('m-diff-after-code', diff.afterContent || '(No after content recorded)');
+        }
+
+        const modal = document.getElementById('event-detail-modal');
+        if (modal) {
+          modal.classList.add('active');
+        }
+      } catch (err) {
+        console.error('TokenShield: Failed to open event modal:', err);
       }
-
-      const modal = document.getElementById('event-detail-modal');
-      modal.classList.add('active');
     }
 
     function openNativeVsCodeDiff() {
@@ -2530,11 +2561,13 @@ export class DashboardPanel {
 
     function closeModal() {
       const modal = document.getElementById('event-detail-modal');
-      modal.classList.remove('active');
+      if (modal) {
+        modal.classList.remove('active');
+      }
     }
 
     function closeModalOnBackdrop(e) {
-      if (e.target.id === 'event-detail-modal') {
+      if (e && e.target && e.target.id === 'event-detail-modal') {
         closeModal();
       }
     }
@@ -2556,6 +2589,14 @@ export class DashboardPanel {
     function reactivate() {
       vscode.postMessage({ command: 'reactivate' });
     }
+
+    window.openEventModal = openEventModal;
+    window.closeModal = closeModal;
+    window.closeModalOnBackdrop = closeModalOnBackdrop;
+    window.openNativeVsCodeDiff = openNativeVsCodeDiff;
+    window.toggleStrategy = toggleStrategy;
+    window.deactivateCompletely = deactivateCompletely;
+    window.reactivate = reactivate;
   </script>
 </body>
 </html>`;

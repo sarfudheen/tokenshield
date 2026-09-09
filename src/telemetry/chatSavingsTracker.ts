@@ -97,6 +97,8 @@ class ChatSavingsTracker {
           afterTokens: e.afterTokens,
           reductionPercent: e.reductionPercent,
           modelName: e.modelName,
+          beforeContent: e.beforeContent,
+          afterContent: e.afterContent,
         })),
       }));
 
@@ -119,6 +121,8 @@ class ChatSavingsTracker {
           afterTokens: de.afterTokens,
           reductionPercent: de.reductionPercent,
           modelName: de.modelName,
+          beforeContent: de.beforeContent,
+          afterContent: de.afterContent,
         };
         this.events.push(ev);
         diskSumTokens += de.tokensSaved;
@@ -167,6 +171,8 @@ class ChatSavingsTracker {
         afterTokens: e.afterTokens,
         reductionPercent: e.reductionPercent,
         modelName: e.modelName,
+        beforeContent: e.beforeContent,
+        afterContent: e.afterContent,
       })),
     }));
 

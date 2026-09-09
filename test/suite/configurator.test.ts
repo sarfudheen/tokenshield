@@ -43,6 +43,9 @@ suite('Claude Code MCP configuration (token-cache wiring)', () => {
     assert.ok(servers['headroom'], 'headroom entry missing from project mcpServers');
     assert.ok(servers['headroom'].command.includes('headroom'));
     assert.deepStrictEqual(servers['headroom'].args, ['mcp', 'serve']);
+    assert.strictEqual(servers['headroom'].env?.HEADROOM_BEACON, 'off');
+    assert.strictEqual(servers['headroom'].env?.HEADROOM_OFFLINE, '1');
+    assert.strictEqual(servers['headroom'].env?.DO_NOT_TRACK, '1');
   });
 
   test('preserves unrelated top-level keys and other projects in ~/.claude.json', async () => {

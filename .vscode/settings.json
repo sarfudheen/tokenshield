@@ -15,7 +15,13 @@
           "mcp",
           "serve"
         ],
-        "type": "stdio"
+        "type": "stdio",
+        "env": {
+          "HEADROOM_BEACON": "off",
+          "HEADROOM_TELEMETRY": "off",
+          "HEADROOM_OFFLINE": "1",
+          "DO_NOT_TRACK": "1"
+        }
       }
     }
   },
