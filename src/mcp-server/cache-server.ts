@@ -2,6 +2,8 @@
 // launched by AI tools as `node cache-server.js <workspaceRoot>`. Never imports
 // vscode. stdout carries only newline-delimited JSON-RPC 2.0; logs go to stderr.
 import * as readline from 'readline';
+import * as fs from 'fs';
+import * as path from 'path';
 import { SemanticCacheStore, CacheScope } from '../cache/store';
 import { CallLogStore } from '../cache/callLog';
 import { recordDiskEvent } from '../cache/eventLog';
@@ -150,6 +152,11 @@ function callTool(name: string, args: Record<string, unknown>): unknown {
           source: args.query.length > 50 ? args.query.slice(0, 47) + '...' : args.query,
           tokensSaved: saved,
           details: `Answer (${result.answer.length} bytes, ~${saved} tok) served from local disk at $0.00 (${result.exact ? 'exact' : 'fuzzy'} match in <2ms)`,
+          beforeTokens: saved,
+          afterTokens: 0,
+          reductionPercent: 100,
+          beforeContent: args.query,
+          afterContent: result.answer,
         });
       }
       return result;
@@ -170,6 +177,11 @@ function callTool(name: string, args: Record<string, unknown>): unknown {
         source: args.query.length > 50 ? args.query.slice(0, 47) + '...' : args.query,
         tokensSaved: saved,
         details: `Stored reusable ${scope} answer (~${saved} tok avoided on next hit) in .aicache/semantic-cache.json`,
+        beforeTokens: saved,
+        afterTokens: 0,
+        reductionPercent: 100,
+        beforeContent: args.query,
+        afterContent: args.answer,
       });
       return { stored: true, id: entry.id, scope: entry.scope };
     }
@@ -187,11 +199,23 @@ function callTool(name: string, args: Record<string, unknown>): unknown {
       const origTok = result.originalTokensEst;
       const skelTok = result.skeletonTokensEst;
       const saved = Math.max(0, origTok - skelTok);
+      const filePath = path.isAbsolute(args.file) ? args.file : path.join(workspaceRoot, args.file);
+      let rawSource: string | undefined;
+      try {
+        if (fs.existsSync(filePath)) {
+          rawSource = fs.readFileSync(filePath, 'utf-8');
+        }
+      } catch { /* ignore */ }
       recordDiskEvent(workspaceRoot, {
         directive: 'AST Skeletons',
         source: args.file,
         tokensSaved: saved,
         details: `Extracted interface signatures (${result.originalBytes} B ➔ ${result.skeletonBytes} B, ${result.reductionPercent}% tokens saved)`,
+        beforeTokens: origTok,
+        afterTokens: skelTok,
+        reductionPercent: result.reductionPercent,
+        beforeContent: rawSource,
+        afterContent: result.skeletonContent,
       });
       return result;
     }
@@ -203,10 +227,15 @@ function callTool(name: string, args: Record<string, unknown>): unknown {
       const saved = Math.max(0, result.originalTokensEst - result.prunedTokensEst);
       if (saved > 0) {
         recordDiskEvent(workspaceRoot, {
-          directive: 'Concise Responses',
+          directive: 'Adaptive Pruner',
           source: 'Prompt Context',
           tokensSaved: saved,
           details: `Pruned context (-${result.reductionPercent}% tokens saved: ${result.originalTokensEst} ➔ ${result.prunedTokensEst} tok)`,
+          beforeTokens: result.originalTokensEst,
+          afterTokens: result.prunedTokensEst,
+          reductionPercent: result.reductionPercent,
+          beforeContent: args.text,
+          afterContent: result.prunedText,
         });
       }
       return result;
@@ -223,6 +252,11 @@ function callTool(name: string, args: Record<string, unknown>): unknown {
           source: 'rtk git diff HEAD',
           tokensSaved: saved,
           details: `Compressed git diff (-${result.reductionPercent}% tokens saved: ${result.originalTokensEst} ➔ ${result.prunedTokensEst} tok)`,
+          beforeTokens: result.originalTokensEst,
+          afterTokens: result.prunedTokensEst,
+          reductionPercent: result.reductionPercent,
+          beforeContent: args.diff,
+          afterContent: result.prunedText,
         });
       }
       return result;
@@ -233,13 +267,21 @@ function callTool(name: string, args: Record<string, unknown>): unknown {
       }
       const headersOnly = args.headersOnly !== false; // default to headers-only (safe mode)
       const pruned = stripCommentsAndHeaders(args.code, headersOnly);
-      const saved = Math.max(0, Math.ceil((args.code.length - pruned.length) / 3.8));
+      const origTok = Math.max(1, Math.ceil(args.code.length / 3.8));
+      const prunedTok = Math.max(1, Math.ceil(pruned.length / 3.8));
+      const saved = Math.max(0, origTok - prunedTok);
+      const pct = origTok > 0 ? Math.round(((origTok - prunedTok) / origTok) * 100) : 0;
       if (saved > 0) {
         recordDiskEvent(workspaceRoot, {
           directive: 'Comment & Header Stripper',
           source: 'Source Code',
           tokensSaved: saved,
           details: `Stripped ${headersOnly ? 'license headers' : 'license headers & filler comments'} (${args.code.length} B ➔ ${pruned.length} B)`,
+          beforeTokens: origTok,
+          afterTokens: prunedTok,
+          reductionPercent: pct,
+          beforeContent: args.code,
+          afterContent: pruned,
         });
       }
       return { code: pruned, originalLength: args.code.length, prunedLength: pruned.length, mode: headersOnly ? 'headers-only' : 'aggressive' };
@@ -256,6 +298,11 @@ function callTool(name: string, args: Record<string, unknown>): unknown {
           source: 'Test Runner Log',
           tokensSaved: saved,
           details: `Isolated failing assertions (-${result.reductionPercent}% tokens saved: ${result.originalTokensEst} ➔ ${result.prunedTokensEst} tok)`,
+          beforeTokens: result.originalTokensEst,
+          afterTokens: result.prunedTokensEst,
+          reductionPercent: result.reductionPercent,
+          beforeContent: args.log,
+          afterContent: result.prunedText,
         });
       }
       return result;

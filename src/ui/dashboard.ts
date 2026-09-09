@@ -24,6 +24,7 @@ import { chatSavingsTracker, ChatSavingsEvent } from '../telemetry/chatSavingsTr
 import { SemanticCacheStore } from '../cache/store';
 import { formatCompactTokens } from './formatters';
 import { getFileSkeleton } from '../strategies/skeleton';
+import { pruneContext, stripCommentsAndHeaders } from '../strategies/adaptivePruner';
 
 export class DiffContentProvider implements vscode.TextDocumentContentProvider {
   public static readonly scheme = 'tokenshield-preview';
@@ -274,12 +275,15 @@ export class DashboardPanel {
             registerDiffContentProvider();
             const provider = DiffContentProvider.getInstance();
             const rawFileName = message.source ? path.basename(message.source) : 'payload';
+            const parsed = path.parse(rawFileName);
+            const ext = parsed.ext || (message.language ? `.${message.language}` : '.ts');
+            const baseName = parsed.name || 'payload';
             const nonce = Date.now();
             const beforeUri = vscode.Uri.parse(
-              `${DiffContentProvider.scheme}:/${encodeURIComponent(rawFileName)} (Without TokenShield)?${nonce}`
+              `${DiffContentProvider.scheme}:/${encodeURIComponent(baseName)} (Without TokenShield)${ext}?${nonce}`
             );
             const afterUri = vscode.Uri.parse(
-              `${DiffContentProvider.scheme}:/${encodeURIComponent(rawFileName)} (With TokenShield)?${nonce}`
+              `${DiffContentProvider.scheme}:/${encodeURIComponent(baseName)} (With TokenShield)${ext}?${nonce}`
             );
 
             provider.setContent(beforeUri, message.beforeContent || '');
@@ -470,7 +474,7 @@ export class DashboardPanel {
     let pct = ev.reductionPercent;
 
     if (before === undefined || after === undefined) {
-      const arrowMatch = ev.details.match(/(\d+)\s*(?:B|bytes)?\s*➔\s*(\d+)\s*(?:B|bytes|tok)?/i);
+      const arrowMatch = ev.details.match(/(\d+)\s*(?:B|bytes)?\s*(?:➔|→|->)\s*(\d+)\s*(?:B|bytes|tok)?/i);
       const diffMatch = ev.details.match(/applied\s+(\d+)\s+token\s+diff\s+hunk\s+instead\s+of\s+rewriting\s+full\s+(\d+)\s+token/i);
       const pctMatch = ev.details.match(/~?(\d+)%/);
 
@@ -520,20 +524,71 @@ export class DashboardPanel {
         howItAvoided = 'RTK filtered terminal noise, ANSI escape codes, Git headers, and redundant test output before prompt ingestion.';
         break;
       case 'AST Skeletons':
+      case 'AST Skeleton Pruning':
         howItAvoided = 'Extracted type signatures, interface declarations, and function definitions without loading full method implementation bodies.';
         break;
+      case 'Adaptive Pruner':
+      case 'Adaptive Context Pruner':
+        howItAvoided = 'Adaptive Pruner stripped non-semantic comments, license preambles, blank lines, and filler whitespace from code context.';
+        break;
       case 'Semantic Cache':
+      case 'Local Semantic Cache':
         howItAvoided = 'Served cached answer directly from local on-device disk store in <2ms at zero cost, bypassing LLM prompt inference entirely.';
         break;
       case 'Headroom Reversible CCR':
         howItAvoided = 'Applied lossless bidirectional Context Chunk Representation to compress bulky JSON payload, preserving complete semantic reversibility.';
         break;
       case 'Diff-Only Output':
+      case 'Diff-Only Code Generation':
         howItAvoided = 'Emitted targeted unified diff hunks with ±3 lines of context instead of rewriting and transmitting the entire source file.';
         break;
+      case 'Git Diff Scoping':
+      case 'Git Diff Context Scoping':
+        howItAvoided = 'Constrained git diff inspection strictly to modified hunks with ±3 lines context, stripping unchanged context lines.';
+        break;
+      case 'Comment & Header Stripper':
+        howItAvoided = 'Stripped legal copyright preambles, SPDX headers, and obvious comments before prompt ingestion.';
+        break;
+      case 'Test Failure Isolator':
+        howItAvoided = 'Isolated failing assertions and stack traces, filtering out passing test suites and verbose runner logs.';
+        break;
+      case 'CodeGraph Pre-Indexing':
+        howItAvoided = 'Queried symbol graph directly via codegraph_explore instead of scanning entire workspace with multi-file grep.';
+        break;
+      case 'Smart Model Routing':
+        howItAvoided = 'Downshifted simple lookups, comments, and formatting tasks to fast sub-cent model tier.';
+        break;
+      case 'Loop Guardrails':
+      case 'Autonomous Loop Guardrails':
+        howItAvoided = 'Halted runaway autonomous retry cycle after consecutive failures, isolating the blocker without burning prompt budget.';
+        break;
+      case 'Smart Context Exclusions':
+      case 'Context Exclusion Rules':
+      case '.copilotignore Generator':
+        howItAvoided = 'Blocked minified bundles, lock files, and build directories from AI ingestion via context exclusion rules.';
+        break;
       case 'Concise Responses':
+      case 'Concise AI Responses':
+        howItAvoided = 'Strips conversational filler, pleasantries, apologies, and polite preambles from prompt memory.';
+        break;
       case 'Context Compaction':
-        howItAvoided = 'Pruned conversational filler, pleasantries, apologies, and stale multi-turn tool outputs from prompt memory.';
+        howItAvoided = 'Pruned multi-turn conversation memory, purging stale intermediate tool outputs while retaining task decisions.';
+        break;
+      case 'Prompt Prefix Caching':
+      case 'Deterministic KV-Cache':
+        howItAvoided = 'Maintained deterministic instruction prefix order across turns to maximize cloud provider KV-cache hit rate.';
+        break;
+      case 'Windowed Range Slicing':
+        howItAvoided = 'Constrained file reads to targeted 100-line slice windows around symbol declarations instead of loading full files.';
+        break;
+      case 'Inline Chat Scope Lock':
+        howItAvoided = 'Locked inline editor chat context strictly to active line selection and 1-hop symbol references.';
+        break;
+      case 'Edit Session Awareness':
+        howItAvoided = 'Reused loaded in-memory editor buffers instead of issuing redundant workspace file reads.';
+        break;
+      case 'Context Saturation Monitor':
+        howItAvoided = 'Proactively nudged fresh thread creation when conversation length exceeded saturation thresholds.';
         break;
       default:
         howItAvoided = ev.details || 'Optimized prompt context via local TokenShield directive.';
@@ -547,7 +602,9 @@ export class DashboardPanel {
       before,
       after,
       ev.tokensSaved,
-      pct
+      pct,
+      ev.beforeContent,
+      ev.afterContent
     );
 
     return {
@@ -577,7 +634,9 @@ export class DashboardPanel {
     beforeTokens: number,
     afterTokens: number,
     tokensSaved: number,
-    reductionPercent: number
+    reductionPercent: number,
+    evBeforeContent?: string,
+    evAfterContent?: string
   ): {
     beforeTitle: string;
     afterTitle: string;
@@ -626,13 +685,13 @@ export class DashboardPanel {
       };
     }
 
-    if (directive === 'AST Skeletons') {
-      let beforeContent = '';
-      let afterContent = '';
+    if (directive === 'AST Skeletons' || directive === 'AST Skeleton Pruning') {
+      let beforeContent = evBeforeContent || '';
+      let afterContent = evAfterContent || '';
       const wsRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || process.cwd();
       const resolvedPath = path.isAbsolute(src) ? src : path.join(wsRoot, src);
 
-      if (fs.existsSync(resolvedPath) && fs.statSync(resolvedPath).isFile()) {
+      if (!beforeContent && fs.existsSync(resolvedPath) && fs.statSync(resolvedPath).isFile()) {
         try {
           const rawCode = fs.readFileSync(resolvedPath, 'utf-8');
           const lines = rawCode.split('\n');
@@ -662,69 +721,166 @@ export class DashboardPanel {
       };
     }
 
-    if (directive === 'Semantic Cache') {
+    if (directive === 'Semantic Cache' || directive === 'Local Semantic Cache') {
+      const beforeContent = evBeforeContent
+        ? `[Unoptimized: Full LLM Prompt Request Sent Across Network]\nEndpoint: /v1/chat/completions\nQuery: "${src}"\nInput Payload:\n${evBeforeContent}\nCost Incurred: $${((beforeTokens / 1_000_000) * 0.15).toFixed(5)} USD`
+        : `[Unoptimized: Full LLM Prompt Request Sent Across Network]\nEndpoint: /v1/chat/completions\nQuery: "${src}"\nInput Tokens: ~${beforeTokens.toLocaleString()} tok\nOutput Tokens: ~${Math.round(saved * 0.4)} tok\nNetwork Latency: 1,480 ms\nCost Incurred: $${((beforeTokens / 1_000_000) * 0.15).toFixed(5)} USD`;
+
+      const afterContent = evAfterContent
+        ? `[TokenShield Semantic Cache: Instant On-Device Hit]\nCache File: .aicache/semantic-cache.json\nQuery: "${src}"\nCached Answer:\n${evAfterContent}\nTokens Bypassed: +${saved.toLocaleString()} tok ($0.00000 USD)`
+        : `[TokenShield Semantic Cache: Instant On-Device Hit]\nCache File: .aicache/semantic-cache.json\nQuery: "${src}"\nDisk Access Latency: 1.4 ms (<2ms)\nTokens Bypassed: +${saved.toLocaleString()} tok ($0.00000 USD)\nStatus: Cache Hit (Served verbatim from SSD at zero cost)`;
+
       return {
         beforeTitle: `CLOUD LLM NETWORK CALL (${beforeTokens.toLocaleString()} tok)`,
         afterTitle: `LOCAL DISK CACHE HIT (0 tok)`,
         language: 'json',
         explanation: `Served instant exact/fuzzy answer from local .aicache/ at $0.00 cost in <2ms, bypassing cloud model inference entirely.`,
-        beforeContent: `[Unoptimized: Full LLM Prompt Request Sent Across Network]\nEndpoint: /v1/chat/completions\nQuery: "${src}"\nInput Tokens: ~${beforeTokens.toLocaleString()} tok\nOutput Tokens: ~${Math.round(saved * 0.4)} tok\nNetwork Latency: 1,480 ms\nCost Incurred: $${((beforeTokens / 1_000_000) * 0.15).toFixed(5)} USD`,
-        afterContent: `[TokenShield Semantic Cache: Instant On-Device Hit]\nCache File: .aicache/semantic-cache.json\nQuery: "${src}"\nDisk Access Latency: 1.4 ms (<2ms)\nTokens Bypassed: +${saved.toLocaleString()} tok ($0.00000 USD)\nStatus: Cache Hit (Served verbatim from SSD at zero cost)`
+        beforeContent,
+        afterContent
       };
     }
 
     if (directive === 'Headroom Reversible CCR') {
+      const beforeContent = evBeforeContent || `[\n  { "id": 1, "name": "TelemetryEvent", "status": "active", "code": 200, "region": "us-east" },\n  { "id": 2, "name": "TelemetryEvent", "status": "active", "code": 200, "region": "us-east" },\n  { "id": 3, "name": "TelemetryEvent", "status": "active", "code": 200, "region": "us-east" },\n  ... [+${saved.toLocaleString()} tokens of repetitive JSON array items omitted] ...\n]`;
+      const afterContent = evAfterContent || `[\n  { "id": 1, "name": "TelemetryEvent", "status": "active", "code": 200, "region": "us-east" },\n  { "id": 2, "name": "TelemetryEvent", "status": "active", "code": 200, "region": "us-east" },\n  "/* Headroom SmartCrusher: +48 uniform items omitted (losslessly reversible) */"\n]`;
+
       return {
         beforeTitle: `RAW BULKY JSON (${beforeTokens.toLocaleString()} tok)`,
         afterTitle: `SMARTCRUSHED PAYLOAD (${afterTokens.toLocaleString()} tok)`,
         language: 'json',
         explanation: `Repetitive uniform array items losslessly collapsed preserving schema and exemplar values (-${pct}% tokens avoided).`,
-        beforeContent: `[\n  { "id": 1, "name": "TelemetryEvent", "status": "active", "code": 200, "region": "us-east" },\n  { "id": 2, "name": "TelemetryEvent", "status": "active", "code": 200, "region": "us-east" },\n  { "id": 3, "name": "TelemetryEvent", "status": "active", "code": 200, "region": "us-east" },\n  ... [+${saved.toLocaleString()} tokens of repetitive JSON array items omitted] ...\n]`,
-        afterContent: `[\n  { "id": 1, "name": "TelemetryEvent", "status": "active", "code": 200, "region": "us-east" },\n  { "id": 2, "name": "TelemetryEvent", "status": "active", "code": 200, "region": "us-east" },\n  "/* Headroom SmartCrusher: +48 uniform items omitted (losslessly reversible) */"\n]`
+        beforeContent,
+        afterContent
       };
     }
 
-    if (directive === 'Diff-Only Output') {
+    if (directive === 'Diff-Only Output' || directive === 'Diff-Only Code Generation') {
+      let beforeContent = evBeforeContent || '';
+      let afterContent = evAfterContent || '';
+      const wsRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || process.cwd();
+      const resolvedPath = path.isAbsolute(src) ? src : path.join(wsRoot, src);
+
+      if (!beforeContent && fs.existsSync(resolvedPath) && fs.statSync(resolvedPath).isFile()) {
+        try {
+          beforeContent = fs.readFileSync(resolvedPath, 'utf-8');
+        } catch { /* ignore */ }
+      }
+
+      if (!beforeContent || !afterContent) {
+        beforeContent = `// Entire 450-line file reprinted by LLM\nimport * as fs from 'fs';\n// ... 400 unchanged lines reprinted verbatim ...\nfunction validate() {\n  return true;\n}\n// ... 45 more lines reprinted ...`;
+        afterContent = `// Targeted Diff Hunk (+${saved.toLocaleString()} output tokens saved)\n@@ -45,3 +45,4 @@\n function validate() {\n+  logAudit();\n   return true;\n }`;
+      }
+
       return {
         beforeTitle: `FULL FILE REWRITE (${beforeTokens.toLocaleString()} tok)`,
         afterTitle: `UNIFIED DIFF HUNK (${afterTokens.toLocaleString()} tok)`,
         language: 'diff',
-        explanation: `Instructs model to emit ±3 lines unified diff hunk instead of rewriting the entire 500-line source file.`,
-        beforeContent: `// Entire 450-line file reprinted by LLM\nimport * as fs from 'fs';\n// ... 400 unchanged lines reprinted verbatim ...\nfunction validate() {\n  return true;\n}\n// ... 45 more lines reprinted ...`,
-        afterContent: `// Targeted Diff Hunk (+${saved.toLocaleString()} output tokens saved)\n@@ -45,3 +45,4 @@\n function validate() {\n+  logAudit();\n   return true;\n }`
+        explanation: `Instructs model to emit ±3 lines unified diff hunk instead of rewriting the entire source file.`,
+        beforeContent,
+        afterContent
       };
     }
 
-    if (directive === 'Git Diff Scoping') {
+    if (directive === 'Adaptive Pruner' || directive === 'Adaptive Context Pruner') {
+      let beforeContent = evBeforeContent || '';
+      let afterContent = evAfterContent || '';
+      let language = 'typescript';
+
+      const wsRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || process.cwd();
+      const resolvedPath = path.isAbsolute(src) ? src : path.join(wsRoot, src);
+
+      if (!beforeContent || !afterContent) {
+        if (fs.existsSync(resolvedPath) && fs.statSync(resolvedPath).isFile()) {
+          try {
+            const rawCode = fs.readFileSync(resolvedPath, 'utf-8');
+            beforeContent = rawCode;
+            const pruneRes = pruneContext(rawCode, { aggressive: true });
+            afterContent = pruneRes.prunedText;
+            const ext = path.extname(src).replace('.', '');
+            if (ext) {
+              language = ext === 'js' ? 'javascript' : ext === 'ts' ? 'typescript' : ext;
+            }
+          } catch { /* fallback */ }
+        }
+      } else {
+        const ext = path.extname(src).replace('.', '');
+        if (ext) {
+          language = ext === 'js' ? 'javascript' : ext === 'ts' ? 'typescript' : ext;
+        }
+      }
+
+      if (!beforeContent || !afterContent) {
+        beforeContent = `// Source: ${src} (Raw unpruned context)\n/*\n * Copyright (c) 2026 Enterprise Corp.\n * Licensed under the Apache License, Version 2.0 (the "License");\n * You may not use this file except in compliance with the License.\n * [40 lines of legal boilerplate and disclaimers...]\n */\n\nimport * as vscode from 'vscode';\n\n// Helper to validate active editor session\nexport function validateSession(editor: vscode.TextEditor): boolean {\n  // Check if document is open\n  if (!editor.document) {\n    return false; // No document\n  }\n\n  // Return validity\n  return true;\n}`;
+        afterContent = `// Source: ${src} [TokenShield Adaptive Pruner: Clean & Compact]\nimport * as vscode from 'vscode';\n\nexport function validateSession(editor: vscode.TextEditor): boolean {\n  if (!editor.document) {\n    return false;\n  }\n  return true;\n}`;
+      }
+
+      return {
+        beforeTitle: `RAW SOURCE / CONTEXT (${beforeTokens.toLocaleString()} tok)`,
+        afterTitle: `PRUNED CODE CONTEXT (${afterTokens.toLocaleString()} tok)`,
+        language,
+        explanation: `Stripped non-semantic comments, license preambles, blank lines, and filler whitespace from ${src} (-${pct}% tokens avoided).`,
+        beforeContent,
+        afterContent
+      };
+    }
+
+    if (directive === 'Git Diff Scoping' || directive === 'Git Diff Context Scoping') {
+      const beforeContent = evBeforeContent || `diff --git a/${src} b/${src}\nindex e69de29..495d438 100644\n--- a/${src}\n+++ b/${src}\n// ... 180 lines of unchanged file context ...\n// ... lines 1 to 180 ...\n@@ -185,5 +185,6 @@\n   function execute() {\n+    refreshIndex();\n     return true;\n   }\n// ... 240 lines of unchanged file context below ...`;
+      const afterContent = evAfterContent || `// Scoped Diff Hunk: ${src} (+${saved.toLocaleString()} tok saved)\n@@ -185,3 +185,4 @@\n   function execute() {\n+    refreshIndex();\n     return true;`;
+
       return {
         beforeTitle: `RAW UNTRUNCATED GIT DIFF (${beforeTokens.toLocaleString()} tok)`,
         afterTitle: `SCOPED GIT DIFF HUNKS (${afterTokens.toLocaleString()} tok)`,
         language: 'diff',
         explanation: `Compressed git diff strictly to changed hunks with ±3 lines context, stripping unmodified context bloat (-${pct}% tokens avoided).`,
-        beforeContent: `diff --git a/${src} b/${src}\nindex e69de29..495d438 100644\n--- a/${src}\n+++ b/${src}\n// ... 180 lines of unchanged file context ...\n// ... lines 1 to 180 ...\n@@ -185,5 +185,6 @@\n   function execute() {\n+    refreshIndex();\n     return true;\n   }\n// ... 240 lines of unchanged file context below ...`,
-        afterContent: `// Scoped Diff Hunk: ${src} (+${saved.toLocaleString()} tok saved)\n@@ -185,3 +185,4 @@\n   function execute() {\n+    refreshIndex();\n     return true;`
+        beforeContent,
+        afterContent
       };
     }
 
     if (directive === 'Comment & Header Stripper') {
+      let beforeContent = evBeforeContent || '';
+      let afterContent = evAfterContent || '';
+      let language = 'typescript';
+
+      const wsRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || process.cwd();
+      const resolvedPath = path.isAbsolute(src) ? src : path.join(wsRoot, src);
+      if (!beforeContent && fs.existsSync(resolvedPath) && fs.statSync(resolvedPath).isFile()) {
+        try {
+          const rawCode = fs.readFileSync(resolvedPath, 'utf-8');
+          beforeContent = rawCode;
+          afterContent = stripCommentsAndHeaders(rawCode);
+          const ext = path.extname(src).replace('.', '');
+          if (ext) { language = ext; }
+        } catch { /* fallback */ }
+      }
+
+      if (!beforeContent || !afterContent) {
+        beforeContent = `/*\n * Copyright (c) 2026 Enterprise Corp.\n * Licensed under the Apache License, Version 2.0\n * [35 lines of legal boilerplate...]\n */\nexport function calculateTotal(items: Item[]): number {\n  // initialize sum to 0\n  let sum = 0;\n  // loop through each item\n  for (const item of items) {\n    // add price\n    sum += item.price;\n  }\n  // return total\n  return sum;\n}`;
+        afterContent = `export function calculateTotal(items: Item[]): number {\n  let sum = 0;\n  for (const item of items) {\n    sum += item.price;\n  }\n  return sum;\n}`;
+      }
+
       return {
         beforeTitle: `CODE WITH LICENSE PREAMBLES (${beforeTokens.toLocaleString()} tok)`,
         afterTitle: `CLEAN CODE STRIPPED (${afterTokens.toLocaleString()} tok)`,
-        language: 'typescript',
-        explanation: `Stripped legal copyright preambles, SPDX headers, and obvious comments (// increment i) before prompt ingestion (-${pct}% tokens avoided).`,
-        beforeContent: `/*\n * Copyright (c) 2026 Enterprise Corp.\n * Licensed under the Apache License, Version 2.0\n * [35 lines of legal boilerplate...]\n */\nexport function calculateTotal(items: Item[]): number {\n  // initialize sum to 0\n  let sum = 0;\n  // loop through each item\n  for (const item of items) {\n    // add price\n    sum += item.price;\n  }\n  // return total\n  return sum;\n}`,
-        afterContent: `export function calculateTotal(items: Item[]): number {\n  let sum = 0;\n  for (const item of items) {\n    sum += item.price;\n  }\n  return sum;\n}`
+        language,
+        explanation: `Stripped legal copyright preambles, SPDX headers, and obvious comments before prompt ingestion (-${pct}% tokens avoided).`,
+        beforeContent,
+        afterContent
       };
     }
 
     if (directive === 'Test Failure Isolator') {
+      const beforeContent = evBeforeContent || `PASS test/auth.test.ts (24ms)\nPASS test/cache.test.ts (19ms)\nPASS test/config.test.ts (12ms)\nPASS test/session.test.ts (15ms)\n[... 38 more passing test suites ...]\nFAIL test/validator.test.ts\n  ✕ should reject expired token (4ms)\n    AssertionError: expected false to be true\n      at Context.<anonymous> (test/validator.test.ts:48:12)\nPASS test/utils.test.ts (8ms)\nTest Suites: 1 failed, 42 passed, 43 total`;
+      const afterContent = evAfterContent || `FAIL test/validator.test.ts\n  ✕ should reject expired token (4ms)\n    AssertionError: expected false to be true\n      at Context.<anonymous> (test/validator.test.ts:48:12)\n(42 passing suites stripped, -${pct}% tokens avoided)`;
+
       return {
         beforeTitle: `FULL TEST LOG STREAM (${beforeTokens.toLocaleString()} tok)`,
         afterTitle: `ISOLATED FAILING ASSERTIONS (${afterTokens.toLocaleString()} tok)`,
         language: 'shell',
-        explanation: `Extracted only failing test assertions and stack traces; stripped 40+ passing test suites and console logs (-${pct}% tokens avoided).`,
-        beforeContent: `PASS test/auth.test.ts (24ms)\nPASS test/cache.test.ts (19ms)\nPASS test/config.test.ts (12ms)\nPASS test/session.test.ts (15ms)\n[... 38 more passing test suites ...]\nFAIL test/validator.test.ts\n  ✕ should reject expired token (4ms)\n    AssertionError: expected false to be true\n      at Context.<anonymous> (test/validator.test.ts:48:12)\nPASS test/utils.test.ts (8ms)\nTest Suites: 1 failed, 42 passed, 43 total`,
-        afterContent: `FAIL test/validator.test.ts\n  ✕ should reject expired token (4ms)\n    AssertionError: expected false to be true\n      at Context.<anonymous> (test/validator.test.ts:48:12)\n(42 passing suites stripped, -${pct}% tokens avoided)`
+        explanation: `Extracted only failing test assertions and stack traces; stripped passing test suites and console logs (-${pct}% tokens avoided).`,
+        beforeContent,
+        afterContent
       };
     }
 
@@ -750,7 +906,7 @@ export class DashboardPanel {
       };
     }
 
-    if (directive === 'Loop Guardrails') {
+    if (directive === 'Loop Guardrails' || directive === 'Autonomous Loop Guardrails') {
       return {
         beforeTitle: `RUNAWAY RETRY LOOP (UNCONSTRAINED)`,
         afterTitle: `GUARDRAIL HALT & BLOCKER SUMMARY`,
@@ -761,7 +917,7 @@ export class DashboardPanel {
       };
     }
 
-    if (directive === 'Smart Context Exclusions') {
+    if (directive === 'Smart Context Exclusions' || directive === 'Context Exclusion Rules' || directive === '.copilotignore Generator') {
       return {
         beforeTitle: `UNFILTERED WORKSPACE SCAN (${beforeTokens.toLocaleString()} tok)`,
         afterTitle: `EXCLUSIONS ENFORCED (${afterTokens.toLocaleString()} tok)`,
@@ -769,6 +925,72 @@ export class DashboardPanel {
         explanation: `Auto-excluded dist/, package-lock.json, and minified bundles via .copilotignore rules (-${pct}% tokens avoided).`,
         beforeContent: `[Files Scanned & Sent to Context Prompt]:\n- dist/bundle.js (2.4MB / ~620,000 tokens)\n- package-lock.json (214KB / ~54,000 tokens)\n- node_modules/.cache/... (1.2MB / ~310,000 tokens)\nTotal Ingestion: ~${beforeTokens.toLocaleString()} tokens`,
         afterContent: `[TokenShield .copilotignore Active]:\n- dist/** (BLOCKED)\n- package-lock.json (BLOCKED)\n- node_modules/** (BLOCKED)\nOnly relevant source files ingested (~${afterTokens.toLocaleString()} tokens)`
+      };
+    }
+
+    if (directive === 'Prompt Prefix Caching' || directive === 'Deterministic KV-Cache') {
+      return {
+        beforeTitle: `UNALIGNED SYSTEM PROMPT (${beforeTokens.toLocaleString()} tok)`,
+        afterTitle: `KV-CACHE ALIGNED PREFIX (${afterTokens.toLocaleString()} tok)`,
+        language: 'markdown',
+        explanation: `Maintained deterministic instruction order and byte-aligned prefix blocks to unlock cloud provider KV-cache discount (-${pct}% cost avoided).`,
+        beforeContent: `[Dynamic Client Prompt - Cache Miss]\nTurn ID: #14 (Dynamic Timestamp: ${new Date().toISOString()})\nSystem Instructions: [Order dynamically altered across turns]\n- Rule: verbosity control\n- Rule: code graph\nCloud KV Cache Status: MISS (Billed at 100% full input rate)`,
+        afterContent: `[TokenShield Deterministic Prefix Block]\n<!-- Byte-Aligned Static Instruction Header -->\n# Antigravity TokenShield Optimizations\nCloud KV Cache Status: HIT (90% Input Token Discount Applied)`
+      };
+    }
+
+    if (directive === 'Context Compaction') {
+      return {
+        beforeTitle: `ACCUMULATED MULTI-TURN HISTORY (${beforeTokens.toLocaleString()} tok)`,
+        afterTitle: `COMPACTED CONTEXT MEMORY (${afterTokens.toLocaleString()} tok)`,
+        language: 'markdown',
+        explanation: `Purged stale intermediate tool outputs and bulky logs from earlier turns while preserving architectural decisions (-${pct}% tokens avoided).`,
+        beforeContent: `Turn 1: User request (400 tok)\nTurn 2: Agent run terminal "cat package.json" (850 tok)\nTurn 3: Agent run terminal "npm list --all" (4,200 tok raw dependency tree)\nTurn 4: Agent run terminal "git log -n 50" (6,100 tok commit logs)\nTurn 5: User followup...\n[... 18 turns of stale tool outputs accumulating quadratically ...]`,
+        afterContent: `Turn 1-4: [Compacted State Summary: Verified dependencies and recent git history]\nTurn 18: [Active Context Window Preserved with Latest Turn Decisions]\n(-${pct}% stale intermediate tokens safely discarded)`
+      };
+    }
+
+    if (directive === 'Windowed Range Slicing') {
+      return {
+        beforeTitle: `FULL FILE READ (${beforeTokens.toLocaleString()} tok)`,
+        afterTitle: `100-LINE SYMBOL SLICE (${afterTokens.toLocaleString()} tok)`,
+        language: 'typescript',
+        explanation: `Enforced 100-line window slicing around declaration in ${src}, avoiding full-file prompt ingestion (-${pct}% tokens avoided).`,
+        beforeContent: `// Source: ${src} (Full 1,200 line source file loaded into prompt)\n// Lines 1 - 450: Unrelated classes, interfaces, and helpers\n// ...\nexport function ${src.includes('.') ? path.parse(src).name : 'targetFunction'}() {\n  return true;\n}\n// Lines 465 - 1200: Trailing methods and exports`,
+        afterContent: `// Source: ${src} [Windowed Slice: Lines 445-475 around declaration]\nexport function ${src.includes('.') ? path.parse(src).name : 'targetFunction'}() {\n  return true;\n}\n// Remaining 1,170 lines skipped (-${pct}% tokens avoided)`
+      };
+    }
+
+    if (directive === 'Inline Chat Scope Lock') {
+      return {
+        beforeTitle: `FULL WORKSPACE CONTEXT (${beforeTokens.toLocaleString()} tok)`,
+        afterTitle: `PINNED SELECTION SCOPE (${afterTokens.toLocaleString()} tok)`,
+        language: 'typescript',
+        explanation: `Locked inline editor chat prompt context strictly to selected lines and immediate 1-hop references (-${pct}% tokens avoided).`,
+        beforeContent: `// Unpinned: All open editor tabs & entire active file loaded into chat context\n// File: ${src} (Full file)\n// Tab 2: config.ts\n// Tab 3: styles.css\nTotal Context Ingested: ~${beforeTokens.toLocaleString()} tokens`,
+        afterContent: `// Pinned Selection: ${src} (Lines 24-38)\nexport function calculateRate(): number {\n  return rate * multiplier;\n}\n// Context locked strictly to selection (-${pct}% tokens avoided)`
+      };
+    }
+
+    if (directive === 'Edit Session Awareness') {
+      return {
+        beforeTitle: `REDUNDANT FILE DISK READ (${beforeTokens.toLocaleString()} tok)`,
+        afterTitle: `IN-MEMORY SESSION BUFFER HIT (0 tok)`,
+        language: 'typescript',
+        explanation: `Reused active in-memory edit session buffer for ${src} instead of issuing redundant workspace file reads (-${pct}% tokens avoided).`,
+        beforeContent: `[File Read Requested for Multi-File Edit]:\nPath: ${src}\nDisk Read: Issued\nPrompt Ingestion: ~${beforeTokens.toLocaleString()} tokens reprinted`,
+        afterContent: `[TokenShield Edit Session Awareness]:\nPath: ${src}\nBuffer Status: Already loaded in active multi-file edit session.\nAction: Reused in-memory editor buffer (0 redundant tokens ingested)`
+      };
+    }
+
+    if (directive === 'Context Saturation Monitor') {
+      return {
+        beforeTitle: `SATURATED THREAD (45+ MESSAGES)`,
+        afterTitle: `FRESH COMPACT THREAD NUDGE`,
+        language: 'markdown',
+        explanation: `Proactively nudged thread reset when conversation length exceeded saturation limits, preventing quadratic token cost accumulation.`,
+        beforeContent: `[Chat Thread History: Saturated]\nMessage Count: 48 messages\nAccumulated Context: ~${beforeTokens.toLocaleString()} tokens per subsequent prompt\nRisk: Quadratic token accumulation & context degradation`,
+        afterContent: `[TokenShield Thread Reset Nudge]\nSuggested Action: Start fresh session with current task summary.\nSavings: Resets prompt baseline to ~${afterTokens.toLocaleString()} tokens (avoided +${saved.toLocaleString()} tokens)`
       };
     }
 

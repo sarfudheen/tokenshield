@@ -69,8 +69,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           'Adaptive Pruner',
           fileName,
           tokensSaved,
-          `Pruned context (-${result.reductionPercent}% tokens saved: ${result.originalTokensEst} → ${result.prunedTokensEst} tok)`,
-          true
+          `Pruned context (-${result.reductionPercent}% tokens saved: ${result.originalTokensEst} ➔ ${result.prunedTokensEst} tok)`,
+          true,
+          result.originalTokensEst,
+          result.prunedTokensEst,
+          result.reductionPercent,
+          text,
+          result.prunedText
         );
       } else {
         vscode.window.showInformationMessage(`TokenShield: Context copied to clipboard.`);
@@ -122,8 +127,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           'Git Diff Scoping',
           'rtk git diff HEAD',
           tokensSaved,
-          `Compressed git diff (-${result.reductionPercent}% tokens saved: ${result.originalTokensEst} → ${result.prunedTokensEst} tok)`,
-          true
+          `Compressed git diff (-${result.reductionPercent}% tokens saved: ${result.originalTokensEst} ➔ ${result.prunedTokensEst} tok)`,
+          true,
+          result.originalTokensEst,
+          result.prunedTokensEst,
+          result.reductionPercent,
+          diffRaw,
+          result.prunedText
         );
       } catch (err) {
         vscode.window.showErrorMessage(`TokenShield: Failed to extract git diff: ${err instanceof Error ? err.message : String(err)}`);
@@ -164,12 +174,19 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           const fileTokens = Math.max(1, Math.ceil(doc.getText().length / 3.8));
           const diffTokens = Math.max(1, Math.ceil(diffRaw.length / 3.8));
           const savedTokens = Math.max(0, fileTokens - diffTokens);
+          const pct = Math.round((savedTokens / fileTokens) * 100);
           if (savedTokens > 20) {
             chatSavingsTracker.recordEvent(
               'Diff-Only Output',
               relPath,
               savedTokens,
-              `Applied ${diffTokens} token diff hunk instead of rewriting full ${fileTokens} token file (${Math.round((savedTokens / fileTokens) * 100)}% tokens saved)`
+              `Applied ${diffTokens} token diff hunk instead of rewriting full ${fileTokens} token file (${pct}% tokens saved)`,
+              false,
+              fileTokens,
+              diffTokens,
+              pct,
+              doc.getText(),
+              diffRaw
             );
           }
         }

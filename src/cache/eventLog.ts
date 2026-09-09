@@ -19,6 +19,8 @@ export interface DiskSavingsEvent {
   afterTokens?: number;
   reductionPercent?: number;
   modelName?: string;
+  beforeContent?: string;
+  afterContent?: string;
 }
 
 interface EventsFileFormat {
@@ -36,6 +38,8 @@ export function recordDiskEvent(
     afterTokens?: number;
     reductionPercent?: number;
     modelName?: string;
+    beforeContent?: string;
+    afterContent?: string;
   }
 ): DiskSavingsEvent {
   const cacheDir = path.join(workspaceRoot, CACHE_DIR);
@@ -63,6 +67,15 @@ export function recordDiskEvent(
       ? event.costSavedUsd
       : (event.tokensSaved / 1_000_000) * 0.15; // default lightweight tier rate ($0.15/1M)
 
+    // Truncate disk-stored payloads to 50KB to keep events.json lean
+    const maxDiskPayload = 50_000;
+    const beforeContent = event.beforeContent
+      ? (event.beforeContent.length > maxDiskPayload ? event.beforeContent.slice(0, maxDiskPayload) + '\n// [... Remaining payload truncated on disk ...]' : event.beforeContent)
+      : undefined;
+    const afterContent = event.afterContent
+      ? (event.afterContent.length > maxDiskPayload ? event.afterContent.slice(0, maxDiskPayload) + '\n// [... Remaining payload truncated on disk ...]' : event.afterContent)
+      : undefined;
+
     const newEvent: DiskSavingsEvent = {
       id: event.id || `evt-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       timestamp: event.timestamp || new Date().toISOString(),
@@ -76,6 +89,8 @@ export function recordDiskEvent(
       afterTokens: event.afterTokens,
       reductionPercent: event.reductionPercent,
       modelName: event.modelName,
+      beforeContent,
+      afterContent,
     };
 
     data.events.unshift(newEvent);

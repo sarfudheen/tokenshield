@@ -21,6 +21,8 @@ export interface ChatSavingsEvent {
   afterTokens?: number;
   reductionPercent?: number;
   modelName?: string;
+  beforeContent?: string;
+  afterContent?: string;
 }
 
 export interface ArchivedSession {
@@ -230,6 +232,8 @@ class ChatSavingsTracker {
           afterTokens: de.afterTokens,
           reductionPercent: de.reductionPercent,
           modelName: de.modelName,
+          beforeContent: de.beforeContent,
+          afterContent: de.afterContent,
         };
         this.events.unshift(ev);
 
@@ -410,7 +414,9 @@ class ChatSavingsTracker {
     showToast: boolean = false,
     beforeTokens?: number,
     afterTokens?: number,
-    reductionPercent?: number
+    reductionPercent?: number,
+    beforeContent?: string,
+    afterContent?: string
   ): Promise<ChatSavingsEvent> {
     const config = getConfig();
     const activeModel = await getActiveModel();
@@ -429,6 +435,8 @@ class ChatSavingsTracker {
       afterTokens,
       reductionPercent,
       modelName: activeModel.name,
+      beforeContent,
+      afterContent,
     };
 
     this.knownEventIds.add(event.id);
@@ -458,6 +466,8 @@ class ChatSavingsTracker {
         afterTokens,
         reductionPercent,
         modelName: activeModel.name,
+        beforeContent,
+        afterContent,
       });
       this.persistLifetime();
     }
