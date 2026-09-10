@@ -2,7 +2,7 @@
   "name": "tokenshield",
   "displayName": "TokenShield — AI Token & Cost Optimizer (Copilot & Claude)",
   "description": "Save 60–90% AI token & LLM costs across GitHub Copilot, Claude Code, and Codex. Zero-latency context pruning, AST skeletons, semantic cache, and real-time savings tracking.",
-  "version": "1.0.17",
+  "version": "1.0.18",
   "publisher": "sarfudheen",
   "license": "MIT",
   "repository": {
@@ -339,9 +339,18 @@
         "tokenshield.pricing": {
           "type": "object",
           "default": {
-            "flagship": { "inputPerMillion": 15.0, "outputPerMillion": 75.0 },
-            "standard": { "inputPerMillion": 3.0, "outputPerMillion": 15.0 },
-            "lightweight": { "inputPerMillion": 0.15, "outputPerMillion": 0.60 }
+            "flagship": {
+              "inputPerMillion": 15,
+              "outputPerMillion": 75
+            },
+            "standard": {
+              "inputPerMillion": 3,
+              "outputPerMillion": 15
+            },
+            "lightweight": {
+              "inputPerMillion": 0.15,
+              "outputPerMillion": 0.6
+            }
           },
           "description": "Model pricing table in USD per 1M tokens (used for savings dashboard calculations)."
         },
