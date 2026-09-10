@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { ExtensionConfig, getEffectiveStrategies } from '../core/config';
+import { ExtensionConfig, TargetTool, getEffectiveStrategies } from '../core/config';
+import { detectActiveTools, TARGET_TOOL_LABELS } from '../core/ideDetector';
 import {
   MARKER_START,
   MARKER_END,
@@ -232,7 +233,40 @@ export async function initializeForProject(
 
   outputChannel.appendLine(`[initProject] Using stack: ${chosenStack} for project: ${projectName}`);
 
-  // 3. Build core TokenShield block via CopilotGenerator (includes all 19 CAPs)
+  // 3. Tool-selection QuickPick (pre-checked with auto-detected tools)
+  const detectedTools = detectActiveTools();
+  const allTools: TargetTool[] = ['copilot', 'claude', 'codex', 'antigravity'];
+  const toolItems = allTools.map(t => ({
+    label: TARGET_TOOL_LABELS[t],
+    description: t,
+    tool: t,
+    picked: detectedTools.includes(t),
+  }));
+
+  const toolPicks = await vscode.window.showQuickPick(toolItems, {
+    title: 'TokenShield: Which AI tools do you use in this project?',
+    placeHolder: `Detected: ${detectedTools.map(t => TARGET_TOOL_LABELS[t]).join(', ')}`,
+    canPickMany: true,
+  });
+
+  const selectedTools: TargetTool[] = toolPicks
+    ? toolPicks.map(p => p.tool)
+    : detectedTools; // user pressed Escape → keep auto-detected
+
+  // Persist the user's selection to workspace settings
+  if (toolPicks && toolPicks.length > 0) {
+    try {
+      const wsConfig = vscode.workspace.getConfiguration('tokenshield', wsFolders[0].uri);
+      await wsConfig.update('targetTools', selectedTools, vscode.ConfigurationTarget.Workspace);
+      outputChannel.appendLine(`[initProject] Saved targetTools to workspace settings: ${selectedTools.join(', ')}`);
+    } catch (err) {
+      outputChannel.appendLine(`[initProject] Notice: targetTools save deferred: ${err}`);
+    }
+  }
+
+  outputChannel.appendLine(`[initProject] Target tools: ${selectedTools.join(', ')}`);
+
+  // 4. Build core TokenShield block via CopilotGenerator (includes all 19 CAPs)
   const copilotGen = new CopilotGenerator();
   const strategies = getEffectiveStrategies(config);
   const baseContent = copilotGen.generateContent(strategies, config);

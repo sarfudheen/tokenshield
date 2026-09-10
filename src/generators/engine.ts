@@ -67,7 +67,7 @@ export class InstructionEngine {
 
     const copilotGen = this.generators.get('copilot');
 
-    if (copilotGen) {
+    if (copilotGen && config.targetTools.includes('copilot')) {
       if (structureLayout === 'structured') {
         // --- Structured .github/ Mode ---
         // 1. Write dedicated TokenShield directives file to .github/instructions/tokenshield.instructions.md

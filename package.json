@@ -161,13 +161,13 @@
               "antigravity"
             ]
           },
-          "default": [
-            "copilot",
-            "antigravity",
-            "claude",
-            "codex"
-          ],
-          "description": "Which AI tools to generate instruction files for."
+          "default": [],
+          "markdownDescription": "Which AI tools to generate instruction files for. Leave empty (default) to auto-detect based on installed IDE extensions. When set explicitly, only the listed tools will receive instruction files."
+        },
+        "tokenshield.autoDetectTools": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Automatically detect which AI tools are present in the current IDE (Copilot, Claude Code, Codex, Antigravity) and generate only the relevant instruction files. Disable to fall back to `copilot` only or set `#tokenshield.targetTools#` explicitly."
         },
         "tokenshield.profile": {
           "type": "string",

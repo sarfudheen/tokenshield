@@ -16,6 +16,7 @@ import { SemanticCacheStore } from './cache/store';
 import { CallLogStore } from './cache/callLog';
 import { startSession } from './session/tracker';
 import { initializeForProject } from './generators/projectInit';
+import { detectActiveTools, TARGET_TOOL_LABELS } from './core/ideDetector';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -35,6 +36,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   process.env.DO_NOT_TRACK = '1';
 
   const config = getConfig();
+
+  // Log detected AI tools for diagnostics
+  const detectedTools = detectActiveTools();
+  outputChannel.appendLine(`[activate] Detected IDE tools: ${detectedTools.map(t => TARGET_TOOL_LABELS[t]).join(', ')}`);
+  outputChannel.appendLine(`[activate] Effective targetTools: ${config.targetTools.join(', ')}`);
 
   if (config.enabled) {
     initSessionTracking();
@@ -223,8 +229,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     const alreadyDismissed = context.workspaceState.get<boolean>('tokenshield.initPromptDismissed', false);
 
     if (!hasAnyInstructions && !alreadyDismissed) {
+      const detectedToolNames = config.targetTools.map(t => TARGET_TOOL_LABELS[t]).join(', ');
       vscode.window.showInformationMessage(
-        '🛡️ TokenShield: No project-level Copilot instructions found. Initialize for this project to get stack-specific optimizations?',
+        `🛡️ TokenShield: No project instructions found. Detected tools: ${detectedToolNames}. Initialize for this project?`,
         'Initialize Now',
         'Do Not Show Again'
       ).then(async action => {

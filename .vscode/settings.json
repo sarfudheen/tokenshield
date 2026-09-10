@@ -25,6 +25,30 @@
       }
     }
   },
+  "tokenshield.activeStrategies": {
+    "codeGraph": true,
+    "outputCompression": true,
+    "verbosityControl": true,
+    "sessionManagement": true,
+    "semanticCache": true,
+    "astSkeleton": true,
+    "contextExclusion": true,
+    "diffOnlyOutput": true,
+    "agentGuardrails": true,
+    "smartModelRouting": true,
+    "gitDiffContext": true,
+    "rangeSlicing": true,
+    "inlineChatScopePinning": true,
+    "kvCacheAlignment": true,
+    "headroomCompression": true,
+    "copilotEditsAwareness": true,
+    "testFailureIsolator": true,
+    "commentStripper": true,
+    "copilotIgnoreGeneration": true,
+    "threadResetTrigger": true
+  },
+  "tokenshield.profile": "full",
+  "tokenshield.enabled": true,
   "github.copilot.chat.codesearch.exclude": {
     "*.lock": true,
     "*.min.js": true,
@@ -48,28 +72,5 @@
     "yarn.lock": true,
     "pnpm-lock.yaml": true,
     ".yarn/**": true
-  },
-  "tokenshield.activeStrategies": {
-    "codeGraph": true,
-    "outputCompression": true,
-    "verbosityControl": true,
-    "sessionManagement": true,
-    "semanticCache": true,
-    "astSkeleton": true,
-    "contextExclusion": true,
-    "diffOnlyOutput": true,
-    "agentGuardrails": true,
-    "smartModelRouting": true,
-    "gitDiffContext": true,
-    "rangeSlicing": true,
-    "inlineChatScopePinning": true,
-    "kvCacheAlignment": true,
-    "headroomCompression": true,
-    "copilotEditsAwareness": true,
-    "testFailureIsolator": true,
-    "commentStripper": true,
-    "copilotIgnoreGeneration": true,
-    "threadResetTrigger": true
-  },
-  "tokenshield.profile": "full"
+  }
 }

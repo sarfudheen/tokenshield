@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { resolveTargetTools } from './ideDetector';
 
 export type Profile = 'full' | 'debug' | 'planning' | 'review' | 'custom';
 export type VerbosityLevel = 'light' | 'full' | 'ultra';
@@ -73,6 +74,7 @@ export interface ExtensionConfig {
   githubStructureMode: GithubStructureMode;
   generateAgentFiles: boolean;
   commentStrippingMode: CommentStrippingMode;
+  autoDetectTools: boolean;
 }
 
 export const DEFAULT_PRICING: PricingTable = {
@@ -146,7 +148,10 @@ export function getConfig(): ExtensionConfig {
   return {
     enabled: config.get<boolean>('enabled', true),
     autoApply: config.get<boolean>('autoApply', true),
-    targetTools: config.get<TargetTool[]>('targetTools', ['copilot', 'antigravity', 'claude', 'codex']),
+    targetTools: resolveTargetTools(
+      config.get<TargetTool[]>('targetTools', []),
+      config.get<boolean>('autoDetectTools', true),
+    ),
     profile: config.get<Profile>('profile', 'full'),
     activeStrategies: config.get<StrategyState>('activeStrategies', PROFILE_STRATEGIES.full),
     verbosityLevel: config.get<VerbosityLevel>('verbosityLevel', 'full'),
@@ -165,6 +170,7 @@ export function getConfig(): ExtensionConfig {
     githubStructureMode: config.get<GithubStructureMode>('githubStructureMode', 'auto'),
     generateAgentFiles: config.get<boolean>('generateAgentFiles', false),
     commentStrippingMode: config.get<CommentStrippingMode>('commentStrippingMode', 'headers-only'),
+    autoDetectTools: config.get<boolean>('autoDetectTools', true),
   };
 }
 
