@@ -108,9 +108,10 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: v${{ steps.version_step.outputs.version }}
+          name: Release v${{ steps.version_step.outputs.version }}
           files: ${{ steps.vsix_path.outputs.file }}
           generate_release_notes: true
-          name: Release ${{ github.ref_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
