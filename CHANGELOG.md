@@ -2,6 +2,15 @@
 
 All notable changes to the "TokenShield" extension will be documented in this file.
 
+## [1.0.18] - 2026-09-10
+
+### Features
+- implement automated stack-aware project instruction generation with multi-stack detection and custom directive templates (29a4d69)
+
+### Maintenance
+- initialize TokenShield configuration with project ignore rules, agent guidelines, and MCP integration settings (30ab30e)
+- add VS Code settings for MCP servers and TokenShield strategies while removing legacy AGENTS.md and .copilotignore files (9b8798b)
+
 ## [1.0.17] - 2026-09-09
 
 ### Added
