@@ -59,9 +59,13 @@ jobs:
             VER=$(node -p "require('./package.json').version")
             node scripts/update-changelog.js "$VER"
             git add package.json package-lock.json CHANGELOG.md 2>/dev/null || git add package.json CHANGELOG.md
-            git commit -m "chore(release): bump version to ${VER} and update changelog [skip ci]"
-            git tag "v${VER}"
-            git push origin HEAD:${{ github.ref_name }} --follow-tags
+            git commit -m "chore(release): bump version to ${VER} and update changelog [skip ci]" || true
+            git tag "v${VER}" 2>/dev/null || true
+            # Branch might be protected by GH006 (requires PR) - do not fail the release build
+            if ! git push origin HEAD:${{ github.ref_name }}; then
+              echo "::warning::Direct push to ${{ github.ref_name }} was declined by branch protection rule. The package will still be built and released with version ${VER}."
+            fi
+            git push origin "v${VER}" 2>/dev/null || echo "::warning::Tag v${VER} push skipped or tag already exists."
           elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
             RAW_TAG="${{ github.ref_name }}"
             TAG_VER="${RAW_TAG#v}"
@@ -71,7 +75,7 @@ jobs:
             if ! git diff --quiet package.json CHANGELOG.md; then
               git add package.json package-lock.json CHANGELOG.md 2>/dev/null || git add package.json CHANGELOG.md
               git commit -m "chore(release): sync package.json & changelog to ${VER} [skip ci]" || true
-              git push origin HEAD:master || true
+              git push origin HEAD:master 2>/dev/null || echo "::notice::master is protected; building with synced in-runner files."
             fi
           else
             VER=$(node -p "require('./package.json').version")
