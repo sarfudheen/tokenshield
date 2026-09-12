@@ -425,7 +425,7 @@
     "lint": "eslint src --ext ts",
     "test": "node ./dist/test/runTest.js",
     "test:unit": "npm run compile && node scripts/test-unit.js",
-    "package": "node esbuild.js --production && node ./node_modules/@vscode/vsce/vsce package --no-dependencies --no-yarn --allow-star-activation",
+    "package": "node esbuild.js --production && node ./node_modules/@vscode/vsce/vsce package --no-dependencies --no-yarn --allow-star-activation --skip-license",
     "changelog": "node scripts/update-changelog.js",
     "version:patch": "npm version patch && npm run changelog",
     "version:minor": "npm version minor && npm run changelog",
