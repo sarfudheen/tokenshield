@@ -22,27 +22,60 @@ export function extractCodeSkeleton(
 ): string {
   const ext = path.extname(filePath).toLowerCase();
 
-  switch (ext) {
-    case '.ts':
-    case '.tsx':
-    case '.js':
-    case '.jsx':
-      return extractJsTsSkeleton(sourceCode, expandFunctions);
-    case '.py':
-      return extractPythonSkeleton(sourceCode, expandFunctions);
-    case '.go':
-      return extractGoSkeleton(sourceCode, expandFunctions);
-    case '.rs':
-      return extractRustSkeleton(sourceCode, expandFunctions);
-    case '.java':
-    case '.cpp':
-    case '.c':
-    case '.cs':
-      return extractCStyleSkeleton(sourceCode, expandFunctions);
-    case '.json':
-      return extractJsonSkeleton(sourceCode);
-    default:
-      return extractGenericSkeleton(sourceCode);
+  try {
+    let skeleton: string;
+    switch (ext) {
+      case '.ts':
+      case '.tsx':
+      case '.js':
+      case '.jsx':
+        skeleton = extractJsTsSkeleton(sourceCode, expandFunctions);
+        break;
+      case '.py':
+        skeleton = extractPythonSkeleton(sourceCode, expandFunctions);
+        break;
+      case '.go':
+        skeleton = extractGoSkeleton(sourceCode, expandFunctions);
+        break;
+      case '.rs':
+        skeleton = extractRustSkeleton(sourceCode, expandFunctions);
+        break;
+      case '.java':
+      case '.cpp':
+      case '.c':
+      case '.cs':
+        skeleton = extractCStyleSkeleton(sourceCode, expandFunctions);
+        break;
+      case '.kt':
+      case '.kts':
+        skeleton = extractKotlinSkeleton(sourceCode, expandFunctions);
+        break;
+      case '.swift':
+        skeleton = extractSwiftSkeleton(sourceCode, expandFunctions);
+        break;
+      case '.rb':
+        skeleton = extractRubySkeleton(sourceCode, expandFunctions);
+        break;
+      case '.php':
+        skeleton = extractPhpSkeleton(sourceCode, expandFunctions);
+        break;
+      case '.json':
+        skeleton = extractJsonSkeleton(sourceCode);
+        break;
+      default:
+        skeleton = extractGenericSkeleton(sourceCode);
+        break;
+    }
+
+    // Sanity boundary: if parsing produced an empty result from non-empty source, fall back
+    if ((!skeleton || skeleton.trim().length === 0) && sourceCode.trim().length > 0) {
+      skeleton = regexLineSlicer(sourceCode);
+    }
+    return skeleton;
+  } catch {
+    // Graceful fallback on syntax or parsing failure
+    const fallback = regexLineSlicer(sourceCode);
+    return fallback && fallback.trim().length > 0 ? fallback : extractGenericSkeleton(sourceCode);
   }
 }
 
@@ -115,8 +148,12 @@ function extractJsTsSkeleton(code: string, expand: string[]): string {
       }
     }
 
-    // Track braces
-    for (const char of line) {
+    // Track braces (strip strings and inline comments to prevent brace desync)
+    const lineForBraces = line
+      .replace(/\/\/.*$/, '')
+      .replace(/(["'`])(?:\\.|(?!\1)[^\\])*\1/g, '""');
+
+    for (const char of lineForBraces) {
       if (char === '{') { braceDepth++; }
       else if (char === '}') {
         braceDepth--;
@@ -333,6 +370,197 @@ function extractJsonSkeleton(code: string): string {
   }
 }
 
+/**
+ * Kotlin skeleton: keeps package, imports, class/interface/object headers, and fun signatures.
+ */
+function extractKotlinSkeleton(code: string, expand: string[]): string {
+  const lines = code.split('\n');
+  const result: string[] = [];
+  let inBody = false;
+  let depth = 0;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!inBody && (trimmed.startsWith('fun ') || trimmed.startsWith('suspend fun ') || trimmed.includes(' fun '))) {
+      const match = trimmed.match(/(?:fun\s+)([a-zA-Z0-9_]+)/);
+      const name = match ? match[1] : '';
+      if (!expand.includes(name) && line.includes('{')) {
+        const sig = line.substring(0, line.indexOf('{')).trimEnd();
+        result.push(`${sig} { /* ... */ }`);
+        inBody = true;
+        depth = (line.match(/\{/g) || []).length - (line.match(/\}/g) || []).length;
+        if (depth <= 0) { inBody = false; }
+        continue;
+      }
+    }
+
+    if (inBody) {
+      depth += (line.match(/\{/g) || []).length - (line.match(/\}/g) || []).length;
+      if (depth <= 0) { inBody = false; }
+      continue;
+    }
+
+    result.push(line);
+  }
+
+  return result.join('\n');
+}
+
+/**
+ * Swift skeleton: keeps import, protocols, structs, classes, extensions, and func signatures.
+ */
+function extractSwiftSkeleton(code: string, expand: string[]): string {
+  const lines = code.split('\n');
+  const result: string[] = [];
+  let inBody = false;
+  let depth = 0;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!inBody && (trimmed.startsWith('func ') || trimmed.includes(' func '))) {
+      const match = trimmed.match(/func\s+([a-zA-Z0-9_]+)/);
+      const name = match ? match[1] : '';
+      if (!expand.includes(name) && line.includes('{')) {
+        const sig = line.substring(0, line.indexOf('{')).trimEnd();
+        result.push(`${sig} { /* ... */ }`);
+        inBody = true;
+        depth = (line.match(/\{/g) || []).length - (line.match(/\}/g) || []).length;
+        if (depth <= 0) { inBody = false; }
+        continue;
+      }
+    }
+
+    if (inBody) {
+      depth += (line.match(/\{/g) || []).length - (line.match(/\}/g) || []).length;
+      if (depth <= 0) { inBody = false; }
+      continue;
+    }
+
+    result.push(line);
+  }
+
+  return result.join('\n');
+}
+
+/**
+ * Ruby skeleton: keeps require, class, module definitions and def signatures.
+ */
+function extractRubySkeleton(code: string, expand: string[]): string {
+  const lines = code.split('\n');
+  const result: string[] = [];
+  let inDef = false;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    const indent = line.search(/\S/);
+
+    if (trimmed.startsWith('def ')) {
+      const match = trimmed.match(/def\s+([a-zA-Z0-9_?!.]+)/);
+      const name = match ? match[1] : '';
+      if (expand.includes(name)) {
+        result.push(line);
+      } else {
+        result.push(line);
+        const nextIndent = ' '.repeat(Math.max(0, indent + 2));
+        result.push(`${nextIndent}...`);
+        inDef = true;
+      }
+      continue;
+    }
+
+    if (inDef) {
+      if (trimmed === 'end') {
+        inDef = false;
+        result.push(line);
+      }
+      continue;
+    }
+
+    result.push(line);
+  }
+
+  return result.join('\n');
+}
+
+/**
+ * PHP skeleton: keeps namespace, use, classes, interfaces, traits, and function signatures.
+ */
+function extractPhpSkeleton(code: string, expand: string[]): string {
+  const lines = code.split('\n');
+  const result: string[] = [];
+  let inBody = false;
+  let depth = 0;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    const isFn = (trimmed.startsWith('function ') || trimmed.includes(' function ')) && !trimmed.startsWith('//');
+    if (!inBody && isFn) {
+      const match = trimmed.match(/function\s+([a-zA-Z0-9_]+)/);
+      const name = match ? match[1] : '';
+      if (!expand.includes(name) && line.includes('{')) {
+        const sig = line.substring(0, line.indexOf('{')).trimEnd();
+        result.push(`${sig} { /* ... */ }`);
+        inBody = true;
+        depth = (line.match(/\{/g) || []).length - (line.match(/\}/g) || []).length;
+        if (depth <= 0) { inBody = false; }
+        continue;
+      }
+    }
+
+    if (inBody) {
+      depth += (line.match(/\{/g) || []).length - (line.match(/\}/g) || []).length;
+      if (depth <= 0) { inBody = false; }
+      continue;
+    }
+
+    result.push(line);
+  }
+
+  return result.join('\n');
+}
+
+/**
+ * Fallback regex-based line slicer when language-specific structural parsing encounters
+ * active syntax errors or fails completely (Issue 3 fallback).
+ */
+export function regexLineSlicer(code: string): string {
+  const lines = code.split('\n');
+  const result: string[] = [];
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('#') || trimmed.startsWith('/*') || trimmed.startsWith('*')) {
+      result.push(line);
+      continue;
+    }
+    // Imports, packages, modules
+    if (/^(?:import|export|from|package|namespace|using|use|require)\b/.test(trimmed)) {
+      result.push(line);
+      continue;
+    }
+    // Class, interface, type, struct, enum declarations
+    if (/^(?:export\s+)?(?:default\s+)?(?:abstract\s+)?(?:public\s+|private\s+|protected\s+)?(?:class|interface|type|enum|struct|trait|protocol|object)\b/.test(trimmed)) {
+      result.push(line);
+      continue;
+    }
+    // Functions, methods, definitions
+    if (/^(?:export\s+)?(?:async\s+)?(?:public\s+|private\s+|protected\s+|static\s+|suspend\s+)*(?:function\*?|def|func|fn|fun)\b/.test(trimmed)) {
+      if (line.includes('{')) {
+        const sig = line.substring(0, line.indexOf('{')).trimEnd();
+        result.push(`${sig} { /* ... */ }`);
+      } else {
+        result.push(line);
+      }
+      continue;
+    }
+    // Variable / constant declarations at top level
+    if (/^(?:export\s+)?(?:const|let|var|val)\s+[a-zA-Z0-9_$]+\s*[:=]/.test(trimmed)) {
+      result.push(line);
+      continue;
+    }
+  }
+  return result.join('\n');
+}
+
 function extractGenericSkeleton(code: string): string {
   const lines = code.split('\n');
   if (lines.length <= 50) { return code; }
@@ -344,7 +572,7 @@ function extractGenericSkeleton(code: string): string {
 }
 
 /**
- * Generate full skeleton stats for a file on disk.
+ * Generate full skeleton stats for a file on disk with 1MB size bounding (Issue 6).
  */
 export function getFileSkeleton(
   workspaceRoot: string,
@@ -357,6 +585,32 @@ export function getFileSkeleton(
   }
 
   try {
+    const stats = fs.statSync(absPath);
+    const MAX_SKELETON_FILE_BYTES = 1024 * 1024; // 1 MB ceiling
+
+    if (stats.size > MAX_SKELETON_FILE_BYTES) {
+      // Memory bloat guard: summarize oversized files instead of full in-memory AST split
+      const origBytes = stats.size;
+      const origTokens = Math.ceil(origBytes / 4);
+      const rawHead = fs.readFileSync(absPath, 'utf-8').slice(0, 4000);
+      const summaryContent = `// [TokenSculpt Guard: File size (${(origBytes / 1024).toFixed(0)} KB) exceeds 1MB threshold]\n` +
+        `// Path: ${relativePath}\n// Header preview:\n` +
+        rawHead.split('\n').slice(0, 40).join('\n') +
+        `\n// [... ${(origBytes / 1024).toFixed(0)} KB omitted to conserve memory ...]`;
+      const skelBytes = Buffer.byteLength(summaryContent, 'utf-8');
+      const skelTokens = Math.ceil(skelBytes / 4);
+      const reduction = Math.max(0, Math.round(((origBytes - skelBytes) / origBytes) * 100));
+      return {
+        file: relativePath,
+        originalBytes: origBytes,
+        skeletonBytes: skelBytes,
+        originalTokensEst: origTokens,
+        skeletonTokensEst: skelTokens,
+        reductionPercent: reduction,
+        skeletonContent: summaryContent,
+      };
+    }
+
     const content = fs.readFileSync(absPath, 'utf-8');
     const skeleton = extractCodeSkeleton(content, absPath, expandFunctions);
 

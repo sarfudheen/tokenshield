@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { LIGHTWEIGHT_TASK_PATTERNS, FULLPOWER_TASK_PATTERNS } from '../constants';
+import { detectActiveTools } from '../core/ideDetector';
 
 export type TaskComplexity = 'lightweight' | 'full-power' | 'unknown';
 
@@ -129,8 +130,15 @@ export async function suggestLighterModel(query: string): Promise<void> {
   tracker.recordClassification(query, classification);
 
   if (classification === 'lightweight') {
+    const activeTools = detectActiveTools();
+    const isCopilotOnly = activeTools.length === 1 && activeTools[0] === 'copilot';
+
+    const message = isCopilotOnly
+      ? '💡 Simple task detected. If your Copilot subscription permits model switching, choose a fast model (e.g. GPT-4o-mini) to save quota.'
+      : '💡 This looks like a simple task. Consider using a lighter model (e.g., GPT-4o-mini / Haiku) to save tokens.';
+
     const selection = await vscode.window.showInformationMessage(
-      '💡 This looks like a simple task. Consider using a lighter model (e.g., GPT-4o-mini) to save tokens.',
+      message,
       'Dismiss',
       'Don\'t show again',
     );

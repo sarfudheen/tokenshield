@@ -2341,6 +2341,11 @@ export class DashboardPanel {
     </div>
   </div>
 
+  <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:10px 16px; margin-bottom:24px; display:flex; align-items:center; gap:10px; font-size:12px; color:var(--text-muted);">
+    <span>ℹ️</span>
+    <span><strong>Estimation Notice:</strong> Token counts and cost metrics are on-device approximations calculated using standard byte-token ratios (~4 chars/token). Actual cloud provider billing may vary slightly depending on model tokenizer, hidden prompt metadata, and tool-call formatting schemas.</span>
+  </div>
+
   <h2>🔴 Live Activity Log (Session #${sessionNum})</h2>
   <div class="ledger-container">
     <table>

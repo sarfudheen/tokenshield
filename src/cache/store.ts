@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { spawnSync } from 'child_process';
 import { normalizeQuery, cacheKey, buildIdf, similarity, isMatch } from './similarity';
+import { SecretSanitizer } from './sanitizer';
 
 export const CACHE_DIR = '.aicache';
 export const CACHE_FILE = 'semantic-cache.json';
@@ -91,23 +92,25 @@ export class SemanticCacheStore {
 
   store(query: string, answer: string, scope: CacheScope = 'code'): CacheEntry {
     const data = this.load();
-    const tokens = normalizeQuery(query);
+    const cleanQuery = SecretSanitizer.redact(query);
+    const cleanAnswer = SecretSanitizer.redact(answer);
+    const tokens = normalizeQuery(cleanQuery);
     const key = cacheKey(tokens);
     const timestamp = this.now();
 
     let entry = data.entries.find((e) => e.id === key);
     if (entry) {
-      entry.query = query;
-      entry.answer = answer;
+      entry.query = cleanQuery;
+      entry.answer = cleanAnswer;
       entry.scope = scope;
       entry.gitHead = this.currentGitHead();
       entry.lastAccessedAt = timestamp;
     } else {
       entry = {
         id: key,
-        query,
+        query: cleanQuery,
         tokens,
-        answer,
+        answer: cleanAnswer,
         scope,
         gitHead: this.currentGitHead(),
         createdAt: timestamp,
@@ -209,25 +212,54 @@ export class SemanticCacheStore {
       return this.gitHeadCache.value;
     }
     let head: string | null = null;
+
+    // Fast path: resolve from .git directory on disk without spawning shell
     try {
-      const commitResult = spawnSync('git', ['rev-parse', 'HEAD'], {
-        cwd: this.workspaceRoot,
-        encoding: 'utf-8',
-        timeout: 3000,
-      });
-      const branchResult = spawnSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {
-        cwd: this.workspaceRoot,
-        encoding: 'utf-8',
-        timeout: 3000,
-      });
-      if (commitResult.status === 0 && commitResult.stdout) {
-        const commit = commitResult.stdout.trim();
-        const branch = branchResult.status === 0 ? branchResult.stdout.trim() : 'unknown';
-        head = `${branch}:${commit}`;
+      const gitDir = path.join(this.workspaceRoot, '.git');
+      const headFile = path.join(gitDir, 'HEAD');
+      if (fs.existsSync(headFile)) {
+        const headContent = fs.readFileSync(headFile, 'utf-8').trim();
+        if (headContent.startsWith('ref: ')) {
+          const refRel = headContent.slice(5).trim();
+          const branch = refRel.replace(/^refs\/heads\//, '');
+          const refPath = path.join(gitDir, refRel);
+          if (fs.existsSync(refPath)) {
+            const commit = fs.readFileSync(refPath, 'utf-8').trim();
+            if (/^[0-9a-f]{40}$/i.test(commit)) {
+              head = `${branch}:${commit}`;
+            }
+          }
+        } else if (/^[0-9a-f]{40}$/i.test(headContent)) {
+          head = `detached:${headContent}`;
+        }
       }
     } catch {
-      // Not a git repo or git unavailable — entries just never go stale.
+      // Best-effort fast path
     }
+
+    // Fallback: spawnSync git if fast path didn't resolve (e.g. packed-refs, worktrees)
+    if (!head) {
+      try {
+        const commitResult = spawnSync('git', ['rev-parse', 'HEAD'], {
+          cwd: this.workspaceRoot,
+          encoding: 'utf-8',
+          timeout: 2000,
+        });
+        const branchResult = spawnSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {
+          cwd: this.workspaceRoot,
+          encoding: 'utf-8',
+          timeout: 2000,
+        });
+        if (commitResult.status === 0 && commitResult.stdout) {
+          const commit = commitResult.stdout.trim();
+          const branch = branchResult.status === 0 ? branchResult.stdout.trim() : 'unknown';
+          head = `${branch}:${commit}`;
+        }
+      } catch {
+        // Not a git repo or git unavailable — entries just never go stale.
+      }
+    }
+
     this.gitHeadCache = { value: head, expiresAt: timestamp + GIT_HEAD_TTL_MS };
     return head;
   }

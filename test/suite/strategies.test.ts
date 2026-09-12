@@ -20,10 +20,11 @@ Module.prototype.require = function (request: string) {
   return originalRequire.apply(this, arguments);
 };
 
-import { extractCodeSkeleton } from '../../src/strategies/skeleton';
+import { extractCodeSkeleton, regexLineSlicer } from '../../src/strategies/skeleton';
 import { classifyTask } from '../../src/strategies/modelRouting';
 import { detectProjectExclusions } from '../../src/strategies/contextExclusion';
 import { getGuardrailTracker } from '../../src/strategies/guardrails';
+import { SecretSanitizer, REDACTED_PLACEHOLDER } from '../../src/cache/sanitizer';
 
 suite('Enhanced Strategies (AST Skeletons through Model Routing)', () => {
   suite('AST Skeleton Extraction', () => {
@@ -71,6 +72,153 @@ class DataProcessor:
       assert.ok(skeleton.includes('def __init__'));
       assert.ok(skeleton.includes('def process'));
       assert.ok(!skeleton.includes('result[item] = len(item)'));
+    });
+    test('handles braces inside strings and comments without desyncing brace depth', () => {
+      const tsCode = `
+export function formatTemplate(input: string): string {
+  const json = "{ \\"nested\\": { \\"value\\": 123 } }";
+  // inline comment with { brace }
+  const message = \`Hello \${input} {test}\`;
+  return message;
+}
+
+export function nextFunction(): void {
+  console.log("second");
+}
+`;
+      const skeleton = extractCodeSkeleton(tsCode, 'template.ts');
+      assert.ok(skeleton.includes('formatTemplate'));
+      assert.ok(skeleton.includes('nextFunction'));
+      assert.ok(skeleton.includes('{ /* ... */ }'));
+      assert.ok(!skeleton.includes('console.log("second")'));
+    });
+
+    test('extracts Kotlin classes and fun signatures', () => {
+      const ktCode = `
+package com.example.service
+
+import java.util.*
+
+class UserService {
+    fun fetchUser(id: String): User {
+        val user = repo.findById(id)
+        return user
+    }
+}
+`;
+      const skeleton = extractCodeSkeleton(ktCode, 'UserService.kt');
+      assert.ok(skeleton.includes('class UserService'));
+      assert.ok(skeleton.includes('fun fetchUser'));
+      assert.ok(!skeleton.includes('val user = repo.findById'));
+    });
+
+    test('extracts Swift structs and func signatures', () => {
+      const swiftCode = `
+import Foundation
+
+struct NetworkManager {
+    func executeRequest(url: URL) -> Data {
+        let session = URLSession.shared
+        return Data()
+    }
+}
+`;
+      const skeleton = extractCodeSkeleton(swiftCode, 'Network.swift');
+      assert.ok(skeleton.includes('struct NetworkManager'));
+      assert.ok(skeleton.includes('func executeRequest'));
+      assert.ok(!skeleton.includes('let session = URLSession.shared'));
+    });
+
+    test('extracts Ruby classes and def signatures', () => {
+      const rbCode = `
+class PaymentGateway
+  def process_payment(amount)
+    charge = Stripe::Charge.create(amount: amount)
+    charge.status
+  end
+end
+`;
+      const skeleton = extractCodeSkeleton(rbCode, 'gateway.rb');
+      assert.ok(skeleton.includes('class PaymentGateway'));
+      assert.ok(skeleton.includes('def process_payment'));
+      assert.ok(!skeleton.includes('Stripe::Charge.create'));
+    });
+
+    test('extracts PHP classes and function signatures', () => {
+      const phpCode = `
+namespace App\\Http;
+
+class ApiController {
+    public function handleRequest($request) {
+        $data = $request->all();
+        return response()->json($data);
+    }
+}
+`;
+      const skeleton = extractCodeSkeleton(phpCode, 'ApiController.php');
+      assert.ok(skeleton.includes('class ApiController'));
+      assert.ok(skeleton.includes('public function handleRequest'));
+      assert.ok(!skeleton.includes('$request->all()'));
+    });
+
+    test('regexLineSlicer falls back cleanly on broken syntax', () => {
+      const brokenCode = `
+export class BrokenComponent {
+  public methodWithoutClosingBrace( {
+    const x = 12;
+export function validFunction(): string {
+`;
+      const fallback = regexLineSlicer(brokenCode);
+      assert.ok(fallback.includes('export class BrokenComponent'));
+      assert.ok(fallback.includes('validFunction'));
+    });
+  });
+
+  suite('Secret Sanitizer', () => {
+    test('detects and redacts AWS access keys', () => {
+      const input = 'deploy with key AKIAIOSFODNN7EXAMPLE and secret';
+      const result = SecretSanitizer.redact(input);
+      assert.ok(!result.includes('AKIAIOSFODNN7EXAMPLE'));
+      assert.ok(result.includes(REDACTED_PLACEHOLDER));
+    });
+
+    test('detects and redacts GitHub personal access tokens', () => {
+      const input = 'export GITHUB_TOKEN="ghp_111111111122222222223333333333444444"';
+      const result = SecretSanitizer.redact(input);
+      assert.ok(!result.includes('ghp_111111111122222222223333333333444444'));
+      assert.ok(result.includes(REDACTED_PLACEHOLDER));
+    });
+
+    test('detects and redacts OpenAI and Anthropic API keys', () => {
+      const input = 'OpenAI: sk-abcdef1234567890abcdef123456, Claude: sk-ant-api03-abcdef1234567890abcdef123456';
+      const result = SecretSanitizer.redact(input);
+      assert.ok(!result.includes('sk-abcdef1234567890abcdef123456'));
+      assert.ok(!result.includes('sk-ant-api03-abcdef1234567890abcdef123456'));
+      assert.ok(result.includes(REDACTED_PLACEHOLDER));
+    });
+
+    test('detects and redacts PEM private keys', () => {
+      const input = `-----BEGIN RSA PRIVATE KEY-----
+MIIEowIBAAKCAQEA0Y1+exampleFakeKeyDataHereForTestingPurposesOnly123456
+-----END RSA PRIVATE KEY-----`;
+      const result = SecretSanitizer.redact(input);
+      assert.ok(!result.includes('MIIEowIBAAKCAQEA0Y1'));
+      assert.ok(result.includes(REDACTED_PLACEHOLDER));
+    });
+
+    test('detects and redacts generic password and secret assignments', () => {
+      const input = 'const dbConfig = { password: "superSecretPassword123!", api_key: "abcdef9876543210" };';
+      const result = SecretSanitizer.redact(input);
+      assert.ok(!result.includes('superSecretPassword123!'));
+      assert.ok(!result.includes('abcdef9876543210'));
+      assert.ok(result.includes(REDACTED_PLACEHOLDER));
+    });
+
+    test('leaves normal non-secret code intact', () => {
+      const input = 'function calculateTotal(price, qty) { return price * qty; }';
+      const result = SecretSanitizer.redact(input);
+      assert.strictEqual(result, input);
+      assert.strictEqual(SecretSanitizer.containsSecrets(input), false);
     });
   });
 

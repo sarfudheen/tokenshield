@@ -10,6 +10,7 @@ import { recordDiskEvent } from '../cache/eventLog';
 import { getFileSkeleton } from '../strategies/skeleton';
 import { pruneContext, compressGitDiff, isolateTestFailures, stripCommentsAndHeaders } from '../strategies/adaptivePruner';
 import { normalizePromptForCache, padToCacheBoundary } from '../strategies/kvCacheOptimizer';
+import { SecretSanitizer } from '../cache/sanitizer';
 
 const SERVER_NAME = 'token-cache';
 const SERVER_VERSION = '0.5.0';
@@ -162,7 +163,7 @@ function callTool(name: string, args: Record<string, unknown>): unknown {
       const result = store.lookup(args.query);
       callLog.recordLookup(result);
       if (result.hit && result.answer) {
-        const saved = Math.max(1, Math.ceil(result.answer.length / 3.8));
+        const saved = Math.max(1, Math.ceil(result.answer.length / 4));
         recordDiskEvent(workspaceRoot, {
           directive: 'Semantic Cache',
           source: args.query.length > 50 ? args.query.slice(0, 47) + '...' : args.query,
@@ -184,20 +185,22 @@ function callTool(name: string, args: Record<string, unknown>): unknown {
       if (args.answer.length > 50_000) {
         throw new Error('cache_store rejected: answer exceeds 50KB maximum size');
       }
+      const cleanQuery = SecretSanitizer.redact(args.query);
+      const cleanAnswer = SecretSanitizer.redact(args.answer);
       const scope: CacheScope = args.scope === 'durable' ? 'durable' : 'code';
-      const entry = store.store(args.query, args.answer, scope);
+      const entry = store.store(cleanQuery, cleanAnswer, scope);
       callLog.recordStore();
-      const saved = Math.max(1, Math.ceil(args.answer.length / 3.8));
+      const saved = Math.max(1, Math.ceil(cleanAnswer.length / 4));
       recordDiskEvent(workspaceRoot, {
         directive: 'Semantic Cache',
-        source: args.query.length > 50 ? args.query.slice(0, 47) + '...' : args.query,
+        source: cleanQuery.length > 50 ? cleanQuery.slice(0, 47) + '...' : cleanQuery,
         tokensSaved: saved,
         details: `Stored reusable ${scope} answer (~${saved} tok avoided on next hit) in .aicache/semantic-cache.json`,
         beforeTokens: saved,
         afterTokens: 0,
         reductionPercent: 100,
-        beforeContent: args.query,
-        afterContent: args.answer,
+        beforeContent: cleanQuery,
+        afterContent: cleanAnswer,
       });
       return { stored: true, id: entry.id, scope: entry.scope };
     }
@@ -222,6 +225,8 @@ function callTool(name: string, args: Record<string, unknown>): unknown {
           rawSource = fs.readFileSync(filePath, 'utf-8');
         }
       } catch { /* ignore */ }
+      result.skeletonContent = SecretSanitizer.redact(result.skeletonContent);
+      const cleanRawSource = rawSource ? SecretSanitizer.redact(rawSource) : undefined;
       recordDiskEvent(workspaceRoot, {
         directive: 'AST Skeletons',
         source: args.file,
@@ -230,7 +235,7 @@ function callTool(name: string, args: Record<string, unknown>): unknown {
         beforeTokens: origTok,
         afterTokens: skelTok,
         reductionPercent: result.reductionPercent,
-        beforeContent: rawSource,
+        beforeContent: cleanRawSource,
         afterContent: result.skeletonContent,
       });
       return result;
@@ -283,8 +288,8 @@ function callTool(name: string, args: Record<string, unknown>): unknown {
       }
       const headersOnly = args.headersOnly !== false; // default to headers-only (safe mode)
       const pruned = stripCommentsAndHeaders(args.code, headersOnly);
-      const origTok = Math.max(1, Math.ceil(args.code.length / 3.8));
-      const prunedTok = Math.max(1, Math.ceil(pruned.length / 3.8));
+      const origTok = Math.max(1, Math.ceil(args.code.length / 4));
+      const prunedTok = Math.max(1, Math.ceil(pruned.length / 4));
       const saved = Math.max(0, origTok - prunedTok);
       const pct = origTok > 0 ? Math.round(((origTok - prunedTok) / origTok) * 100) : 0;
       if (saved > 0) {
@@ -403,6 +408,9 @@ rl.on('line', (line) => {
   }
 
   if (request.id === undefined || request.id === null) {
+    if (request.method === 'notifications/initialized' || request.method === 'initialized') {
+      process.stderr.write(`[${SERVER_NAME}] MCP client initialized successfully\n`);
+    }
     return;
   }
 
