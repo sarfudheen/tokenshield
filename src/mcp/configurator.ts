@@ -286,7 +286,7 @@ export async function configureAntigravityMcp(
       };
       config['mcpServers'] = mcpServers;
       fs.writeFileSync(filePath, JSON.stringify(config, null, 2), 'utf-8');
-      outputChannel.appendLine(`[mcp] Updated ${label} with TokenShield MCP server for Antigravity`);
+      outputChannel.appendLine(`[mcp] Updated ${label} with TokenSculpt MCP server for Antigravity`);
     } catch (err) {
       outputChannel.appendLine(`[mcp] Failed to update ${label}: ${err}`);
     }

@@ -8,8 +8,8 @@ let debounceTimer: NodeJS.Timeout | undefined;
 
 export function createEditorTokenBadge(context: vscode.ExtensionContext): vscode.StatusBarItem {
   tokenStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 99);
-  tokenStatusBarItem.name = 'TokenShield Token Counter';
-  tokenStatusBarItem.command = 'tokenshield.dashboard';
+  tokenStatusBarItem.name = 'TokenSculpt Token Counter';
+  tokenStatusBarItem.command = 'tokensculpt.dashboard';
 
   // Listen to active editor change
   context.subscriptions.push(
@@ -78,22 +78,22 @@ export async function updateTokenBadge(editor: vscode.TextEditor | undefined): P
 
   if (hasSelection) {
     tokenStatusBarItem.text = `$(symbol-variable) ${formattedTokens} tok (${formattedCost})`;
-    md.appendMarkdown(`### 🔍 TokenShield Selection Analysis\n`);
+    md.appendMarkdown(`### 🔍 TokenSculpt Selection Analysis\n`);
     md.appendMarkdown(`- **Selected Tokens**: ~\`${tokenCount.toLocaleString()}\` tokens\n`);
     md.appendMarkdown(`- **Estimated Inference Cost**: \`${formattedCost}\`\n`);
     md.appendMarkdown(`- **Active Engine**: \`${activeModel.name}\` ($${pricing.inputPerMillion}/1M input tokens)\n\n`);
     md.appendMarkdown(`---\n\n`);
-    md.appendMarkdown(`[⚡ Prune & Copy](command:tokenshield.pruneAndCopy) &nbsp;|&nbsp; [📊 Dashboard](command:tokenshield.dashboard)`);
+    md.appendMarkdown(`[⚡ Prune & Copy](command:tokensculpt.pruneAndCopy) &nbsp;|&nbsp; [📊 Dashboard](command:tokensculpt.dashboard)`);
   } else {
     tokenStatusBarItem.text = `$(symbol-key) ${formattedTokens} tok (${formattedCost})`;
-    md.appendMarkdown(`### 📄 TokenShield File Analysis\n`);
+    md.appendMarkdown(`### 📄 TokenSculpt File Analysis\n`);
     md.appendMarkdown(`- **File**: \`${vscode.workspace.asRelativePath(editor.document.fileName)}\`\n`);
     md.appendMarkdown(`- **Estimated Tokens**: ~\`${tokenCount.toLocaleString()}\` tokens\n`);
     md.appendMarkdown(`- **Estimated Prompt Cost**: \`${formattedCost}\`\n`);
     md.appendMarkdown(`- **Total Lines**: \`${editor.document.lineCount.toLocaleString()}\` lines\n`);
     md.appendMarkdown(`- **Active Engine**: \`${activeModel.name}\` ($${pricing.inputPerMillion}/1M input tokens)\n\n`);
     md.appendMarkdown(`---\n\n`);
-    md.appendMarkdown(`[⚡ Compress & Prune](command:tokenshield.pruneAndCopy) &nbsp;|&nbsp; [📊 Dashboard](command:tokenshield.dashboard)`);
+    md.appendMarkdown(`[⚡ Compress & Prune](command:tokensculpt.pruneAndCopy) &nbsp;|&nbsp; [📊 Dashboard](command:tokensculpt.dashboard)`);
   }
 
   tokenStatusBarItem.tooltip = md;

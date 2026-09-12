@@ -9,7 +9,7 @@ suite('Lifetime Data Store (persistence & session management)', () => {
   let tmpDir: string;
 
   setup(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tokenshield-lifetime-test-'));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tokensculpt-lifetime-test-'));
   });
 
   teardown(() => {

@@ -27,7 +27,7 @@ import { getFileSkeleton } from '../strategies/skeleton';
 import { pruneContext, stripCommentsAndHeaders } from '../strategies/adaptivePruner';
 
 export class DiffContentProvider implements vscode.TextDocumentContentProvider {
-  public static readonly scheme = 'tokenshield-preview';
+  public static readonly scheme = 'tokensculpt-preview';
   private static instance?: DiffContentProvider;
   private contents = new Map<string, string>();
   private onDidChangeEmitter = new vscode.EventEmitter<vscode.Uri>();
@@ -64,14 +64,14 @@ export function registerDiffContentProvider(context?: vscode.ExtensionContext): 
   providerRegistered = true;
 }
 
-const REFRESH_COMMAND = 'tokenshield.dashboard';
-const EXPORT_COMMAND = 'tokenshield.exportReport';
-const PRUNE_COMMAND = 'tokenshield.pruneAndCopy';
-const PROFILE_COMMAND = 'tokenshield.switchProfile';
-const EXCLUSIONS_COMMAND = 'tokenshield.exclusions';
-const RESET_COMMAND = 'tokenshield.newSession';
-const RESET_ALL_COMMAND = 'tokenshield.resetAllData';
-const HEALTH_COMMAND = 'tokenshield.healthCheck';
+const REFRESH_COMMAND = 'tokensculpt.dashboard';
+const EXPORT_COMMAND = 'tokensculpt.exportReport';
+const PRUNE_COMMAND = 'tokensculpt.pruneAndCopy';
+const PROFILE_COMMAND = 'tokensculpt.switchProfile';
+const EXCLUSIONS_COMMAND = 'tokensculpt.exclusions';
+const RESET_COMMAND = 'tokensculpt.newSession';
+const RESET_ALL_COMMAND = 'tokensculpt.resetAllData';
+const HEALTH_COMMAND = 'tokensculpt.healthCheck';
 
 interface DashboardMeasurements {
   codeGraph: Measurement;
@@ -237,8 +237,8 @@ export class DashboardPanel {
     }
 
     const panel = vscode.window.createWebviewPanel(
-      'tokenshieldDashboard',
-      'TokenShield — Savings Dashboard',
+      'tokensculptDashboard',
+      'TokenSculpt — Savings Dashboard',
       vscode.ViewColumn.One,
       {
         enableScripts: true,
@@ -264,12 +264,12 @@ export class DashboardPanel {
           await DashboardPanel.refreshCurrentPanel();
           const label = message.name || message.key;
           vscode.window.showInformationMessage(
-            `TokenShield: ${label} is now ${message.enabled ? 'ENABLED' : 'DISABLED'}`
+            `TokenSculpt: ${label} is now ${message.enabled ? 'ENABLED' : 'DISABLED'}`
           );
         } else if (message.command === 'deactivateCompletely') {
-          await vscode.commands.executeCommand('tokenshield.deactivateCompletely');
+          await vscode.commands.executeCommand('tokensculpt.deactivateCompletely');
         } else if (message.command === 'reactivate') {
-          await vscode.commands.executeCommand('tokenshield.reactivate');
+          await vscode.commands.executeCommand('tokensculpt.reactivate');
         } else if (message.command === 'openDiff') {
           try {
             registerDiffContentProvider();
@@ -280,10 +280,10 @@ export class DashboardPanel {
             const baseName = parsed.name || 'payload';
             const nonce = Date.now();
             const beforeUri = vscode.Uri.parse(
-              `${DiffContentProvider.scheme}:/${encodeURIComponent(baseName)} (Without TokenShield)${ext}?${nonce}`
+              `${DiffContentProvider.scheme}:/${encodeURIComponent(baseName)} (Without TokenSculpt)${ext}?${nonce}`
             );
             const afterUri = vscode.Uri.parse(
-              `${DiffContentProvider.scheme}:/${encodeURIComponent(baseName)} (With TokenShield)${ext}?${nonce}`
+              `${DiffContentProvider.scheme}:/${encodeURIComponent(baseName)} (With TokenSculpt)${ext}?${nonce}`
             );
 
             provider.setContent(beforeUri, message.beforeContent || '');
@@ -293,11 +293,11 @@ export class DashboardPanel {
               'vscode.diff',
               beforeUri,
               afterUri,
-              `TokenShield Audit: ${message.directive} (${rawFileName})`,
+              `TokenSculpt Audit: ${message.directive} (${rawFileName})`,
               { preview: true }
             );
           } catch (err) {
-            vscode.window.showErrorMessage(`TokenShield: Failed to open diff: ${err}`);
+            vscode.window.showErrorMessage(`TokenSculpt: Failed to open diff: ${err}`);
           }
         }
       },
@@ -330,7 +330,7 @@ export class DashboardPanel {
     this.panel.webview.html = this.getLoadingContent();
 
     const [measurements, activeModel, availableModels, sessionSummary] = await vscode.window.withProgress(
-      { location: vscode.ProgressLocation.Notification, title: 'TokenShield: reading live activity ledger…', cancellable: false },
+      { location: vscode.ProgressLocation.Notification, title: 'TokenSculpt: reading live activity ledger…', cancellable: false },
       async () => {
         const m = {
           codeGraph: measureCodeGraph(strategies),
@@ -377,13 +377,13 @@ export class DashboardPanel {
   private getLoadingContent(): string {
     return `<!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"><title>TokenShield</title>
+<head><meta charset="UTF-8"><title>TokenSculpt</title>
 <style>
   body { font-family: var(--vscode-font-family, sans-serif); color: var(--vscode-foreground, #ccc); background: var(--vscode-editor-background, #12151c); padding: 40px; }
 </style>
 </head>
 <body>
-  <h1>🛡️ TokenShield Real-Time Ledger</h1>
+  <h1>🛡️ TokenSculpt Real-Time Ledger</h1>
   <p>Gathering live token savings events and execution history…</p>
 </body>
 </html>`;
@@ -593,7 +593,7 @@ export class DashboardPanel {
         howItAvoided = 'Proactively nudged fresh thread creation when conversation length exceeded saturation thresholds.';
         break;
       default:
-        howItAvoided = ev.details || 'Optimized prompt context via local TokenShield directive.';
+        howItAvoided = ev.details || 'Optimized prompt context via local TokenSculpt directive.';
         break;
     }
 
@@ -662,19 +662,19 @@ export class DashboardPanel {
         language = 'diff';
         explanation = `Filtered raw commit hashes, index lines, and unmodified context lines from ${src} (-${pct}% tokens avoided). Measured on-device by RTK.`;
         beforeContent = `$ ${src} (unfiltered terminal stream)\ndiff --git a/src/index.ts b/src/index.ts\nindex 8a3f120..bc914e2 100644\n--- a/src/index.ts\n+++ b/src/index.ts\n// ... lines 1 to 140 unmodified context lines ...\n@@ -141,6 +141,8 @@ export function process() {\n-  const oldVal = 1;\n+  const newVal = 2;\n// ... 210 lines of trailing unmodified file context ...\n[... +${saved.toLocaleString()} tokens of raw commit hashes and unchanged diff context stripped ...]`;
-        afterContent = `$ ${src} [TokenShield RTK Active]\n--- a/src/index.ts\n+++ b/src/index.ts\n@@ -141,6 +141,8 @@\n-  const oldVal = 1;\n+  const newVal = 2;\n(${saved.toLocaleString()} unchanged context & index tokens stripped before prompt ingestion)`;
+        afterContent = `$ ${src} [TokenSculpt RTK Active]\n--- a/src/index.ts\n+++ b/src/index.ts\n@@ -141,6 +141,8 @@\n-  const oldVal = 1;\n+  const newVal = 2;\n(${saved.toLocaleString()} unchanged context & index tokens stripped before prompt ingestion)`;
       } else if (cmd.includes('status')) {
         explanation = `Stripped git status guide hints, upstream tracking banners, and untracked noise from ${src} (-${pct}% tokens avoided). Measured on-device by RTK.`;
         beforeContent = `$ ${src} (unfiltered terminal stream)\nOn branch master\nYour branch is up to date with 'origin/master'.\n\nChanges to be committed:\n  (use "git restore --staged <file>..." to unstage)\n\tmodified:   src/index.ts\n\nUntracked files:\n  (use "git add <file>..." to include in what will be committed)\n\t[... +${saved.toLocaleString()} tokens of untracked files & git instruction banners omitted ...]`;
-        afterContent = `$ ${src} [TokenShield RTK Active]\nM src/index.ts\n(Verbose git status instructions & untracked noise stripped before LLM ingestion)`;
+        afterContent = `$ ${src} [TokenSculpt RTK Active]\nM src/index.ts\n(Verbose git status instructions & untracked noise stripped before LLM ingestion)`;
       } else if (cmd.includes('rg') || cmd.includes('grep')) {
         explanation = `Stripped repetitive search output lines, ANSI highlights, and redundant file paths from ${src} (-${pct}% tokens avoided). Measured on-device by RTK.`;
         beforeContent = `$ ${src} (unfiltered terminal stream)\n\\x1b[35msrc/core/config.ts\\x1b[0m:\\x1b[32m42\\x1b[0m: export function getConfig()\n\\x1b[35msrc/core/config.ts\\x1b[0m:\\x1b[32m89\\x1b[0m: const config = getConfig()\n[... +${saved.toLocaleString()} tokens of ANSI sequences and repeated file path headers omitted ...]`;
-        afterContent = `$ ${src} [TokenShield RTK Active]\nsrc/core/config.ts:42: export function getConfig()\nsrc/core/config.ts:89: const config = getConfig()\n(Stripped ANSI codes & path duplicates; +${saved.toLocaleString()} tokens avoided)`;
+        afterContent = `$ ${src} [TokenSculpt RTK Active]\nsrc/core/config.ts:42: export function getConfig()\nsrc/core/config.ts:89: const config = getConfig()\n(Stripped ANSI codes & path duplicates; +${saved.toLocaleString()} tokens avoided)`;
       } else {
         explanation = `Filtered terminal ANSI escape sequences, spinner progress junk, and non-failing test suites from ${src} (-${pct}% tokens avoided). Measured on-device by RTK.`;
         beforeContent = `$ ${src} (unfiltered terminal stream)\n\\x1b[32m✔ Loaded test suites\\x1b[0m\n\\x1b[90m PASS \\x1b[0m test/suite/cache.test.ts (24ms)\n\\x1b[90m PASS \\x1b[0m test/suite/callLog.test.ts (18ms)\n\\x1b[90m PASS \\x1b[0m test/suite/session.test.ts (15ms)\n\\x1b[90m PASS \\x1b[0m test/suite/pruner.test.ts (19ms)\n[... +${saved.toLocaleString()} tokens of ANSI sequences, progress spinners, and passing suites omitted ...]\nTests: All passed\nTime: 1.42s`;
-        afterContent = `$ ${src} [TokenShield RTK Active]\n✓ Tests passed.\n(Terminal noise, progress spinners & ANSI sequences dropped before prompt ingestion)`;
+        afterContent = `$ ${src} [TokenSculpt RTK Active]\n✓ Tests passed.\n(Terminal noise, progress spinners & ANSI sequences dropped before prompt ingestion)`;
       }
 
       return {
@@ -710,7 +710,7 @@ export class DashboardPanel {
 
       if (!beforeContent || !afterContent) {
         beforeContent = `// Target: ${src}\nexport class DataProcessor {\n  private cache: Map<string, CacheEntry> = new Map();\n  private maxEntries: number = 300;\n\n  constructor(private readonly root: string) {\n    this.initStorage();\n  }\n\n  public processRecord(id: string, payload: Record<string, unknown>): Result {\n    // [85 lines of internal loops, data transformations,\n    //  validation logic, and memory buffering...]\n    const validated = this.validate(payload);\n    const hash = crypto.createHash('sha256').update(id).digest('hex');\n    this.cache.set(hash, validated);\n    return { status: 'ok', id: hash };\n  }\n\n  private validate(input: unknown): CleanData {\n    // [40 lines of field-by-field validation checks...]\n    return clean;\n  }\n}`;
-        afterContent = `// Target: ${src} [TokenShield AST Skeleton]\nexport class DataProcessor {\n  constructor(root: string);\n  public processRecord(id: string, payload: Record<string, unknown>): Result;\n}\n// Internal implementation bodies omitted (~${saved.toLocaleString()} tokens saved)`;
+        afterContent = `// Target: ${src} [TokenSculpt AST Skeleton]\nexport class DataProcessor {\n  constructor(root: string);\n  public processRecord(id: string, payload: Record<string, unknown>): Result;\n}\n// Internal implementation bodies omitted (~${saved.toLocaleString()} tokens saved)`;
       }
 
       return {
@@ -729,8 +729,8 @@ export class DashboardPanel {
         : `[Unoptimized: Full LLM Prompt Request Sent Across Network]\nEndpoint: /v1/chat/completions\nQuery: "${src}"\nInput Tokens: ~${beforeTokens.toLocaleString()} tok\nOutput Tokens: ~${Math.round(saved * 0.4)} tok\nNetwork Latency: 1,480 ms\nCost Incurred: $${((beforeTokens / 1_000_000) * 0.15).toFixed(5)} USD`;
 
       const afterContent = evAfterContent
-        ? `[TokenShield Semantic Cache: Instant On-Device Hit]\nCache File: .aicache/semantic-cache.json\nQuery: "${src}"\nCached Answer:\n${evAfterContent}\nTokens Bypassed: +${saved.toLocaleString()} tok ($0.00000 USD)`
-        : `[TokenShield Semantic Cache: Instant On-Device Hit]\nCache File: .aicache/semantic-cache.json\nQuery: "${src}"\nDisk Access Latency: 1.4 ms (<2ms)\nTokens Bypassed: +${saved.toLocaleString()} tok ($0.00000 USD)\nStatus: Cache Hit (Served verbatim from SSD at zero cost)`;
+        ? `[TokenSculpt Semantic Cache: Instant On-Device Hit]\nCache File: .aicache/semantic-cache.json\nQuery: "${src}"\nCached Answer:\n${evAfterContent}\nTokens Bypassed: +${saved.toLocaleString()} tok ($0.00000 USD)`
+        : `[TokenSculpt Semantic Cache: Instant On-Device Hit]\nCache File: .aicache/semantic-cache.json\nQuery: "${src}"\nDisk Access Latency: 1.4 ms (<2ms)\nTokens Bypassed: +${saved.toLocaleString()} tok ($0.00000 USD)\nStatus: Cache Hit (Served verbatim from SSD at zero cost)`;
 
       return {
         beforeTitle: `CLOUD LLM NETWORK CALL (${beforeTokens.toLocaleString()} tok)`,
@@ -813,7 +813,7 @@ export class DashboardPanel {
 
       if (!beforeContent || !afterContent) {
         beforeContent = `// Source: ${src} (Raw unpruned context)\n/*\n * Copyright (c) 2026 Enterprise Corp.\n * Licensed under the Apache License, Version 2.0 (the "License");\n * You may not use this file except in compliance with the License.\n * [40 lines of legal boilerplate and disclaimers...]\n */\n\nimport * as vscode from 'vscode';\n\n// Helper to validate active editor session\nexport function validateSession(editor: vscode.TextEditor): boolean {\n  // Check if document is open\n  if (!editor.document) {\n    return false; // No document\n  }\n\n  // Return validity\n  return true;\n}`;
-        afterContent = `// Source: ${src} [TokenShield Adaptive Pruner: Clean & Compact]\nimport * as vscode from 'vscode';\n\nexport function validateSession(editor: vscode.TextEditor): boolean {\n  if (!editor.document) {\n    return false;\n  }\n  return true;\n}`;
+        afterContent = `// Source: ${src} [TokenSculpt Adaptive Pruner: Clean & Compact]\nimport * as vscode from 'vscode';\n\nexport function validateSession(editor: vscode.TextEditor): boolean {\n  if (!editor.document) {\n    return false;\n  }\n  return true;\n}`;
       }
 
       return {
@@ -904,7 +904,7 @@ export class DashboardPanel {
         language: 'markdown',
         explanation: `Downshifted routine typo, comment, or single-line lookup task from expensive reasoning model to fast sub-cent model (99% cost avoided).`,
         beforeContent: `[Flagship Model Routing (Opus / GPT-4o / O1)]:\nTask: "${src}"\nModel: Flagship Tier ($15.00 / 1M input)\nEstimated Cost: ~$0.04500 USD`,
-        afterContent: `[TokenShield Smart Routing]:\nTask: "${src}" (Classified: Lightweight)\nRouted to: Gemini Flash / Claude Haiku ($0.15 / 1M input)\nCost: ~$0.00045 USD (99% cost avoided)`
+        afterContent: `[TokenSculpt Smart Routing]:\nTask: "${src}" (Classified: Lightweight)\nRouted to: Gemini Flash / Claude Haiku ($0.15 / 1M input)\nCost: ~$0.00045 USD (99% cost avoided)`
       };
     }
 
@@ -915,7 +915,7 @@ export class DashboardPanel {
         language: 'shell',
         explanation: `Halted runaway autonomous agent retry cycle after 3 failures, preventing runaway token credit burn.`,
         beforeContent: `Attempt 1: FAILED -> Retrying (4,000 tok)\nAttempt 2: FAILED -> Retrying (8,000 tok)\nAttempt 3: FAILED -> Retrying (12,000 tok)\nAttempt 4: FAILED -> Retrying (16,000 tok)\nAttempt 5: FAILED -> Retrying (20,000 tok)...\nTotal Burn: ~${beforeTokens.toLocaleString()} tokens`,
-        afterContent: `[TokenShield Guardrail Tripped]\nAutonomous loop halted after 3 consecutive failures.\nBlocker isolated: "${details || 'Subagent execution error'}"\nAvoided ~${saved.toLocaleString()} runaway loop tokens.`
+        afterContent: `[TokenSculpt Guardrail Tripped]\nAutonomous loop halted after 3 consecutive failures.\nBlocker isolated: "${details || 'Subagent execution error'}"\nAvoided ~${saved.toLocaleString()} runaway loop tokens.`
       };
     }
 
@@ -926,7 +926,7 @@ export class DashboardPanel {
         language: 'markdown',
         explanation: `Auto-excluded dist/, package-lock.json, and minified bundles via .copilotignore rules (-${pct}% tokens avoided).`,
         beforeContent: `[Files Scanned & Sent to Context Prompt]:\n- dist/bundle.js (2.4MB / ~620,000 tokens)\n- package-lock.json (214KB / ~54,000 tokens)\n- node_modules/.cache/... (1.2MB / ~310,000 tokens)\nTotal Ingestion: ~${beforeTokens.toLocaleString()} tokens`,
-        afterContent: `[TokenShield .copilotignore Active]:\n- dist/** (BLOCKED)\n- package-lock.json (BLOCKED)\n- node_modules/** (BLOCKED)\nOnly relevant source files ingested (~${afterTokens.toLocaleString()} tokens)`
+        afterContent: `[TokenSculpt .copilotignore Active]:\n- dist/** (BLOCKED)\n- package-lock.json (BLOCKED)\n- node_modules/** (BLOCKED)\nOnly relevant source files ingested (~${afterTokens.toLocaleString()} tokens)`
       };
     }
 
@@ -937,7 +937,7 @@ export class DashboardPanel {
         language: 'markdown',
         explanation: `Maintained deterministic instruction order and byte-aligned prefix blocks to unlock cloud provider KV-cache discount (-${pct}% cost avoided).`,
         beforeContent: `[Dynamic Client Prompt - Cache Miss]\nTurn ID: #14 (Dynamic Timestamp: ${new Date().toISOString()})\nSystem Instructions: [Order dynamically altered across turns]\n- Rule: verbosity control\n- Rule: code graph\nCloud KV Cache Status: MISS (Billed at 100% full input rate)`,
-        afterContent: `[TokenShield Deterministic Prefix Block]\n<!-- Byte-Aligned Static Instruction Header -->\n# Antigravity TokenShield Optimizations\nCloud KV Cache Status: HIT (90% Input Token Discount Applied)`
+        afterContent: `[TokenSculpt Deterministic Prefix Block]\n<!-- Byte-Aligned Static Instruction Header -->\n# Antigravity TokenSculpt Optimizations\nCloud KV Cache Status: HIT (90% Input Token Discount Applied)`
       };
     }
 
@@ -981,7 +981,7 @@ export class DashboardPanel {
         language: 'typescript',
         explanation: `Reused active in-memory edit session buffer for ${src} instead of issuing redundant workspace file reads (-${pct}% tokens avoided).`,
         beforeContent: `[File Read Requested for Multi-File Edit]:\nPath: ${src}\nDisk Read: Issued\nPrompt Ingestion: ~${beforeTokens.toLocaleString()} tokens reprinted`,
-        afterContent: `[TokenShield Edit Session Awareness]:\nPath: ${src}\nBuffer Status: Already loaded in active multi-file edit session.\nAction: Reused in-memory editor buffer (0 redundant tokens ingested)`
+        afterContent: `[TokenSculpt Edit Session Awareness]:\nPath: ${src}\nBuffer Status: Already loaded in active multi-file edit session.\nAction: Reused in-memory editor buffer (0 redundant tokens ingested)`
       };
     }
 
@@ -992,7 +992,7 @@ export class DashboardPanel {
         language: 'markdown',
         explanation: `Proactively nudged thread reset when conversation length exceeded saturation limits, preventing quadratic token cost accumulation.`,
         beforeContent: `[Chat Thread History: Saturated]\nMessage Count: 48 messages\nAccumulated Context: ~${beforeTokens.toLocaleString()} tokens per subsequent prompt\nRisk: Quadratic token accumulation & context degradation`,
-        afterContent: `[TokenShield Thread Reset Nudge]\nSuggested Action: Start fresh session with current task summary.\nSavings: Resets prompt baseline to ~${afterTokens.toLocaleString()} tokens (avoided +${saved.toLocaleString()} tokens)`
+        afterContent: `[TokenSculpt Thread Reset Nudge]\nSuggested Action: Start fresh session with current task summary.\nSavings: Resets prompt baseline to ~${afterTokens.toLocaleString()} tokens (avoided +${saved.toLocaleString()} tokens)`
       };
     }
 
@@ -1311,7 +1311,7 @@ export class DashboardPanel {
         const timeStr = ev.timestamp.toLocaleTimeString();
         const costStr = ev.costSavedUsd < 0.0001 ? '<$0.0001' : `$${ev.costSavedUsd.toFixed(4)}`;
         return `
-        <tr class="activity-row" onclick="openEventModal('${ev.id}')" title="Click to inspect With vs Without TokenShield calculation">
+        <tr class="activity-row" onclick="openEventModal('${ev.id}')" title="Click to inspect With vs Without TokenSculpt calculation">
           <td><span class="ledger-time">${timeStr}</span></td>
           <td><span class="tool-badge">${ev.directive}</span></td>
           <td><code>${ev.source}</code></td>
@@ -1331,7 +1331,7 @@ export class DashboardPanel {
           const timeStr = new Date(ev.timestamp).toLocaleTimeString();
           const costStr = ev.costSavedUsd < 0.0001 ? '<$0.0001' : `$${ev.costSavedUsd.toFixed(4)}`;
           return `
-            <tr class="activity-row" onclick="openEventModal('${ev.id}')" title="Click to inspect With vs Without TokenShield calculation">
+            <tr class="activity-row" onclick="openEventModal('${ev.id}')" title="Click to inspect With vs Without TokenSculpt calculation">
               <td><span class="ledger-time">${timeStr}</span></td>
               <td><span class="tool-badge">${ev.directive}</span></td>
               <td><code>${ev.source}</code></td>
@@ -1395,7 +1395,7 @@ export class DashboardPanel {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TokenShield Savings Dashboard</title>
+  <title>TokenSculpt Savings Dashboard</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
     :root {
@@ -2291,17 +2291,17 @@ export class DashboardPanel {
   ${!config.enabled ? `
   <div class="deactivated-banner">
     <div>
-      <h3>⚠️ TokenShield is Completely Deactivated</h3>
+      <h3>⚠️ TokenSculpt is Completely Deactivated</h3>
       <p>All optimization directives, prompt policies, and file exclusions have been stripped from your workspace. AI assistants (Copilot, Claude, Antigravity) are operating in default unconstrained mode.</p>
     </div>
     <div>
-      <button class="btn-reactivate" onclick="reactivate()">▶ Reactivate TokenShield</button>
+      <button class="btn-reactivate" onclick="reactivate()">▶ Reactivate TokenSculpt</button>
     </div>
   </div>` : ''}
 
   <div class="header">
     <div>
-      <h1>🛡️ TokenShield Savings Dashboard</h1>
+      <h1>🛡️ TokenSculpt Savings Dashboard</h1>
       <div class="tagline">Real-time local token & cost optimization monitor (100% private & on-device)</div>
     </div>
     <div class="btn-group">
@@ -2386,7 +2386,7 @@ export class DashboardPanel {
           <div class="comp-card comp-without">
             <div class="comp-header">
               <span class="comp-icon">🔴</span>
-              <span class="comp-name">WITHOUT TOKENSHIELD</span>
+              <span class="comp-name">WITHOUT TOKENSCULPT</span>
             </div>
             <div class="comp-tokens" id="m-before-tokens">12,961 tok</div>
             <div class="comp-cost" id="m-before-cost">$0.0019 est. baseline</div>
@@ -2402,7 +2402,7 @@ export class DashboardPanel {
           <div class="comp-card comp-with">
             <div class="comp-header">
               <span class="comp-icon">🟢</span>
-              <span class="comp-name">WITH TOKENSHIELD</span>
+              <span class="comp-name">WITH TOKENSCULPT</span>
             </div>
             <div class="comp-tokens" id="m-after-tokens">10,006 tok</div>
             <div class="comp-cost" id="m-after-cost">$0.0015 optimized</div>
@@ -2455,14 +2455,14 @@ export class DashboardPanel {
           <div class="payload-grid">
             <div class="payload-col payload-col-before">
               <div class="payload-col-header">
-                <span id="m-diff-before-title">🔴 WITHOUT TOKENSHIELD (RAW)</span>
+                <span id="m-diff-before-title">🔴 WITHOUT TOKENSCULPT (RAW)</span>
                 <span class="payload-tag-bloat">PROMPT BLOAT</span>
               </div>
               <pre class="payload-pre" id="m-diff-before-code"></pre>
             </div>
             <div class="payload-col payload-col-after">
               <div class="payload-col-header">
-                <span id="m-diff-after-title">🟢 WITH TOKENSHIELD (OPTIMIZED)</span>
+                <span id="m-diff-after-title">🟢 WITH TOKENSCULPT (OPTIMIZED)</span>
                 <span class="payload-tag-clean">CLEAN PROMPT</span>
               </div>
               <pre class="payload-pre" id="m-diff-after-code"></pre>
@@ -2476,19 +2476,19 @@ export class DashboardPanel {
     </div>
   </div>
 
-  <script type="application/json" id="tokenshield-events-data">
+  <script type="application/json" id="tokensculpt-events-data">
 ${safeEventsJson}
   </script>
   <script>
     const vscode = acquireVsCodeApi();
     let eventsMap = {};
     try {
-      const dataEl = document.getElementById('tokenshield-events-data');
+      const dataEl = document.getElementById('tokensculpt-events-data');
       if (dataEl && dataEl.textContent) {
         eventsMap = JSON.parse(dataEl.textContent);
       }
     } catch (e) {
-      console.error('TokenShield: Failed to parse events data:', e);
+      console.error('TokenSculpt: Failed to parse events data:', e);
     }
     let activeModalEvent = null;
 
@@ -2496,7 +2496,7 @@ ${safeEventsJson}
       try {
         const ev = eventsMap[eventId];
         if (!ev) {
-          console.warn('TokenShield: Event not found for id:', eventId);
+          console.warn('TokenSculpt: Event not found for id:', eventId);
           return;
         }
         activeModalEvent = ev;
@@ -2515,7 +2515,7 @@ ${safeEventsJson}
         setTxt('m-before-cost', '$' + Number(ev.costWithoutUsd || 0).toFixed(5) + ' est. baseline');
 
         setTxt('m-after-tokens', Number(ev.afterTokens || 0).toLocaleString() + ' tok');
-        setTxt('m-after-cost', '$' + Number(ev.costWithUsd || 0).toFixed(5) + ' with TokenShield');
+        setTxt('m-after-cost', '$' + Number(ev.costWithUsd || 0).toFixed(5) + ' with TokenSculpt');
 
         setTxt('m-reduction-pct', '-' + (ev.reductionPercent || 0) + '%');
         setTxt('m-tokens-saved', '+' + Number(ev.tokensSaved || 0).toLocaleString() + ' tokens');
@@ -2534,9 +2534,9 @@ ${safeEventsJson}
         const diff = ev.payloadDiff;
         if (diff) {
           setTxt('m-diff-explanation', diff.explanation || '');
-          setTxt('m-diff-before-title', '🔴 ' + (diff.beforeTitle || 'WITHOUT TOKENSHIELD (RAW)'));
+          setTxt('m-diff-before-title', '🔴 ' + (diff.beforeTitle || 'WITHOUT TOKENSCULPT (RAW)'));
           setTxt('m-diff-before-code', diff.beforeContent || '(No before content recorded)');
-          setTxt('m-diff-after-title', '🟢 ' + (diff.afterTitle || 'WITH TOKENSHIELD (OPTIMIZED)'));
+          setTxt('m-diff-after-title', '🟢 ' + (diff.afterTitle || 'WITH TOKENSCULPT (OPTIMIZED)'));
           setTxt('m-diff-after-code', diff.afterContent || '(No after content recorded)');
         }
 
@@ -2545,7 +2545,7 @@ ${safeEventsJson}
           modal.classList.add('active');
         }
       } catch (err) {
-        console.error('TokenShield: Failed to open event modal:', err);
+        console.error('TokenSculpt: Failed to open event modal:', err);
       }
     }
 
@@ -2584,7 +2584,7 @@ ${safeEventsJson}
       vscode.postMessage({ command: 'toggleStrategy', key, name, enabled });
     }
     function deactivateCompletely() {
-      if (confirm('Deactivate TokenShield completely?\\n\\nThis will cleanly remove all optimization directives from AGENTS.md, CLAUDE.md, and Copilot files, and halt all background tasks.')) {
+      if (confirm('Deactivate TokenSculpt completely?\\n\\nThis will cleanly remove all optimization directives from AGENTS.md, CLAUDE.md, and Copilot files, and halt all background tasks.')) {
         vscode.postMessage({ command: 'deactivateCompletely' });
       }
     }

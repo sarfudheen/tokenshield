@@ -1,7 +1,7 @@
-<!-- TOKENSHIELD:START -->
-<!-- TokenShield: AI Token & Cost Optimizer (v1.0.0). Managed block - do not edit manually. -->
+<!-- TOKENSCULPT:START -->
+<!-- TokenSculpt: AI Token & Cost Optimizer (v1.0.0). Managed block - do not edit manually. -->
 
-# Antigravity TokenShield Optimizations
+# Antigravity TokenSculpt Optimizations
 
 ## Active Optimizations
 
@@ -56,4 +56,4 @@
 ### Test Failure Log Isolation
 - **MANDATORY**: Report only failing test lines, assertions, and line numbers.
 
-<!-- TOKENSHIELD:END -->
+<!-- TOKENSCULPT:END -->

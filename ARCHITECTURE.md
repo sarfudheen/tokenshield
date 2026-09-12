@@ -1,21 +1,21 @@
-# TokenShield — Architecture Document
+# TokenSculpt — Architecture Document
 
-**Version:** 1.0.17  
+**Version:** 1.0.18  
 **Date:** September 2026  
 **Type:** Universal AI Token & Cost Optimizer Extension  
-**Source:** `tokenshield/`
+**Source:** `tokensculpt/`
 
-This document describes the internal architecture, component interactions, data flows, and design decisions of the **TokenShield** extension.
+This document describes the internal architecture, component interactions, data flows, and design decisions of the **TokenSculpt** extension.
 
 ---
 
 ## 1. Overview
 
-TokenShield is an efficiency platform and IDE extension that reduces LLM token consumption across Google Antigravity IDE, GitHub Copilot, Cursor, Windsurf, Claude Code, and OpenAI Codex. It operates through three complementary mechanisms:
+TokenSculpt is an efficiency platform and IDE extension that reduces LLM token consumption across Google Antigravity IDE, GitHub Copilot, Cursor, Windsurf, Claude Code, and OpenAI Codex. It operates through three complementary mechanisms:
 
 | Mechanism | How it works | Requires binary? |
 |---|---|---|
-| **Instruction file injection** | Writes optimization rules into `AGENTS.md`, `.agents/rules/tokenshield.md`, `.github/copilot-instructions.md`, `CLAUDE.md`, `.codex/instructions.md` | No |
+| **Instruction file injection** | Writes optimization rules into `AGENTS.md`, `.agents/rules/tokensculpt.md`, `.github/copilot-instructions.md`, `CLAUDE.md`, `.codex/instructions.md` | No |
 | **Local MCP servers** | Configures 100% on-device MCP servers: `token-cache` (AST skeletons, semantic cache, context pruning), `headroom` (reversible CCR), `codegraph` (symbol exploration) | Node.js (for built-in server) |
 | **CLI tool integration** | Installs/configures CodeGraph (semantic indexing) and RTK (CLI output compression) | Yes |
 
@@ -61,7 +61,7 @@ Without the MCP config entry, Copilot has no knowledge the binary exists and can
 ```mermaid
 graph TB
     subgraph VS_CODE["VS Code Host"]
-        EXT["extension.ts\n(Entry Point — 11 commands)"]
+        EXT["extension.ts\n(Entry Point — 23 commands with aliases)"]
         CFG["config.ts\n(Settings & Profiles)"]
         CONST["constants.ts\n(Markers, ToolInstallEntry types)"]
     end
@@ -100,7 +100,7 @@ graph TB
         CP_FILE[".github/copilot-instructions.md"]
         CL_FILE["CLAUDE.md"]
         CD_FILE[".codex/instructions.md"]
-        AG_FILE["AGENTS.md & .agents/rules/tokenshield.md"]
+        AG_FILE["AGENTS.md & .agents/rules/tokensculpt.md"]
         CAV_FILE[".cavemanrc  (verbosity hints)"]
         VS_SETTINGS[".vscode/settings.json\n(MCP: token-cache + headroom)"]
         CG_DIR[".codegraph/  (CodeGraph index)"]
@@ -155,12 +155,12 @@ graph TB
 flowchart TD
     A([VS Code Startup\nonStartupFinished]) --> B{config.enabled?}
     B -- No --> Z([Exit — status bar shows zap-off Token Opt: OFF])
-    B -- Yes --> C[Register 11 Commands]
+    B -- Yes --> C[Register Commands with Aliases\ntokensculpt.* & tokenshield.*]
     C --> D[Create Status Bar Items\nProfile bar + CG index bar]
-    D --> E[Listen for config changes]
+    D --> E[Listen for config changes\ntokensculpt & tokenshield]
     E --> F{config.autoApply?}
     F -- No --> H
-    F -- Yes --> G1[generateAllInstructions\ncopilot + claude + codex]
+    F -- Yes --> G1[generateAllInstructions\ncopilot + claude + codex + antigravity]
     G1 --> G2[installAllTools\ncodegraph npm · rtk brew/shell · .cavemanrc]
     G2 --> G3[configureMcpServers\ntoken-cache + headroom entries\npurge rtk / cloud entries]
     G3 --> H{config.activeStrategies\n.codeGraph?}
@@ -169,23 +169,23 @@ flowchart TD
     I --> J([Extension Ready])
 ```
 
-**Core Registered Commands (`tokenshield.*`):**
+**Core Registered Commands (`tokensculpt.*`, with `tokenshield.*` aliases):**
 
 | Command ID | Title | Purpose |
 |---|---|---|
-| `tokenshield.hub` | Open Control Hub | QuickPick master control hub for profiles, toggles, and status |
-| `tokenshield.toggle` | Toggle On/Off | Globally enable or pause all TokenShield optimizations |
-| `tokenshield.toggleFeature` | Toggle Feature (1-Click Switch) | Interactive QuickPick to toggle any of the 20 features |
-| `tokenshield.switchProfile` | Select Optimization Profile | Switch between Full, Debug, Planning, Review, and Custom |
-| `tokenshield.dashboard` | Open Savings Dashboard | Webview dashboard with real-time tokens & spend saved |
-| `tokenshield.healthCheck` | Run Health Check | Diagnostic validation across all 20 strategies and local tools |
-| `tokenshield.regenerate` | Regenerate Instruction Files | Re-emit optimized directives to `AGENTS.md`, `CLAUDE.md`, `.github/` |
-| `tokenshield.exclusions` | Edit Context Exclusions | Interactive manager for `.copilotignore` and folder exclusions |
-| `tokenshield.newSession` | Start New Session | Archive current session savings to disk and reset active counters |
-| `tokenshield.setupTools` | Setup CLI Tools | Check and install companion binaries (`@colbymchenry/codegraph`, `rtk`) |
-| `tokenshield.configureMcp` | Configure MCP Servers | Wire on-device MCP servers in VS Code, Antigravity, and Claude |
-| `tokenshield.reindex` | Reindex Code Graph | Manually trigger AST symbol reindexing in `.codegraph/` |
-| `tokenshield.exportReport` | Export Savings Report | Export verified savings telemetry in Markdown, JSON, or CSV |
+| `tokensculpt.hub` | Open Control Hub | QuickPick master control hub for profiles, toggles, and status |
+| `tokensculpt.toggle` | Toggle On/Off | Globally enable or pause all TokenSculpt optimizations |
+| `tokensculpt.toggleFeature` | Toggle Feature (1-Click Switch) | Interactive QuickPick to toggle any of the 20 features |
+| `tokensculpt.switchProfile` | Select Optimization Profile | Switch between Full, Debug, Planning, Review, and Custom |
+| `tokensculpt.dashboard` | Open Savings Dashboard | Webview dashboard with real-time tokens & spend saved |
+| `tokensculpt.healthCheck` | Run Health Check | Diagnostic validation across all 20 strategies and local tools |
+| `tokensculpt.regenerate` | Regenerate Instruction Files | Re-emit optimized directives to `AGENTS.md`, `CLAUDE.md`, `.github/` |
+| `tokensculpt.exclusions` | Edit Context Exclusions | Interactive manager for `.copilotignore` and folder exclusions |
+| `tokensculpt.newSession` | Start New Session | Archive current session savings to disk and reset active counters |
+| `tokensculpt.setupTools` | Setup CLI Tools | Check and install companion binaries (`@colbymchenry/codegraph`, `rtk`) |
+| `tokensculpt.configureMcp` | Configure MCP Servers | Wire on-device MCP servers in VS Code, Antigravity, and Claude |
+| `tokensculpt.reindex` | Reindex Code Graph | Manually trigger AST symbol reindexing in `.codegraph/` |
+| `tokensculpt.exportReport` | Export Savings Report | Export verified savings telemetry in Markdown, JSON, or CSV |
 
 ---
 
@@ -217,7 +217,7 @@ Built-in profiles enforce quality-trade-off constraints across all **20 modular 
 | 20 | `headroomCompression` | Headroom Reversible CCR | ✓ | ✗ | ✓ | ✓ |
 
 - **`custom` profile**: User toggles each of the 20 strategies independently.
-- **`commentStrippingMode`**: Configured via `tokenshield.commentStrippingMode`:
+- **`commentStrippingMode`**: Configured via `tokensculpt.commentStrippingMode` (fallback: `tokenshield.commentStrippingMode`):
   - `'headers-only'` (Default): Strips copyright license headers and preambles only, preserving inline comments to protect LLM bug-fixing and code reasoning accuracy.
   - `'aggressive'`: Strips both license headers and inline filler comments.
   - `'off'`: Preserves all comments and headers.
@@ -328,7 +328,7 @@ Validates all optimization strategies are correctly configured and active:
 
 ```mermaid
 flowchart TD
-    A([tokenshield.healthCheck]) --> B[validateAllStrategies]
+    A([tokensculpt.healthCheck]) --> B[validateAllStrategies]
     B --> C[Show progress notification\nValidating all strategies...]
 
     C --> D[validateCodeGraph\nCodeGraph]
@@ -352,12 +352,12 @@ flowchart TD
 
     F --> F1{strategy enabled?}
     F1 -- No --> F2[Status: disabled]
-    F1 -- Yes --> F3[Check each instruction file\nfor TOKENSHIELD:START + Verbosity]
+    F1 -- Yes --> F3[Check each instruction file\nfor TOKENSCULPT:START + Verbosity]
     F3 --> F4[Status: ok / warn / error]
 
     G --> G1{strategy enabled?}
     G1 -- No --> G2[Status: disabled]
-    G1 -- Yes --> G3[Check each instruction file\nfor TOKENSHIELD:START + Session]
+    G1 -- Yes --> G3[Check each instruction file\nfor TOKENSCULPT:START + Session]
     G3 --> G4[Check CLAUDE.md for /compact /clear /model]
     G4 --> G5[Status: ok / warn / error]
 
@@ -413,7 +413,7 @@ flowchart LR
         K -- No --> L[Write new file]
         K -- Yes --> M{preserveExisting?}
         M -- No --> N[Overwrite entire file]
-        M -- Yes --> O{Markers found?}
+        M -- Yes --> O{Markers found?\nTOKENSCULPT or TOKENSHIELD}
         O -- Yes --> P[Replace only the\nSTART…END block in-place]
         O -- No --> Q[Prepend marker block at TOP\nfor KV-cache prefix alignment]
     end
@@ -426,11 +426,11 @@ flowchart LR
 
 ### Marker Format & KV-Cache Prefix Alignment
 
-When injecting into an existing instruction file that has no TokenShield markers, TokenShield places the managed block at the **TOP** of the file. Cloud LLM providers (Anthropic Claude, OpenAI, Google Gemini) match prompt cache prefixes from the first token forward. Maintaining a byte-stable prefix at the start of instruction files maximizes KV-cache hit rates (50–90% cost discounts) across all subsequent requests.
+When injecting into an existing instruction file that has no TokenSculpt markers, TokenSculpt places the managed block at the **TOP** of the file. Cloud LLM providers (Anthropic Claude, OpenAI, Google Gemini) match prompt cache prefixes from the first token forward. Maintaining a byte-stable prefix at the start of instruction files maximizes KV-cache hit rates (50–90% cost discounts) across all subsequent requests.
 
 ```
-<!-- TOKENSHIELD:START -->   ← Managed block at TOP for KV-cache prefix hits
-<!-- TokenShield: AI Token & Cost Optimizer. Managed block - do not edit manually. -->
+<!-- TOKENSCULPT:START -->   ← Managed block at TOP for KV-cache prefix hits
+<!-- TokenSculpt: AI Token & Cost Optimizer. Managed block - do not edit manually. -->
 
 ## Token Efficiency Standards
 ### Search Before Synthesize (CodeGraph)
@@ -443,7 +443,7 @@ When injecting into an existing instruction file that has no TokenShield markers
 ### Context Compaction & Session Hygiene
 ...
 
-<!-- TOKENSHIELD:END -->     ← Managed block end
+<!-- TOKENSCULPT:END -->     ← Managed block end
 
 # Your existing instructions       ← Always preserved below prefix block
 Your custom rules here...
@@ -453,7 +453,7 @@ Your custom rules here...
 
 ## 11. MCP Configuration Flow (`mcp/configurator.ts`)
 
-RTK uses **PreToolUse hooks** (not MCP). TokenShield configures **100% on-device MCP servers** (`token-cache`, `headroom`, and `codegraph`) and purges any cloud services (like `context7`) to guarantee zero cloud leakage and full air-gapped operation.
+RTK uses **PreToolUse hooks** (not MCP). TokenSculpt configures **100% on-device MCP servers** (`token-cache`, `headroom`, and `codegraph`) and purges any cloud services (like `context7`) to guarantee zero cloud leakage and full air-gapped operation.
 
 ```mermaid
 flowchart TD
@@ -492,7 +492,7 @@ flowchart TD
       },
       "token-cache": {
         "command": "node",
-        "args": ["/path/to/tokenshield/dist/cache-server.js", "/path/to/workspace"],
+        "args": ["/path/to/tokensculpt/dist/cache-server.js", "/path/to/workspace"],
         "type": "stdio"
       }
     }
@@ -512,7 +512,7 @@ flowchart TD
         },
         "token-cache": {
           "command": "node",
-          "args": ["/path/to/tokenshield/dist/cache-server.js", "/path/to/workspace"]
+          "args": ["/path/to/tokensculpt/dist/cache-server.js", "/path/to/workspace"]
         }
       }
     }
@@ -534,7 +534,7 @@ flowchart LR
     C -- No --> E[Create WebviewPanel\nenableScripts: true]
     E --> F[Read live config\n+ getEffectiveStrategies]
     F --> G[Calculate estimates\nCodeGraph: 25%\nRTK: 30%\nVerbosity: 20/35/50%\nSession: 15%\nTotal: capped at 90%]
-    G --> H[Build HTML\nGlassmorphic UI\n19-feature cards\nlive activity log]
+    G --> H[Build HTML\nGlassmorphic UI\n20-feature cards\nlive activity log]
     H --> I([Rendered Dashboard])
 ```
 
@@ -546,24 +546,24 @@ flowchart LR
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
-│  $(shield) TS: Full · 519.9k ↓ · $7.80       $(graph) CG:1 ✓         │
+│  $(paintcan) TS: Full · 519.9k ↓ · $7.80     $(graph) CG:1 ✓         │
 │  ^─ Master Hub status bar                     ^─ CodeGraph index bar │
 │  Click → QuickPick hub                        Click → validateIndex  │
 │                                                                      │
 │  When disabled:                                                      │
-│  $(shield) TS: OFF  [orange background]                              │
+│  $(zap) TS: OFF  [orange background]                                 │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
 | Status Bar Item | All States |
 |---|---|
-| Profile / Savings bar | `$(shield) TS: Full · 519.9k ↓ · $7.80` · `$(shield) TS: OFF` (orange) |
+| Profile / Savings bar | `$(paintcan) TS: Full · 519.9k ↓ · $7.80` · `$(zap) TS: OFF` (orange) |
 | CG index bar | `CG:N` idle · `CG:N ●` pending (orange) · `$(sync~spin) CG:N` indexing · `CG:N ✓` fresh · `CG:N ✗` error (red) · `CG:0 —` missing (orange) |
 
 ### QuickPick Menu Structure
 
 ```
-TokenShield Command Center
+TokenSculpt Command Center
 ──────────────────────────────────────────────
   $(shield) Disable Plugin              Turn off all token optimizations
   $(check-all) Health Check All Strategies
@@ -586,15 +586,18 @@ TokenShield Command Center
 ```
 <workspace-root>/
 ├── .github/
-│   └── copilot-instructions.md        ← Copilot reads automatically (TokenShield injected)
-├── CLAUDE.md                           ← Claude Code reads automatically (TokenShield injected)
+│   └── copilot-instructions.md        ← Copilot reads automatically (TokenSculpt injected)
+├── CLAUDE.md                           ← Claude Code reads automatically (TokenSculpt injected)
 ├── .codex/
-│   └── instructions.md                ← Codex reads automatically (TokenShield injected)
-├── AGENTS.md                           ← Antigravity / Agent tools (TokenShield injected)
+│   └── instructions.md                ← Codex reads automatically (TokenSculpt injected)
+├── AGENTS.md                           ← Antigravity / Agent tools (TokenSculpt injected)
+├── .agents/
+│   └── rules/
+│       └── tokensculpt.md              ← Antigravity modular rule file
 ├── .codegraph/                         ← CodeGraph semantic index (per project)
 │   └── codegraph.db                   ← SQLite index
 └── .vscode/
-    └── settings.json                   ← tokenshield settings & MCP configuration
+    └── settings.json                   ← tokensculpt settings & MCP configuration
 
 ~/.claude.json
 └── projects[wsPath].mcpServers         ← Claude Code MCP: token-cache + headroom (project-scoped)
@@ -610,23 +613,21 @@ TokenShield Command Center
                                            Activated by: rtk init -g --copilot
 ```
 
-> **Removed:** `.rtkrc` — this was a placeholder. The real RTK config lives at `~/.config/rtk/config.toml` and is managed by `rtk init`.
-
 ---
 
 ## 15. Settings Reference
 
 ```jsonc
 {
-  // Core
-  "tokenshield.enabled": true,              // Global on/off — also via status bar click
-  "tokenshield.autoApply": true,
-  "tokenshield.targetTools": ["copilot", "claude", "codex"],
+  // Core (reads tokensculpt.* with automatic fallback to tokenshield.*)
+  "tokensculpt.enabled": true,              // Global on/off — also via status bar click
+  "tokensculpt.autoApply": true,
+  "tokensculpt.targetTools": ["copilot", "claude", "codex"],
 
   // Profile & strategies
-  "tokenshield.profile": "full",            // full | debug | planning | review | custom
-  "tokenshield.verbosityLevel": "full",     // light (~20%) | full (~35%) | ultra (~50%)
-  "tokenshield.activeStrategies": {         // Only used when profile = "custom"
+  "tokensculpt.profile": "full",            // full | debug | planning | review | custom
+  "tokensculpt.verbosityLevel": "full",     // light (~20%) | full (~35%) | ultra (~50%)
+  "tokensculpt.activeStrategies": {         // Only used when profile = "custom"
     "codeGraph": true,
     "outputCompression": true,
     "verbosityControl": true,
@@ -634,12 +635,12 @@ TokenShield Command Center
   },
 
   // Behaviour
-  "tokenshield.preserveExistingInstructions": true,
-  "tokenshield.autoInstallTools": true,
-  "tokenshield.configureMcpOnActivation": true,
+  "tokensculpt.preserveExistingInstructions": true,
+  "tokensculpt.autoInstallTools": true,
+  "tokensculpt.configureMcpOnActivation": true,
 
   // Per-project CodeGraph indexing
-  "tokenshield.codeGraphProjects": [
+  "tokensculpt.codeGraphProjects": [
     { "name": "Wayfinder",  "path": "/Users/.../IMS_Workspace/wayfinder", "enabled": true },
     { "name": "SP API",     "path": "./de-ims-strategicplanner-api",       "enabled": true },
     { "name": "WF API",     "path": "./de-ims-wayfinder-api-multiprocess", "enabled": false }
@@ -654,7 +655,8 @@ TokenShield Command Center
 | Decision | Rationale |
 |---|---|
 | **File-based injection** over VS Code Language Model API | Works with all current tool versions without relying on unstable proposed APIs |
-| **Marker-based merge** (`TOKENSHIELD:START/END`) | Preserves user content across updates without destroying existing instructions |
+| **Marker-based merge** (`TOKENSCULPT:START/END` + legacy `TOKENSHIELD`) | Preserves user content across updates without destroying existing instructions; seamlessly upgrades existing projects |
+| **Backward-Compatible Command Aliases** | Registers all 23 commands under both `tokensculpt.*` and `tokenshield.*` namespaces to prevent breaking user keybindings or external scripts |
 | **Profile-based constraints** | Enforces spec requirement: strategies have quality trade-offs per task type (debug needs full output, planning needs verbosity) |
 | **Per-project CodeGraph indexing** | Multi-repo workspaces need selective indexing; monorepo components have independent change rates |
 | **RTK via hooks not MCP** | RTK intercepts bash tool calls via PreToolUse hooks — adding it as an MCP server would be wrong. The extension actively removes any stale `rtk` MCP entry |

@@ -1,4 +1,4 @@
-import { TargetTool, StrategyState, ExtensionConfig } from '../core/config';
+import type { TargetTool, StrategyState, ExtensionConfig } from '../core/config';
 import { MARKER_START, MARKER_END, MARKER_COMMENT, COPILOT_INSTRUCTIONS_PATH } from '../core/constants';
 import { BaseInstructionGenerator } from './base';
 import { isBinaryAvailable } from '../installer/installer';
@@ -125,7 +125,7 @@ export class CopilotGenerator extends BaseInstructionGenerator {
     return `${MARKER_START}
 ${MARKER_COMMENT}
 
-# TokenShield Optimization Directives
+# TokenSculpt Optimization Directives
 
 ## Active Optimizations
 

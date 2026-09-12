@@ -1,4 +1,25 @@
 import * as assert from 'assert';
+
+// Mock vscode module for headless testing
+const Module = require('module');
+const originalRequire = Module.prototype.require;
+Module.prototype.require = function (request: string) {
+  if (request === 'vscode') {
+    return {
+      window: { showInformationMessage: async () => undefined },
+      workspace: {
+        getConfiguration: () => ({
+          get: (_k: string, d: unknown) => d,
+          inspect: () => undefined,
+          update: async () => {},
+        }),
+      },
+      ConfigurationTarget: { Workspace: 1, Global: 2 },
+    };
+  }
+  return originalRequire.apply(this, arguments);
+};
+
 import { extractCodeSkeleton } from '../../src/strategies/skeleton';
 import { classifyTask } from '../../src/strategies/modelRouting';
 import { detectProjectExclusions } from '../../src/strategies/contextExclusion';

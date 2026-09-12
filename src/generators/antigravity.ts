@@ -1,6 +1,6 @@
 import * as path from 'path';
 import * as fs from 'fs';
-import { TargetTool, StrategyState, ExtensionConfig } from '../core/config';
+import type { TargetTool, StrategyState, ExtensionConfig } from '../core/config';
 import { MARKER_START, MARKER_END, MARKER_COMMENT, ANTIGRAVITY_INSTRUCTIONS_PATH } from '../core/constants';
 import { BaseInstructionGenerator, GenerationResult } from './base';
 import { isHeadroomSdkAvailable } from '../strategies/adaptivePruner';
@@ -17,7 +17,11 @@ export class AntigravityGenerator extends BaseInstructionGenerator {
       if (!fs.existsSync(agentsRulesDir)) {
         fs.mkdirSync(agentsRulesDir, { recursive: true });
       }
-      const rulePath = path.join(agentsRulesDir, 'tokenshield.md');
+      const rulePath = path.join(agentsRulesDir, 'tokensculpt.md');
+      const oldRulePath = path.join(agentsRulesDir, 'tokenshield.md');
+      if (fs.existsSync(oldRulePath)) {
+        try { fs.unlinkSync(oldRulePath); } catch {}
+      }
       const content = this.generateContent(config.activeStrategies, config);
       fs.writeFileSync(rulePath, content, 'utf-8');
     } catch { /* ignore */ }
@@ -125,7 +129,7 @@ export class AntigravityGenerator extends BaseInstructionGenerator {
     return `${MARKER_START}
 ${MARKER_COMMENT}
 
-# Antigravity TokenShield Optimizations
+# Antigravity TokenSculpt Optimizations
 
 ## Active Optimizations
 

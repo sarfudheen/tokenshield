@@ -1,9 +1,12 @@
-export const MARKER_START = '<!-- TOKENSHIELD:START -->';
-export const MARKER_END = '<!-- TOKENSHIELD:END -->';
-export const MARKER_COMMENT = '<!-- TokenShield: AI Token & Cost Optimizer (v1.0.0). Managed block - do not edit manually. -->';
+export const MARKER_START = '<!-- TOKENSCULPT:START -->';
+export const MARKER_END = '<!-- TOKENSCULPT:END -->';
+export const MARKER_COMMENT = '<!-- TokenSculpt: AI Token & Cost Optimizer (v1.0.0). Managed block - do not edit manually. -->';
 
-export const EXTENSION_ID = 'tokenshield';
-export const EXTENSION_NAME = 'TokenShield';
+export const LEGACY_MARKER_START = '<!-- TOKENSHIELD:START -->';
+export const LEGACY_MARKER_END = '<!-- TOKENSHIELD:END -->';
+
+export const EXTENSION_ID = 'tokensculpt';
+export const EXTENSION_NAME = 'TokenSculpt';
 
 export type ToolInstallMethod = 'npm-global' | 'brew' | 'shell-script' | 'pip';
 
@@ -46,10 +49,12 @@ export const CLAUDE_EXTENSION_ID = 'anthropic.claude-code';
 export const CODEX_EXTENSION_ID = 'openai.codex';
 
 export const COPILOT_INSTRUCTIONS_PATH = '.github/copilot-instructions.md';
-export const COPILOT_INSTRUCTIONS_SUBDIR_PATH = '.github/instructions/tokenshield.instructions.md';
+export const COPILOT_INSTRUCTIONS_SUBDIR_PATH = '.github/instructions/tokensculpt.instructions.md';
 export const COPILOT_PROJECT_INSTRUCTIONS_SUBDIR_PATH = '.github/instructions/copilot-instructions.md';
-export const TOKENSHIELD_AGENT_PATH = '.github/agents/tokenshield.agent.md';
-export const TOKENSHIELD_SKILL_PATH = '.github/skills/tokenshield-optimize/SKILL.md';
+export const TOKENSCULPT_AGENT_PATH = '.github/agents/tokensculpt.agent.md';
+export const TOKENSHIELD_AGENT_PATH = TOKENSCULPT_AGENT_PATH;
+export const TOKENSCULPT_SKILL_PATH = '.github/skills/tokensculpt-optimize/SKILL.md';
+export const TOKENSHIELD_SKILL_PATH = TOKENSCULPT_SKILL_PATH;
 export const COPILOT_VSCODE_INSTRUCTIONS_PATH = '.vscode/copilot-instructions.md';
 export const COPILOTIGNORE_PATH = '.copilotignore';
 export const CLAUDE_INSTRUCTIONS_PATH = 'CLAUDE.md';
@@ -105,14 +110,14 @@ export const STRATEGY_CAP_LABELS: Record<string, string> = {
   headroomCompression:     'Headroom CCR',
 };
 
-import { TOTAL_STRATEGIES } from './config';
+export const TOTAL_STRATEGIES = 20;
 
 export const PROFILE_DESCRIPTIONS: Record<string, string> = {
-  full: `$(zap) Full Optimization — all ${TOTAL_STRATEGIES} TokenShield strategies active`,
+  full: `$(zap) Full Optimization — all ${TOTAL_STRATEGIES} TokenSculpt strategies active`,
   debug: '$(bug) Debug Mode — output compression & diff-only disabled for full diagnostics',
   planning: '$(lightbulb) Planning Mode — verbosity & guardrails relaxed for deep architectural review',
   review: '$(eye) Review Mode — session & comments preserved for complete context and review intent',
-  custom: '$(gear) Custom — customized TokenShield strategy set',
+  custom: '$(gear) Custom — customized TokenSculpt strategy set',
 };
 
 export const DEFAULT_EXCLUSION_PATTERNS: Record<string, string[]> = {

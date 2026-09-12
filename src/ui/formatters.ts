@@ -1,5 +1,5 @@
 /**
- * Formatters for tokens, costs, and percentage metrics across TokenShield UI.
+ * Formatters for tokens, costs, and percentage metrics across TokenSculpt UI.
  */
 
 /**

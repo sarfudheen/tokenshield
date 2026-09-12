@@ -144,33 +144,47 @@ export const PROFILE_STRATEGIES: Record<Profile, StrategyState> = {
 export const TOTAL_STRATEGIES = Object.keys(PROFILE_STRATEGIES.full).length;
 
 export function getConfig(): ExtensionConfig {
-  const config = vscode.workspace.getConfiguration('tokenshield');
+  const sculptConfig = vscode.workspace.getConfiguration('tokensculpt');
+  const legacyConfig = vscode.workspace.getConfiguration('tokenshield');
+
+  function getSetting<T>(key: string, defaultVal: T): T {
+    const inspectSculpt = sculptConfig.inspect<T>(key);
+    if (inspectSculpt && (inspectSculpt.globalValue !== undefined || inspectSculpt.workspaceValue !== undefined || inspectSculpt.workspaceFolderValue !== undefined)) {
+      return sculptConfig.get<T>(key, defaultVal);
+    }
+    const inspectLegacy = legacyConfig.inspect<T>(key);
+    if (inspectLegacy && (inspectLegacy.globalValue !== undefined || inspectLegacy.workspaceValue !== undefined || inspectLegacy.workspaceFolderValue !== undefined)) {
+      return legacyConfig.get<T>(key, defaultVal);
+    }
+    return sculptConfig.get<T>(key, defaultVal);
+  }
+
   return {
-    enabled: config.get<boolean>('enabled', true),
-    autoApply: config.get<boolean>('autoApply', true),
+    enabled: getSetting<boolean>('enabled', true),
+    autoApply: getSetting<boolean>('autoApply', true),
     targetTools: resolveTargetTools(
-      config.get<TargetTool[]>('targetTools', []),
-      config.get<boolean>('autoDetectTools', true),
+      getSetting<TargetTool[]>('targetTools', []),
+      getSetting<boolean>('autoDetectTools', true),
     ),
-    profile: config.get<Profile>('profile', 'full'),
-    activeStrategies: config.get<StrategyState>('activeStrategies', PROFILE_STRATEGIES.full),
-    verbosityLevel: config.get<VerbosityLevel>('verbosityLevel', 'full'),
-    preserveExistingInstructions: config.get<boolean>('preserveExistingInstructions', true),
-    autoInstallTools: config.get<boolean>('autoInstallTools', true),
-    configureMcpOnActivation: config.get<boolean>('configureMcpOnActivation', true),
-    codeGraphProjects: config.get<CodeGraphProject[]>('codeGraphProjects', []),
-    telemetryEnabled: config.get<boolean>('telemetry.enabled', true),
-    guardrails: config.get<GuardrailConfig>('guardrails', {
+    profile: getSetting<Profile>('profile', 'full'),
+    activeStrategies: getSetting<StrategyState>('activeStrategies', PROFILE_STRATEGIES.full),
+    verbosityLevel: getSetting<VerbosityLevel>('verbosityLevel', 'full'),
+    preserveExistingInstructions: getSetting<boolean>('preserveExistingInstructions', true),
+    autoInstallTools: getSetting<boolean>('autoInstallTools', true),
+    configureMcpOnActivation: getSetting<boolean>('configureMcpOnActivation', true),
+    codeGraphProjects: getSetting<CodeGraphProject[]>('codeGraphProjects', []),
+    telemetryEnabled: getSetting<boolean>('telemetry.enabled', true),
+    guardrails: getSetting<GuardrailConfig>('guardrails', {
       maxRetries: 3,
       maxFilesPerTask: 10,
       maxFileReads: 2,
     }),
-    pricing: config.get<PricingTable>('pricing', DEFAULT_PRICING),
-    useVscodeStorage: config.get<boolean>('useVscodeStorage', true),
-    githubStructureMode: config.get<GithubStructureMode>('githubStructureMode', 'auto'),
-    generateAgentFiles: config.get<boolean>('generateAgentFiles', false),
-    commentStrippingMode: config.get<CommentStrippingMode>('commentStrippingMode', 'headers-only'),
-    autoDetectTools: config.get<boolean>('autoDetectTools', true),
+    pricing: getSetting<PricingTable>('pricing', DEFAULT_PRICING),
+    useVscodeStorage: getSetting<boolean>('useVscodeStorage', true),
+    githubStructureMode: getSetting<GithubStructureMode>('githubStructureMode', 'auto'),
+    generateAgentFiles: getSetting<boolean>('generateAgentFiles', false),
+    commentStrippingMode: getSetting<CommentStrippingMode>('commentStrippingMode', 'headers-only'),
+    autoDetectTools: getSetting<boolean>('autoDetectTools', true),
   };
 }
 
@@ -186,18 +200,18 @@ export function countActiveStrategies(strategies: StrategyState): number {
 }
 
 export async function updateProfile(profile: Profile): Promise<void> {
-  const config = vscode.workspace.getConfiguration('tokenshield');
+  const config = vscode.workspace.getConfiguration('tokensculpt');
   await config.update('profile', profile, vscode.ConfigurationTarget.Workspace);
 }
 
 export async function updateStrategies(strategies: Partial<StrategyState>): Promise<void> {
-  const config = vscode.workspace.getConfiguration('tokenshield');
+  const config = vscode.workspace.getConfiguration('tokensculpt');
   const current = config.get<StrategyState>('activeStrategies', PROFILE_STRATEGIES.full);
   await config.update('activeStrategies', { ...current, ...strategies }, vscode.ConfigurationTarget.Workspace);
   await config.update('profile', 'custom', vscode.ConfigurationTarget.Workspace);
 }
 
 export async function saveCodeGraphProjects(projects: CodeGraphProject[]): Promise<void> {
-  const config = vscode.workspace.getConfiguration('tokenshield');
+  const config = vscode.workspace.getConfiguration('tokensculpt');
   await config.update('codeGraphProjects', projects, vscode.ConfigurationTarget.Workspace);
 }

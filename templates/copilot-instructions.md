@@ -1,7 +1,7 @@
 # AI Token Optimization Guidelines
 
-<!-- TOKENSHIELD:START -->
-<!-- TokenShield: AI Token & Cost Optimizer. Managed block - do not edit manually. -->
+<!-- TOKENSCULPT:START -->
+<!-- TokenSculpt: AI Token & Cost Optimizer. Managed block - do not edit manually. -->
 
 ## Token Efficiency Standards
 
@@ -89,4 +89,4 @@ A local `token-cache` MCP server caches answers on disk — cache hits cost zero
 - Reference all previously discussed files and decisions
 - Show complete diff context for suggested changes
 
-<!-- TOKENSHIELD:END -->
+<!-- TOKENSCULPT:END -->

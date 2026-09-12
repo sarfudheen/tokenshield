@@ -3,6 +3,25 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
 
+// Mock vscode module for headless testing
+const Module = require('module');
+const originalRequire = Module.prototype.require;
+Module.prototype.require = function (request: string) {
+  if (request === 'vscode') {
+    return {
+      workspace: {
+        getConfiguration: () => ({
+          get: (_k: string, d: unknown) => d,
+          inspect: () => undefined,
+          update: async () => {},
+        }),
+      },
+      ConfigurationTarget: { Workspace: 1, Global: 2 },
+    };
+  }
+  return originalRequire.apply(this, arguments);
+};
+
 suite('Claude Code MCP configuration (token-cache wiring)', () => {
   let tmpDir: string;
   let claudeConfigPath: string;
@@ -169,5 +188,31 @@ Some rules
 
     const stripped = gen.stripMarkedSection(content);
     assert.strictEqual(stripped.trim(), '');
+  });
+
+  test('stripMarkedSection removes TOKENSCULPT managed block and preserves user content', () => {
+    const { ClaudeGenerator } = require('../../src/generators/claude');
+    const gen = new ClaudeGenerator();
+    const content = `# My Custom Project Rules
+Do not use any in TypeScript.
+
+<!-- TOKENSCULPT:START -->
+<!-- TokenSculpt: AI Token & Cost Optimizer. Managed block - do not edit manually. -->
+
+# Antigravity TokenSculpt Optimizations
+### Code Search & Navigation (CodeGraph)
+- **MANDATORY**: Use CodeGraph.
+<!-- TOKENSCULPT:END -->
+
+# Additional Instructions
+Always write tests.`;
+
+    const stripped = gen.stripMarkedSection(content);
+    assert.ok(!stripped.includes('<!-- TOKENSCULPT:START -->'));
+    assert.ok(!stripped.includes('CodeGraph'));
+    assert.ok(stripped.includes('# My Custom Project Rules'));
+    assert.ok(stripped.includes('Do not use any in TypeScript.'));
+    assert.ok(stripped.includes('# Additional Instructions'));
+    assert.ok(stripped.includes('Always write tests.'));
   });
 });

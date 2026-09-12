@@ -9,15 +9,19 @@ let statusBarItem: vscode.StatusBarItem;
 
 export function createStatusBar(context?: vscode.ExtensionContext): vscode.StatusBarItem {
   statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
-  statusBarItem.name = 'TokenShield Hub';
-  statusBarItem.command = 'tokenshield.hub';
+  statusBarItem.name = 'TokenSculpt Hub';
+  statusBarItem.command = 'tokensculpt.hub';
 
   if (context) {
     context.subscriptions.push(
       chatSavingsTracker.onDidChange(() => {
         updateStatusBar();
       }),
+      vscode.commands.registerCommand('tokensculpt.hub', showMasterHubQuickPick),
       vscode.commands.registerCommand('tokenshield.hub', showMasterHubQuickPick),
+      vscode.commands.registerCommand('tokensculpt.refreshStatus', () => {
+        updateStatusBar();
+      }),
       vscode.commands.registerCommand('tokenshield.refreshStatus', () => {
         updateStatusBar();
       })
@@ -37,7 +41,7 @@ export async function updateStatusBar(): Promise<void> {
   const config = getConfig();
   if (!config.enabled) {
     statusBarItem.text = '$(circle-slash) TS: DEACTIVATED';
-    statusBarItem.tooltip = new vscode.MarkdownString('**🛡️ TokenShield is Completely DEACTIVATED**\n\nAll optimization directives and exclusions have been stripped from your workspace files.\n\nClick to Reactivate TokenShield.');
+    statusBarItem.tooltip = new vscode.MarkdownString('**🛡️ TokenSculpt is Completely DEACTIVATED**\n\nAll optimization directives and exclusions have been stripped from your workspace files.\n\nClick to Reactivate TokenSculpt.');
     statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
     return;
   }
@@ -98,7 +102,7 @@ async function buildMasterHubMarkdownTooltip(
   const activeModel = await getActiveModel();
   const sessionStarted = chatSavingsTracker.getSessionStartedAt();
 
-  md.appendMarkdown(`### 🛡️ TokenShield Control Hub\n\n`);
+  md.appendMarkdown(`### 🛡️ TokenSculpt Control Hub\n\n`);
 
   const lifetimeTok = chatSavingsTracker.getLifetimeTokensSaved();
   const lifetimeCost = formatCost(chatSavingsTracker.getLifetimeCostSavedUsd());
@@ -140,7 +144,7 @@ async function buildMasterHubMarkdownTooltip(
   }
   md.appendMarkdown(`\n\n---\n\n`);
 
-  md.appendMarkdown(`[📊 Dashboard](command:tokenshield.dashboard) &nbsp;|&nbsp; [🔄 New Session](command:tokenshield.newSession) &nbsp;|&nbsp; [⚙️ Toggle Features](command:tokenshield.toggleFeature) &nbsp;|&nbsp; [🩺 Health Check](command:tokenshield.healthCheck) &nbsp;|&nbsp; [⚡ Prune](command:tokenshield.pruneAndCopy)`);
+  md.appendMarkdown(`[📊 Dashboard](command:tokensculpt.dashboard) &nbsp;|&nbsp; [🔄 New Session](command:tokensculpt.newSession) &nbsp;|&nbsp; [⚙️ Toggle Features](command:tokensculpt.toggleFeature) &nbsp;|&nbsp; [🩺 Health Check](command:tokensculpt.healthCheck) &nbsp;|&nbsp; [⚡ Prune](command:tokensculpt.pruneAndCopy)`);
 
   return md;
 }
@@ -151,7 +155,7 @@ async function showMasterHubQuickPick(): Promise<void> {
   if (!config.enabled) {
     const items: vscode.QuickPickItem[] = [
       {
-        label: `$(play) Reactivate TokenShield`,
+        label: `$(play) Reactivate TokenSculpt`,
         description: 'Restore all optimization directives and tools',
         detail: 'Re-injects managed blocks into instruction files, enables CodeGraph and exclusions.',
       },
@@ -165,16 +169,16 @@ async function showMasterHubQuickPick(): Promise<void> {
       },
     ];
     const selected = await vscode.window.showQuickPick(items, {
-      placeHolder: 'TokenShield is completely deactivated',
-      title: 'TokenShield Control Hub (DEACTIVATED)',
+      placeHolder: 'TokenSculpt is completely deactivated',
+      title: 'TokenSculpt Control Hub (DEACTIVATED)',
     });
     if (!selected) { return; }
     if (selected.label.includes('Reactivate')) {
-      vscode.commands.executeCommand('tokenshield.reactivate');
+      vscode.commands.executeCommand('tokensculpt.reactivate');
     } else if (selected.label.includes('Run Health Check')) {
-      vscode.commands.executeCommand('tokenshield.healthCheck');
+      vscode.commands.executeCommand('tokensculpt.healthCheck');
     } else {
-      vscode.commands.executeCommand('tokenshield.dashboard');
+      vscode.commands.executeCommand('tokensculpt.dashboard');
     }
     return;
   }
@@ -215,33 +219,33 @@ async function showMasterHubQuickPick(): Promise<void> {
       detail: `Instantly toggle presets across all ${TOTAL_STRATEGIES} optimization features.`,
     },
     {
-      label: `$(circle-slash) Deactivate TokenShield Completely`,
+      label: `$(circle-slash) Deactivate TokenSculpt Completely`,
       description: 'Strip all directives from workspace files (100% unconstrained AI)',
       detail: 'Removes managed blocks from AGENTS.md, CLAUDE.md, and Copilot files.',
     },
   ];
 
   const selected = await vscode.window.showQuickPick(items, {
-    placeHolder: 'TokenShield Control Hub',
-    title: `TokenShield Hub — Profile: ${config.profile.toUpperCase()} | Session #${sessionNum}: ~${totalTok.toLocaleString()} tok ($${totalCost.toFixed(4)})`,
+    placeHolder: 'TokenSculpt Control Hub',
+    title: `TokenSculpt Hub — Profile: ${config.profile.toUpperCase()} | Session #${sessionNum}: ~${totalTok.toLocaleString()} tok ($${totalCost.toFixed(4)})`,
   });
 
   if (!selected) { return; }
 
   if (selected.label.includes('Open Savings Dashboard')) {
-    vscode.commands.executeCommand('tokenshield.dashboard');
+    vscode.commands.executeCommand('tokensculpt.dashboard');
   } else if (selected.label.includes('Toggle Individual Features')) {
-    vscode.commands.executeCommand('tokenshield.toggleFeature');
+    vscode.commands.executeCommand('tokensculpt.toggleFeature');
   } else if (selected.label.includes('Run Health Check')) {
-    vscode.commands.executeCommand('tokenshield.healthCheck');
+    vscode.commands.executeCommand('tokensculpt.healthCheck');
   } else if (selected.label.includes('Start New Session')) {
-    vscode.commands.executeCommand('tokenshield.newSession');
+    vscode.commands.executeCommand('tokensculpt.newSession');
   } else if (selected.label.includes('Reset Complete Data')) {
-    vscode.commands.executeCommand('tokenshield.resetAllData');
+    vscode.commands.executeCommand('tokensculpt.resetAllData');
   } else if (selected.label.includes('Switch Optimization Profile')) {
-    vscode.commands.executeCommand('tokenshield.switchProfile');
-  } else if (selected.label.includes('Deactivate TokenShield Completely')) {
-    vscode.commands.executeCommand('tokenshield.deactivateCompletely');
+    vscode.commands.executeCommand('tokensculpt.switchProfile');
+  } else if (selected.label.includes('Deactivate TokenSculpt Completely')) {
+    vscode.commands.executeCommand('tokensculpt.deactivateCompletely');
   }
 }
 

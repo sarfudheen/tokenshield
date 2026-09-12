@@ -1,6 +1,6 @@
-# TokenShield Installation & Setup Guide
+# TokenSculpt Installation & Setup Guide
 
-Comprehensive installation, configuration, and verification guide for **TokenShield (v1.0.17)** across **Google Antigravity IDE**, **VS Code**, **Cursor**, **Windsurf**, and **Claude Code CLI**.
+Comprehensive installation, configuration, and verification guide for **TokenSculpt (v1.0.18)** across **Google Antigravity IDE**, **VS Code**, **Cursor**, **Windsurf**, and **Claude Code CLI**.
 
 ---
 
@@ -17,7 +17,7 @@ Comprehensive installation, configuration, and verification guide for **TokenShi
 
 ## 📦 Method 1: Installing the Extension (VSIX)
  
-The extension bundle is distributed as a self-contained `.vsix` archive (e.g. `tokenshield-1.0.17.vsix`), downloadable directly from:
+The extension bundle is distributed as a self-contained `.vsix` archive (e.g. `tokensculpt-1.0.18.vsix`), downloadable directly from:
 👉 **[GitHub Releases (Latest)](https://github.com/sarfudheen/tokenshield/releases/latest)** (expand **Assets** to download `.vsix`)
 
 ### A. Google Antigravity IDE
@@ -26,22 +26,22 @@ The extension bundle is distributed as a self-contained `.vsix` archive (e.g. `t
 1. Open **Antigravity IDE**.
 2. Press `Ctrl+Shift+P` (Windows/Linux) or `Cmd+Shift+P` (macOS) to open the Command Palette.
 3. Type and select **`Extensions: Install from VSIX...`**.
-4. Browse to the workspace root and select `tokenshield-1.0.17.vsix`.
+4. Browse to the workspace root and select `tokensculpt-1.0.18.vsix`.
 5. Once installed, reload the window (`Developer: Reload Window`).
 
 #### Via Extension Directory Link / Sync:
 If running from source or portable Antigravity setups:
 ```powershell
 # Windows PowerShell
-New-Item -ItemType Directory -Force -Path "$HOME\.antigravity-ide\extensions\tokenshield"
-Copy-Item -Path ".\dist\*" -Destination "$HOME\.antigravity-ide\extensions\tokenshield\dist\" -Recurse -Force
-Copy-Item -Path ".\package.json" -Destination "$HOME\.antigravity-ide\extensions\tokenshield\package.json" -Force
+New-Item -ItemType Directory -Force -Path "$HOME\.antigravity-ide\extensions\tokensculpt"
+Copy-Item -Path ".\dist\*" -Destination "$HOME\.antigravity-ide\extensions\tokensculpt\dist\" -Recurse -Force
+Copy-Item -Path ".\package.json" -Destination "$HOME\.antigravity-ide\extensions\tokensculpt\package.json" -Force
 ```
 ```bash
 # macOS / Linux
-mkdir -p ~/.antigravity-ide/extensions/tokenshield
-cp -R ./dist ~/.antigravity-ide/extensions/tokenshield/
-cp ./package.json ~/.antigravity-ide/extensions/tokenshield/
+mkdir -p ~/.antigravity-ide/extensions/tokensculpt
+cp -R ./dist ~/.antigravity-ide/extensions/tokensculpt/
+cp ./package.json ~/.antigravity-ide/extensions/tokensculpt/
 ```
 
 ---
@@ -51,17 +51,17 @@ cp ./package.json ~/.antigravity-ide/extensions/tokenshield/
 #### Via Terminal:
 ```bash
 # VS Code Stable
-code --install-extension tokenshield-1.0.17.vsix
+code --install-extension tokensculpt-1.0.18.vsix
 
 # VS Code Insiders
-code-insiders --install-extension tokenshield-1.0.17.vsix
+code-insiders --install-extension tokensculpt-1.0.18.vsix
 ```
 
 #### Via Extensions View:
 1. Open VS Code and open the Extensions view (`Ctrl+Shift+X` or `Cmd+Shift+X`).
 2. Click the **`...`** (Views and More Actions) menu in the top-right corner.
 3. Select **`Install from VSIX...`**.
-4. Choose `tokenshield-1.0.17.vsix`.
+4. Choose `tokensculpt-1.0.18.vsix`.
 
 ---
 
@@ -69,13 +69,13 @@ code-insiders --install-extension tokenshield-1.0.17.vsix
 
 #### Cursor:
 ```bash
-cursor --install-extension tokenshield-1.0.17.vsix
+cursor --install-extension tokensculpt-1.0.18.vsix
 ```
 Or use the Cursor Command Palette (`Ctrl+Shift+P`) → **`Extensions: Install from VSIX...`**.
 
 #### Windsurf:
 ```bash
-windsurf --install-extension tokenshield-1.0.17.vsix
+windsurf --install-extension tokensculpt-1.0.18.vsix
 ```
 
 ---
@@ -99,13 +99,13 @@ npm run build
 npm run package
 ```
 
-The compiled package `tokenshield-1.0.17.vsix` will be generated in the root directory.
+The compiled package `tokensculpt-1.0.18.vsix` will be generated in the root directory.
 
 ---
 
 ## 🚀 Companion CLI Acceleration Tools (Optional but Recommended)
 
-TokenShield delivers immediate ~30–50% token savings through instructions alone. Installing the following companion CLI tools unlocks up to **90%+ savings**:
+TokenSculpt delivers immediate ~30–50% token savings through instructions alone. Installing the following companion CLI tools unlocks up to **90%+ savings**:
 
 ### 1. CodeGraph (`@colbymchenry/codegraph`)
 Enables semantic code graph indexing, eliminating multi-file grep token burn.
@@ -151,13 +151,13 @@ pip install "headroom-ai[all]"
   ```
 
 > [!TIP]
-> Run `Ctrl+Shift+P` → **`TokenShield: Setup CLI Tools`** inside the IDE to automatically check and install missing tools.
+> Run `Ctrl+Shift+P` → **`TokenSculpt: Setup CLI Tools`** inside the IDE to automatically check and install missing tools.
 
 ---
 
 ## 🔌 Automated Multi-Editor MCP Configuration
 
-TokenShield automatically configures Model Context Protocol (MCP) servers upon extension activation (configurable via `tokenshield.configureMcpOnActivation`).
+TokenSculpt automatically configures Model Context Protocol (MCP) servers upon extension activation (configurable via `tokensculpt.configureMcpOnActivation`).
 
 ### Supported On-Device MCP Servers (100% Local)
 
@@ -170,7 +170,7 @@ TokenShield automatically configures Model Context Protocol (MCP) servers upon e
    - Provides AST symbol query integration (`codegraph_explore`).
 
 > [!NOTE]
-> All MCP servers execute 100% locally via stdio on your machine. TokenShield makes **zero external network calls** and never sends code, metadata, or queries to third-party cloud services.
+> All MCP servers execute 100% locally via stdio on your machine. TokenSculpt makes **zero external network calls** and never sends code, metadata, or queries to third-party cloud services.
 
 ### Automatic Configuration Targets
 
@@ -179,76 +179,76 @@ TokenShield automatically configures Model Context Protocol (MCP) servers upon e
 - **Claude Code CLI:** Updated in `~/.claude.json`.
 
 To manually trigger or refresh MCP configuration at any time:
-- Press `Ctrl+Shift+P` → **`TokenShield: Configure MCP Servers`**.
+- Press `Ctrl+Shift+P` → **`TokenSculpt: Configure MCP Servers`**.
 
 ---
 
 ## ⚙️ Initial Workspace Configuration
 
-Upon opening any workspace, TokenShield will automatically:
+Upon opening any workspace, TokenSculpt will automatically:
 1. Detect project frameworks and languages.
 2. Initialize `.copilotignore` with smart exclusion patterns (ignoring `node_modules/`, `dist/`, `.git/`, lockfiles, minified bundles, etc.).
 3. Generate optimization directives in:
-   - **Antigravity IDE:** `AGENTS.md` & `.agents/rules/tokenshield.md`
+   - **Antigravity IDE:** `AGENTS.md` & `.agents/rules/tokensculpt.md`
    - **GitHub Copilot:** `.vscode/copilot-instructions.md` (or `.github/copilot-instructions.md`)
    - **Claude Code:** `CLAUDE.md`
    - **OpenAI Codex:** `.codex/instructions.md`
 4. Activate the **Master Hub Status Bar** widget:
    ```
-   $(shield) TS: Full · 0 ↓ · $0.00
+   $(paintcan) TS: Full · 0 ↓ · $0.00
    ```
 
 ### Choosing an Optimization Profile
 
-Run `Ctrl+Shift+P` → **`TokenShield: Switch Profile`**:
+Run `Ctrl+Shift+P` → **`TokenSculpt: Switch Profile`**:
 - **Full Optimization (Default):** All 20 strategies active for maximum token and cost reduction.
 - **Debug Mode:** Temporarily disables terminal log compression and diff-only output for full stack traces.
 - **Planning Mode:** Relaxes verbosity restrictions for in-depth architectural discussions.
 - **Review Mode:** Preserves full session conversation history for thorough multi-turn code review.
-- **Custom:** Manually toggle any of the 20 strategies in `.vscode/settings.json`.
+- **Custom:** Manually toggle any of the 20 strategies in `.vscode/settings.json` (`tokensculpt.strategies.*`).
 
 ---
 
 ## 🔍 Verification & Health Check
 
-To verify that TokenShield is functioning properly:
+To verify that TokenSculpt is functioning properly:
 
 1. **Run Health Check:**
-   - Press `Ctrl+Shift+P` → **`TokenShield: Run Health Check`**.
+   - Press `Ctrl+Shift+P` → **`TokenSculpt: Run Health Check`**.
    - Review diagnostic status across all 20 strategies, MCP servers, and tool binaries.
 
 2. **Open Savings Dashboard:**
-   - Press `Ctrl+Shift+P` → **`TokenShield: Open Savings Dashboard`**.
-   - Or click the status bar item `$(shield) TS: ...`.
+   - Press `Ctrl+Shift+P` → **`TokenSculpt: Open Savings Dashboard`**.
+   - Or click the status bar item `$(paintcan) TS: ...`.
    - Inspect the real-time counters, active model pricing, strategy donut charts, and live activity log.
 
 3. **Verify Context Exclusions:**
-   - Press `Ctrl+Shift+P` → **`TokenShield: Edit Context Exclusions`**.
+   - Press `Ctrl+Shift+P` → **`TokenSculpt: Edit Context Exclusions`**.
    - Ensure unwanted build artifacts and lockfiles are correctly excluded from AI scans.
 
 ---
 
 ## 🏢 Team & Enterprise Repository Integration
 
-By default, TokenShield stores workspace instructions locally in `.vscode/` so that developer machines remain clean and git history is untouched.
+By default, TokenSculpt stores workspace instructions locally in `.vscode/` so that developer machines remain clean and git history is untouched.
 
-To share TokenShield optimization rules across your entire engineering team:
-1. Run `Ctrl+Shift+P` → **`TokenShield: Export Directives to Repo`**.
-2. Commit `.github/copilot-instructions.md` (or `.github/instructions/tokenshield.instructions.md`), `CLAUDE.md`, and `AGENTS.md` to your repository.
-3. Every team member using Copilot, Antigravity, or Claude Code will immediately benefit from TokenShield rules without needing extra setup.
+To share TokenSculpt optimization rules across your entire engineering team:
+1. Run `Ctrl+Shift+P` → **`TokenSculpt: Export Directives to Repo`**.
+2. Commit `.github/copilot-instructions.md` (or `.github/instructions/tokensculpt.instructions.md`), `CLAUDE.md`, and `AGENTS.md` to your repository.
+3. Every team member using Copilot, Antigravity, or Claude Code will immediately benefit from TokenSculpt rules without needing extra setup.
 
 ---
 
 ## ❓ Troubleshooting & FAQs
 
 ### Q1: The status bar displays `TS: DEACTIVATED`.
-- **Fix:** Click the status bar or run `TokenShield: Reactivate All Optimizations` (`tokenshield.reactivate`).
+- **Fix:** Click the status bar or run `TokenSculpt: Reactivate All Optimizations` (`tokensculpt.reactivate` or `tokenshield.reactivate`).
 
 ### Q2: CodeGraph or RTK shows "Not Installed" in the dashboard.
 - **Fix:** Ensure `@colbymchenry/codegraph` and `rtk` are installed globally and added to your system `$PATH`. Run `codegraph --version` and `rtk --version` in your terminal to verify.
 
-### Q3: How do I completely wipe all tracking and reset TokenShield?
-- **Fix:** Run `TokenShield: Reset Complete Data (Wipe All History)` to clear session logs, lifetime records in `.aicache/`, and reset all counters.
+### Q3: How do I completely wipe all tracking and reset TokenSculpt?
+- **Fix:** Run `TokenSculpt: Reset Complete Data (Wipe All History)` to clear session logs, lifetime records in `.aicache/`, and reset all counters.
 
-### Q4: How do I remove TokenShield directives before committing?
-- **Fix:** Run `TokenShield: Deactivate Completely (Strip All Directives)`. This cleanly removes all `<!-- TOKENSHIELD:START -->` managed blocks while leaving your custom instructions intact.
+### Q4: How do I remove TokenSculpt directives before committing?
+- **Fix:** Run `TokenSculpt: Deactivate Completely (Strip All Directives)`. This cleanly removes both `<!-- TOKENSCULPT:START -->` and legacy `<!-- TOKENSHIELD:START -->` managed blocks while leaving your custom instructions intact.

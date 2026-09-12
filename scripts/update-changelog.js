@@ -103,7 +103,7 @@ function updateChangelog() {
   if (!fs.existsSync(changelogPath)) {
     fs.writeFileSync(
       changelogPath,
-      `# Changelog\n\nAll notable changes to the "TokenShield" extension will be documented in this file.\n\n`,
+      `# Changelog\n\nAll notable changes to the "TokenSculpt" extension will be documented in this file.\n\n`,
       'utf8'
     );
   }

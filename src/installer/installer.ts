@@ -62,7 +62,7 @@ export async function installAllTools(outputChannel: vscode.OutputChannel, isInt
 }
 
 async function installTool(tool: ToolInstallEntry, outputChannel: vscode.OutputChannel, isInteractive = false): Promise<InstallResult> {
-  const title = `TokenShield: Installing ${tool.name}…`;
+  const title = `TokenSculpt: Installing ${tool.name}…`;
   
   const doInstall = async () => {
     try {
@@ -106,7 +106,7 @@ function installViaNpm(binaryName: string, npmPackage: string, outputChannel: vs
     if (result.status === 0) {
       outputChannel.appendLine(`[installer] ✓ ${binaryName} installed successfully`);
       if (isInteractive) {
-        vscode.window.showInformationMessage(`TokenShield: ${binaryName} installed successfully.`);
+        vscode.window.showInformationMessage(`TokenSculpt: ${binaryName} installed successfully.`);
       }
       return { packageName: binaryName, installed: true, alreadyInstalled: false };
     }
@@ -164,7 +164,7 @@ function installViaPip(binaryName: string, pipPackage: string, outputChannel: vs
     if (result.status === 0) {
       outputChannel.appendLine(`[installer] ✓ ${binaryName} installed successfully`);
       if (isInteractive) {
-        vscode.window.showInformationMessage(`TokenShield: ${binaryName} installed successfully.`);
+        vscode.window.showInformationMessage(`TokenSculpt: ${binaryName} installed successfully.`);
       }
       return { packageName: binaryName, installed: true, alreadyInstalled: false };
     }
@@ -264,7 +264,9 @@ async function offerWireCodegraphAgents(outputChannel: vscode.OutputChannel): Pr
 function generateCavemanConfig(wsPath: string, outputChannel: vscode.OutputChannel): void {
   const cavemanrcPath = path.join(wsPath, '.cavemanrc');
   if (!fs.existsSync(cavemanrcPath)) {
-    const verbosityLevel = vscode.workspace.getConfiguration('tokenshield').get('verbosityLevel', 'full');
+    const tsCfg = vscode.workspace.getConfiguration('tokensculpt');
+    const legacyCfg = vscode.workspace.getConfiguration('tokenshield');
+    const verbosityLevel = tsCfg.get('verbosityLevel') ?? legacyCfg.get('verbosityLevel', 'full');
     fs.writeFileSync(cavemanrcPath, JSON.stringify({
       mode: verbosityLevel,
       rules: { skipIntroductions: true, skipConclusions: true, compactCodeBlocks: true, bulletOverParagraph: true },

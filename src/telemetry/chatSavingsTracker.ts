@@ -483,7 +483,7 @@ class ChatSavingsTracker {
     if (showToast) {
       const formattedCost = costSavedUsd < 0.0001 ? '<$0.0001' : `$${costSavedUsd.toFixed(4)}`;
       vscode.window.showInformationMessage(
-        `🛡️ TokenShield: Saved ~${tokensSaved.toLocaleString()} tokens (${formattedCost}) via ${directive}!`
+        `🛡️ TokenSculpt: Saved ~${tokensSaved.toLocaleString()} tokens (${formattedCost}) via ${directive}!`
       );
     }
 

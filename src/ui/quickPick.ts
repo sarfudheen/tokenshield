@@ -5,8 +5,8 @@ import { PROFILE_DESCRIPTIONS, STRATEGY_DESCRIPTIONS, STRATEGY_CAP_LABELS } from
 export async function showProfilePicker(): Promise<void> {
   const config = getConfig();
   const enabledLabel = config.enabled
-    ? '$(shield) Disable TokenShield'
-    : '$(shield) Enable TokenShield';
+    ? '$(shield) Disable TokenSculpt'
+    : '$(shield) Enable TokenSculpt';
   const enabledDesc = config.enabled
     ? 'Turn off all token optimizations'
     : 'Turn on token optimizations';
@@ -28,21 +28,21 @@ export async function showProfilePicker(): Promise<void> {
   ];
 
   const selected = await vscode.window.showQuickPick(items, {
-    placeHolder: `TokenShield: ${config.enabled ? 'ON' : 'OFF'}  |  Profile: ${config.profile.toUpperCase()}  |  Select action`,
-    title: 'TokenShield Control Center',
+    placeHolder: `TokenSculpt: ${config.enabled ? 'ON' : 'OFF'}  |  Profile: ${config.profile.toUpperCase()}  |  Select action`,
+    title: 'TokenSculpt Control Center',
   });
 
   if (!selected) {
     return;
   }
 
-  if (selected.label.includes('Disable TokenShield') || selected.label.includes('Enable TokenShield')) {
-    await vscode.commands.executeCommand('tokenshield.toggle');
+  if (selected.label.includes('Disable TokenSculpt') || selected.label.includes('Enable TokenSculpt')) {
+    await vscode.commands.executeCommand('tokensculpt.toggle');
     return;
   }
 
   if (selected.label.includes('Health Check') || selected.label.includes('Validate All')) {
-    await vscode.commands.executeCommand('tokenshield.healthCheck');
+    await vscode.commands.executeCommand('tokensculpt.healthCheck');
     return;
   }
 
@@ -52,17 +52,17 @@ export async function showProfilePicker(): Promise<void> {
   }
 
   if (selected.label.includes('Dashboard')) {
-    await vscode.commands.executeCommand('tokenshield.dashboard');
+    await vscode.commands.executeCommand('tokensculpt.dashboard');
     return;
   }
 
   if (selected.label.includes('Regenerate')) {
-    await vscode.commands.executeCommand('tokenshield.regenerate');
+    await vscode.commands.executeCommand('tokensculpt.regenerate');
     return;
   }
 
   if (selected.label.includes('Context Exclusions')) {
-    await vscode.commands.executeCommand('tokenshield.exclusions');
+    await vscode.commands.executeCommand('tokensculpt.exclusions');
     return;
   }
 
@@ -74,7 +74,7 @@ export async function showProfilePicker(): Promise<void> {
   const profile = profileMap[selected.label];
   if (profile) {
     await updateProfile(profile);
-    vscode.window.showInformationMessage(`TokenShield: Switched to ${profile.toUpperCase()} profile`);
+    vscode.window.showInformationMessage(`TokenSculpt: Switched to ${profile.toUpperCase()} profile`);
   }
 }
 
@@ -99,7 +99,7 @@ export async function showSingleFeatureToggle(): Promise<void> {
 
   const selected = await vscode.window.showQuickPick(items, {
     placeHolder: 'Click any feature to toggle it ON or OFF instantly',
-    title: 'TokenShield — 1-Click Feature Switch',
+    title: 'TokenSculpt — 1-Click Feature Switch',
   });
 
   if (!selected) { return; }
@@ -110,6 +110,6 @@ export async function showSingleFeatureToggle(): Promise<void> {
 
   const featureName = STRATEGY_DESCRIPTIONS[selected.key].split(' — ')[0];
   vscode.window.showInformationMessage(
-    `TokenShield: ${featureName} is now ${newVal ? 'ENABLED' : 'DISABLED'}`
+    `TokenSculpt: ${featureName} is now ${newVal ? 'ENABLED' : 'DISABLED'}`
   );
 }

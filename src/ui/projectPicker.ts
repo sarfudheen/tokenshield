@@ -65,7 +65,7 @@ export async function showProjectPicker(outputChannel: vscode.OutputChannel): Pr
   let projects = [...config.codeGraphProjects];
 
   const selected = await vscode.window.showQuickPick(buildPickItems(projects), {
-    title: 'TokenShield — Code Graph Projects',
+    title: 'TokenSculpt — Code Graph Projects',
     placeHolder: 'Select a project to toggle indexing, or add a new folder',
   });
 

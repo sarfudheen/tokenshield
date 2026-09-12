@@ -222,7 +222,7 @@ export async function validateIndex(outputChannel: vscode.OutputChannel): Promis
       'Index Now', 'Manage Projects', 'Cancel'
     );
     if (choice === 'Index Now') { await runCodeGraphReindex(outputChannel); }
-    else if (choice === 'Manage Projects') { await vscode.commands.executeCommand('tokenshield.manageProjects'); }
+    else if (choice === 'Manage Projects') { await vscode.commands.executeCommand('tokensculpt.manageProjects'); }
   } else {
     vscode.window.showInformationMessage(`CodeGraph: All ${projects.length} project(s) fresh. Last: ${lastIndexedAt?.toLocaleTimeString() ?? 'this session'}`);
   }
@@ -231,7 +231,7 @@ export async function validateIndex(outputChannel: vscode.OutputChannel): Promis
 function updateIndexStatusBar(state: 'idle' | 'pending' | 'indexing' | 'fresh' | 'stale' | 'error' | 'missing'): void {
   currentCodeGraphState = state;
   try {
-    vscode.commands.executeCommand('tokenshield.refreshStatus');
+    vscode.commands.executeCommand('tokensculpt.refreshStatus');
   } catch { /* ignore */ }
 }
 

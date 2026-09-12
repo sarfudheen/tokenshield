@@ -10,8 +10,8 @@ import {
   COPILOT_INSTRUCTIONS_PATH,
   COPILOT_INSTRUCTIONS_SUBDIR_PATH,
   COPILOT_PROJECT_INSTRUCTIONS_SUBDIR_PATH,
-  TOKENSHIELD_AGENT_PATH,
-  TOKENSHIELD_SKILL_PATH,
+  TOKENSCULPT_AGENT_PATH,
+  TOKENSCULPT_SKILL_PATH,
 } from '../core/constants';
 import { CopilotGenerator } from './copilot';
 import { detectGithubStructure } from './engine';
@@ -178,7 +178,7 @@ export function buildProjectInstructions(
   projectName: string
 ): string {
   const stackSection = getStackDirectives(stack);
-  return `# TokenShield Optimization Standards — ${projectName}
+  return `# TokenSculpt Optimization Standards — ${projectName}
 
 ${coreBlock}
 
@@ -196,7 +196,7 @@ export async function initializeForProject(
 ): Promise<void> {
   const wsFolders = vscode.workspace.workspaceFolders;
   if (!wsFolders || wsFolders.length === 0) {
-    vscode.window.showWarningMessage('TokenShield: No workspace folder open.');
+    vscode.window.showWarningMessage('TokenSculpt: No workspace folder open.');
     return;
   }
 
@@ -220,7 +220,7 @@ export async function initializeForProject(
     items.push({ label: STACK_LABELS.generic, description: 'generic', stack: 'generic' as ProjectStack });
 
     const pick = await vscode.window.showQuickPick(items, {
-      title: 'TokenShield: Multiple stacks detected — pick the primary one',
+      title: 'TokenSculpt: Multiple stacks detected — pick the primary one',
       placeHolder: `Detected: ${detection.stacks.join(', ')}`,
     });
 
@@ -244,7 +244,7 @@ export async function initializeForProject(
   }));
 
   const toolPicks = await vscode.window.showQuickPick(toolItems, {
-    title: 'TokenShield: Which AI tools do you use in this project?',
+    title: 'TokenSculpt: Which AI tools do you use in this project?',
     placeHolder: `Detected: ${detectedTools.map(t => TARGET_TOOL_LABELS[t]).join(', ')}`,
     canPickMany: true,
   });
@@ -256,7 +256,7 @@ export async function initializeForProject(
   // Persist the user's selection to workspace settings
   if (toolPicks && toolPicks.length > 0) {
     try {
-      const wsConfig = vscode.workspace.getConfiguration('tokenshield', wsFolders[0].uri);
+      const wsConfig = vscode.workspace.getConfiguration('tokensculpt', wsFolders[0].uri);
       await wsConfig.update('targetTools', selectedTools, vscode.ConfigurationTarget.Workspace);
       outputChannel.appendLine(`[initProject] Saved targetTools to workspace settings: ${selectedTools.join(', ')}`);
     } catch (err) {
@@ -347,7 +347,11 @@ ${stackSection}
       ? COPILOT_INSTRUCTIONS_SUBDIR_PATH
       : '.vscode/copilot-instructions.md';
     const existing = wsConfig.get<any[]>('github.copilot.chat.codeGeneration.instructions') || [];
-    const hasEntry = existing.some(e => typeof e === 'object' && (e.file?.includes('copilot-instructions.md') || e.file?.includes('tokenshield.instructions.md')));
+    const hasEntry = existing.some(e => typeof e === 'object' && (
+      e.file?.includes('copilot-instructions.md') ||
+      e.file?.includes('tokensculpt.instructions.md') ||
+      e.file?.includes('tokenshield.instructions.md')
+    ));
     if (!hasEntry) {
       await wsConfig.update(
         'github.copilot.chat.codeGeneration.instructions',
@@ -364,7 +368,7 @@ ${stackSection}
   const stackLabel = STACK_LABELS[chosenStack].replace(/\$\([^)]+\) /, '');
   const modeLabel = structureLayout === 'structured' ? '.github/instructions/' : '.github/';
   const action = await vscode.window.showInformationMessage(
-    `🛡️ TokenShield: Project initialized for ${stackLabel}! Directives written to ${modeLabel}.`,
+    `🛡️ TokenSculpt: Project initialized for ${stackLabel}! Directives written to ${modeLabel}.`,
     'Open Instructions',
     'Dismiss'
   );
@@ -388,7 +392,7 @@ function injectCrossReference(wsPath: string, fullContent: string, outputChannel
       const merged = (copilotGen as any).mergeContent(existing, fullContent);
       if (merged !== existing) {
         fs.writeFileSync(targetFile, merged, 'utf-8');
-        outputChannel.appendLine(`[initProject] Merged TokenShield optimization directives into: ${targetFile}`);
+        outputChannel.appendLine(`[initProject] Merged TokenSculpt optimization directives into: ${targetFile}`);
       }
       break;
     }
@@ -396,14 +400,14 @@ function injectCrossReference(wsPath: string, fullContent: string, outputChannel
 }
 
 function scaffoldAgentAndSkill(wsPath: string, outputChannel: vscode.OutputChannel): void {
-  const agentPath = path.join(wsPath, TOKENSHIELD_AGENT_PATH);
+  const agentPath = path.join(wsPath, TOKENSCULPT_AGENT_PATH);
   const agentDir = path.dirname(agentPath);
   if (!fs.existsSync(agentPath)) {
     if (!fs.existsSync(agentDir)) {
       fs.mkdirSync(agentDir, { recursive: true });
     }
     const agentContent = `---
-name: "TokenShield Optimizer"
+name: "TokenSculpt Optimizer"
 description: >
   Token and cost optimization agent. Use this agent to analyze
   prompt efficiency, suggest context pruning, and enforce the
@@ -413,36 +417,36 @@ tools:
   - terminal
 ---
 
-# TokenShield Optimizer Agent
+# TokenSculpt Optimizer Agent
 
-You enforce TokenShield optimization standards for this project.
+You enforce TokenSculpt optimization standards for this project.
 
 ## Active Optimizations
-Read \`.github/instructions/tokenshield.instructions.md\` for the full list of active features.
+Read \`.github/instructions/tokensculpt.instructions.md\` for the full list of active features.
 `;
     fs.writeFileSync(agentPath, agentContent, 'utf-8');
     outputChannel.appendLine(`[initProject] Scaffolded agent: ${agentPath}`);
   }
 
-  const skillPath = path.join(wsPath, TOKENSHIELD_SKILL_PATH);
+  const skillPath = path.join(wsPath, TOKENSCULPT_SKILL_PATH);
   const skillDir = path.dirname(skillPath);
   if (!fs.existsSync(skillPath)) {
     if (!fs.existsSync(skillDir)) {
       fs.mkdirSync(skillDir, { recursive: true });
     }
     const skillContent = `---
-name: tokenshield-optimize
+name: tokensculpt-optimize
 description: >
   Analyze current AI interaction patterns and suggest token/cost
-  optimizations using TokenShield's 19 optimization features.
+  optimizations using TokenSculpt's 19 optimization features.
 ---
 
-# TokenShield Optimization Skill
+# TokenSculpt Optimization Skill
 
-Invoke this skill to analyze prompt efficiency and apply TokenShield optimizations.
+Invoke this skill to analyze prompt efficiency and apply TokenSculpt optimizations.
 
 ## Active Optimizations
-Read \`.github/instructions/tokenshield.instructions.md\` for active optimization rules.
+Read \`.github/instructions/tokensculpt.instructions.md\` for active optimization rules.
 `;
     fs.writeFileSync(skillPath, skillContent, 'utf-8');
     outputChannel.appendLine(`[initProject] Scaffolded skill: ${skillPath}`);

@@ -181,10 +181,10 @@ suite('AI Token Optimizer Tests', () => {
         const content = fs.readFileSync(templatePath, 'utf-8');
         assert.ok(content.includes('CodeGraph'));
         assert.ok(content.includes('Output Compression'));
-        assert.ok(content.includes('Inline Chat Scope Pinning'));
-        assert.ok(content.includes('Context Saturation Thread Reset'));
-        assert.ok(content.includes('TOKENSHIELD:START'));
-        assert.ok(content.includes('TOKENSHIELD:END'));
+        assert.ok(content.includes('Concise Responses'));
+        assert.ok(content.includes('Context Compaction & Session Hygiene'));
+        assert.ok(content.includes('TOKENSCULPT:START'));
+        assert.ok(content.includes('TOKENSCULPT:END'));
       }
     });
 
@@ -196,16 +196,20 @@ suite('AI Token Optimizer Tests', () => {
         assert.ok(content.includes('/clear'));
         assert.ok(content.includes('/model'));
         assert.ok(content.includes('/context'));
-        assert.ok(content.includes('Context Saturation Thread Reset'));
+        assert.ok(content.includes('Context Compaction & Session Hygiene'));
+        assert.ok(content.includes('TOKENSCULPT:START'));
+        assert.ok(content.includes('TOKENSCULPT:END'));
       }
     });
 
-    test('codex template includes all 19 optimization directives', () => {
+    test('codex template includes all optimization directives', () => {
       const templatePath = path.join(__dirname, '..', '..', '..', 'templates', 'codex-instructions.md');
       if (fs.existsSync(templatePath)) {
         const content = fs.readFileSync(templatePath, 'utf-8');
         assert.ok(content.includes('CodeGraph'));
-        assert.ok(content.includes('Context Saturation Thread Reset'));
+        assert.ok(content.includes('Context Compaction & Session Hygiene'));
+        assert.ok(content.includes('TOKENSCULPT:START'));
+        assert.ok(content.includes('TOKENSCULPT:END'));
       }
     });
   });

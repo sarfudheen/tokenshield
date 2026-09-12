@@ -1,7 +1,7 @@
 # AI Token Optimization Rules
 
-<!-- TOKENSHIELD:START -->
-<!-- TokenShield: AI Token & Cost Optimizer. Managed block - do not edit manually. -->
+<!-- TOKENSCULPT:START -->
+<!-- TokenSculpt: AI Token & Cost Optimizer. Managed block - do not edit manually. -->
 
 ## Token Efficiency Standards
 
@@ -94,4 +94,4 @@ A local `token-cache` MCP server caches answers on disk — cache hits cost zero
 - Never compress error messages or security warnings
 - Re-index CodeGraph after significant code changes (new files, moved modules)
 
-<!-- TOKENSHIELD:END -->
+<!-- TOKENSCULPT:END -->

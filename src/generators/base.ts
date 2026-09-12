@@ -1,7 +1,7 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import { ExtensionConfig, StrategyState, getEffectiveStrategies, TargetTool } from '../core/config';
-import { MARKER_START, MARKER_END, MARKER_COMMENT } from '../core/constants';
+import { MARKER_START, MARKER_END, MARKER_COMMENT, LEGACY_MARKER_START, LEGACY_MARKER_END } from '../core/constants';
 
 export interface GenerationResult {
   target: TargetTool;
@@ -66,20 +66,28 @@ export abstract class BaseInstructionGenerator {
   }
 
   protected mergeContent(existing: string, newOptimizationBlock: string): string {
-    const startIdx = existing.indexOf(MARKER_START);
-    const endIdx = existing.indexOf(MARKER_END);
+    let startIdx = existing.indexOf(MARKER_START);
+    let endIdx = existing.indexOf(MARKER_END);
+    let endMarkerLen = MARKER_END.length;
+
+    if (startIdx === -1 || endIdx === -1) {
+      startIdx = existing.indexOf(LEGACY_MARKER_START);
+      endIdx = existing.indexOf(LEGACY_MARKER_END);
+      endMarkerLen = LEGACY_MARKER_END.length;
+    }
+
     const section = this.extractMarkedSection(newOptimizationBlock);
 
     if (startIdx !== -1 && endIdx !== -1) {
-      // Replace existing TokenShield section in-place
+      // Replace existing TokenSculpt or legacy TokenShield section in-place
       const before = existing.substring(0, startIdx).trimEnd();
-      const after = existing.substring(endIdx + MARKER_END.length).trimStart();
+      const after = existing.substring(endIdx + endMarkerLen).trimStart();
       const prefix = before.length > 0 ? before + '\n\n' : '';
       const suffix = after.length > 0 ? '\n\n' + after : '\n';
       return prefix + section + suffix;
     }
 
-    // No existing section: place TokenShield block at the TOP for KV-cache prefix alignment.
+    // No existing section: place TokenSculpt block at the TOP for KV-cache prefix alignment.
     // Stable prefixes maximize cloud provider prompt caching (50-90% input cost savings).
     const trimmed = existing.trim();
     if (trimmed.length === 0) {
@@ -89,13 +97,21 @@ export abstract class BaseInstructionGenerator {
   }
 
   public stripMarkedSection(content: string): string {
-    const startIdx = content.indexOf(MARKER_START);
-    const endIdx = content.indexOf(MARKER_END);
+    let startIdx = content.indexOf(MARKER_START);
+    let endIdx = content.indexOf(MARKER_END);
+    let endMarkerLen = MARKER_END.length;
+
+    if (startIdx === -1 || endIdx === -1) {
+      startIdx = content.indexOf(LEGACY_MARKER_START);
+      endIdx = content.indexOf(LEGACY_MARKER_END);
+      endMarkerLen = LEGACY_MARKER_END.length;
+    }
+
     if (startIdx === -1 || endIdx === -1) {
       return content;
     }
     const before = content.substring(0, startIdx).trimEnd();
-    const after = content.substring(endIdx + MARKER_END.length).trimStart();
+    const after = content.substring(endIdx + endMarkerLen).trimStart();
     if (before && after) {
       return `${before}\n\n${after}\n`;
     }

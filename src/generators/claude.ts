@@ -1,4 +1,4 @@
-import { TargetTool, StrategyState, ExtensionConfig } from '../core/config';
+import type { TargetTool, StrategyState, ExtensionConfig } from '../core/config';
 import { MARKER_START, MARKER_END, MARKER_COMMENT, CLAUDE_INSTRUCTIONS_PATH } from '../core/constants';
 import { BaseInstructionGenerator } from './base';
 import { isHeadroomSdkAvailable } from '../strategies/adaptivePruner';
@@ -105,7 +105,7 @@ export class ClaudeGenerator extends BaseInstructionGenerator {
     return `${MARKER_START}
 ${MARKER_COMMENT}
 
-# TokenShield Optimizations for Claude Code
+# TokenSculpt Optimizations for Claude Code
 
 ## Active Optimizations
 

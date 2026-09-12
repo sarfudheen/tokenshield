@@ -21,12 +21,12 @@ const STOPWORDS = new Set([
 // forces Jaccard to 1.0 regardless of topic ("cache" alone would fuzzy-match
 // every cache-related question), so 1-token queries stay exact-only. At 2+
 // tokens the Jaccard/cosine thresholds below do the real discriminating work.
-export const MIN_FUZZY_TOKENS = 3;
+export const MIN_FUZZY_TOKENS = 2;
 
 // Tuned together: Jaccard ≥ 0.5 already demands half the unique tokens be
 // shared, so cosine mainly rejects share-one-rare-token cases. 0.7 lets a
 // paraphrase add one or two content words without dropping below threshold.
-const COSINE_THRESHOLD = 0.8;
+const COSINE_THRESHOLD = 0.7;
 const JACCARD_THRESHOLD = 0.5;
 
 /** Lowercase, split camelCase and non-alphanumerics, drop stopwords/short tokens, light stemming. */

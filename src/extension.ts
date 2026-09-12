@@ -24,9 +24,20 @@ let outputChannel: vscode.OutputChannel;
 let extensionPath: string;
 let sessionStarted = false;
 
+function registerCommandWithAlias(
+  context: vscode.ExtensionContext,
+  suffix: string,
+  callback: (...args: any[]) => any
+): void {
+  context.subscriptions.push(
+    vscode.commands.registerCommand(`tokensculpt.${suffix}`, callback),
+    vscode.commands.registerCommand(`tokenshield.${suffix}`, callback)
+  );
+}
+
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
-  outputChannel = vscode.window.createOutputChannel('TokenShield');
-  outputChannel.appendLine('[activate] TokenShield starting...');
+  outputChannel = vscode.window.createOutputChannel('TokenSculpt');
+  outputChannel.appendLine('[activate] TokenSculpt starting...');
   extensionPath = context.extensionPath;
 
   // Enforce zero cloud leakage & disable Headroom external telemetry beacon
@@ -45,113 +56,111 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   if (config.enabled) {
     initSessionTracking();
   } else {
-    outputChannel.appendLine('[activate] TokenShield is currently completely deactivated');
+    outputChannel.appendLine('[activate] TokenSculpt is currently completely deactivated');
   }
 
-  // Register commands — original + new
-  context.subscriptions.push(
-    vscode.commands.registerCommand('tokenshield.toggle', toggleAllCommand),
-    vscode.commands.registerCommand('tokenshield.deactivateCompletely', deactivateCompletelyCommand),
-    vscode.commands.registerCommand('tokenshield.reactivate', reactivateCommand),
-    vscode.commands.registerCommand('tokenshield.toggleFeature', showSingleFeatureToggle),
-    vscode.commands.registerCommand('tokenshield.sessionBreakdown', () => DashboardPanel.show(context.extensionUri)),
-    vscode.commands.registerCommand('tokenshield.switchProfile', showProfilePicker),
-    vscode.commands.registerCommand('tokenshield.regenerate', regenerateCommand),
-    vscode.commands.registerCommand('tokenshield.dashboard', () => DashboardPanel.show(context.extensionUri)),
-    vscode.commands.registerCommand('tokenshield.reindex', () => runCodeGraphReindex(outputChannel)),
-    vscode.commands.registerCommand('tokenshield.validateGraph', () => validateIndex(outputChannel)),
-    vscode.commands.registerCommand('tokenshield.setupTools', () => installAllTools(outputChannel, true)),
-    vscode.commands.registerCommand('tokenshield.manageProjects', () => showProjectPicker(outputChannel)),
-    vscode.commands.registerCommand('tokenshield.configureMcp', () => configureMcpServers(outputChannel, extensionPath)),
-    vscode.commands.registerCommand('tokenshield.healthCheck', () => validateAllStrategies(outputChannel)),
-    vscode.commands.registerCommand('tokenshield.flushCache', clearCacheCommand),
-    vscode.commands.registerCommand('tokenshield.exportReport', () => exportTelemetryCommand(outputChannel)),
-    vscode.commands.registerCommand('tokenshield.exclusions', () => showExclusionPicker(outputChannel)),
-    vscode.commands.registerCommand('tokenshield.init', () => initializeForProject(getConfig(), outputChannel)),
-    vscode.commands.registerCommand('tokenshield.pruneAndCopy', async () => {
-      const editor = vscode.window.activeTextEditor;
-      if (!editor) { return; }
-      const text = editor.selection.isEmpty ? editor.document.getText() : editor.document.getText(editor.selection);
-      const result = pruneContext(text, { aggressive: true });
-      await vscode.env.clipboard.writeText(result.prunedText);
-      const tokensSaved = Math.max(0, result.originalTokensEst - result.prunedTokensEst);
-      const fileName = editor.document.fileName ? vscode.workspace.asRelativePath(editor.document.fileName) : 'Selection';
-      if (tokensSaved > 0) {
-        chatSavingsTracker.recordEvent(
-          'Adaptive Pruner',
-          fileName,
-          tokensSaved,
-          `Pruned context (-${result.reductionPercent}% tokens saved: ${result.originalTokensEst} ➔ ${result.prunedTokensEst} tok)`,
-          true,
-          result.originalTokensEst,
-          result.prunedTokensEst,
-          result.reductionPercent,
-          text,
-          result.prunedText
-        );
-      } else {
-        vscode.window.showInformationMessage(`TokenShield: Context copied to clipboard.`);
-      }
-    }),
-    vscode.commands.registerCommand('tokenshield.exportToRepo', async () => {
-      const results = await exportInstructionsToRepo(getConfig());
-      vscode.window.showInformationMessage(`TokenShield: Exported ${results.length} instruction files to repository.`);
-    }),
-    vscode.commands.registerCommand('tokenshield.newSession', async () => {
-      const archived = await chatSavingsTracker.resetSession();
+  // Register commands — dual registration for TokenSculpt with TokenShield backward compatibility
+  registerCommandWithAlias(context, 'toggle', toggleAllCommand);
+  registerCommandWithAlias(context, 'deactivateCompletely', deactivateCompletelyCommand);
+  registerCommandWithAlias(context, 'reactivate', reactivateCommand);
+  registerCommandWithAlias(context, 'toggleFeature', showSingleFeatureToggle);
+  registerCommandWithAlias(context, 'sessionBreakdown', () => DashboardPanel.show(context.extensionUri));
+  registerCommandWithAlias(context, 'switchProfile', showProfilePicker);
+  registerCommandWithAlias(context, 'regenerate', regenerateCommand);
+  registerCommandWithAlias(context, 'dashboard', () => DashboardPanel.show(context.extensionUri));
+  registerCommandWithAlias(context, 'reindex', () => runCodeGraphReindex(outputChannel));
+  registerCommandWithAlias(context, 'validateGraph', () => validateIndex(outputChannel));
+  registerCommandWithAlias(context, 'setupTools', () => installAllTools(outputChannel, true));
+  registerCommandWithAlias(context, 'manageProjects', () => showProjectPicker(outputChannel));
+  registerCommandWithAlias(context, 'configureMcp', () => configureMcpServers(outputChannel, extensionPath));
+  registerCommandWithAlias(context, 'healthCheck', () => validateAllStrategies(outputChannel));
+  registerCommandWithAlias(context, 'flushCache', clearCacheCommand);
+  registerCommandWithAlias(context, 'exportReport', () => exportTelemetryCommand(outputChannel));
+  registerCommandWithAlias(context, 'exclusions', () => showExclusionPicker(outputChannel));
+  registerCommandWithAlias(context, 'init', () => initializeForProject(getConfig(), outputChannel));
+  registerCommandWithAlias(context, 'pruneAndCopy', async () => {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) { return; }
+    const text = editor.selection.isEmpty ? editor.document.getText() : editor.document.getText(editor.selection);
+    const result = pruneContext(text, { aggressive: true });
+    await vscode.env.clipboard.writeText(result.prunedText);
+    const tokensSaved = Math.max(0, result.originalTokensEst - result.prunedTokensEst);
+    const fileName = editor.document.fileName ? vscode.workspace.asRelativePath(editor.document.fileName) : 'Selection';
+    if (tokensSaved > 0) {
+      chatSavingsTracker.recordEvent(
+        'Adaptive Pruner',
+        fileName,
+        tokensSaved,
+        `Pruned context (-${result.reductionPercent}% tokens saved: ${result.originalTokensEst} ➔ ${result.prunedTokensEst} tok)`,
+        true,
+        result.originalTokensEst,
+        result.prunedTokensEst,
+        result.reductionPercent,
+        text,
+        result.prunedText
+      );
+    } else {
+      vscode.window.showInformationMessage(`TokenSculpt: Context copied to clipboard.`);
+    }
+  });
+  registerCommandWithAlias(context, 'exportToRepo', async () => {
+    const results = await exportInstructionsToRepo(getConfig());
+    vscode.window.showInformationMessage(`TokenSculpt: Exported ${results.length} instruction files to repository.`);
+  });
+  registerCommandWithAlias(context, 'newSession', async () => {
+    const archived = await chatSavingsTracker.resetSession();
+    await updateStatusBar();
+    await DashboardPanel.refreshCurrentPanel();
+    vscode.window.showInformationMessage(
+      `🛡️ TokenSculpt: Started new Session #${chatSavingsTracker.getSessionNumber()}! Session #${archived.sessionNumber} archived (${archived.totalTokensSaved.toLocaleString()} tok, $${archived.totalCostSavedUsd.toFixed(4)} saved).`
+    );
+  });
+  registerCommandWithAlias(context, 'resetAllData', async () => {
+    const confirm = await vscode.window.showWarningMessage(
+      'Are you sure you want to completely reset all TokenSculpt lifetime statistics, archived sessions, and event logs? This cannot be undone.',
+      { modal: true },
+      'Reset Complete Data'
+    );
+    if (confirm === 'Reset Complete Data') {
+      await chatSavingsTracker.resetAllData();
       await updateStatusBar();
       await DashboardPanel.refreshCurrentPanel();
-      vscode.window.showInformationMessage(
-        `🛡️ TokenShield: Started new Session #${chatSavingsTracker.getSessionNumber()}! Session #${archived.sessionNumber} archived (${archived.totalTokensSaved.toLocaleString()} tok, $${archived.totalCostSavedUsd.toFixed(4)} saved).`
-      );
-    }),
-    vscode.commands.registerCommand('tokenshield.resetAllData', async () => {
-      const confirm = await vscode.window.showWarningMessage(
-        'Are you sure you want to completely reset all TokenShield lifetime statistics, archived sessions, and event logs? This cannot be undone.',
-        { modal: true },
-        'Reset Complete Data'
-      );
-      if (confirm === 'Reset Complete Data') {
-        await chatSavingsTracker.resetAllData();
-        await updateStatusBar();
-        await DashboardPanel.refreshCurrentPanel();
-        vscode.window.showInformationMessage('🛡️ TokenShield: All lifetime statistics and session history have been reset to clean slate.');
-      }
-    }),
-    vscode.commands.registerCommand('tokenshield.compressDiff', async () => {
+      vscode.window.showInformationMessage('🛡️ TokenSculpt: All lifetime statistics and session history have been reset to clean slate.');
+    }
+  });
+  registerCommandWithAlias(context, 'compressDiff', async () => {
+    try {
+      const { execSync } = require('child_process');
+      const wsPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || process.cwd();
+      let diffRaw = '';
       try {
-        const { execSync } = require('child_process');
-        const wsPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || process.cwd();
-        let diffRaw = '';
-        try {
-          diffRaw = execSync('rtk git diff HEAD', { cwd: wsPath, encoding: 'utf-8', timeout: 5000 });
-        } catch {
-          diffRaw = execSync('git diff HEAD', { cwd: wsPath, encoding: 'utf-8', timeout: 5000 });
-        }
-        if (!diffRaw || diffRaw.trim().length === 0) {
-          vscode.window.showInformationMessage('TokenShield: No git changes detected (working directory clean).');
-          return;
-        }
-        const result = compressGitDiff(diffRaw);
-        await vscode.env.clipboard.writeText(result.prunedText);
-        const tokensSaved = Math.max(0, result.originalTokensEst - result.prunedTokensEst);
-        chatSavingsTracker.recordEvent(
-          'Git Diff Scoping',
-          'rtk git diff HEAD',
-          tokensSaved,
-          `Compressed git diff (-${result.reductionPercent}% tokens saved: ${result.originalTokensEst} ➔ ${result.prunedTokensEst} tok)`,
-          true,
-          result.originalTokensEst,
-          result.prunedTokensEst,
-          result.reductionPercent,
-          diffRaw,
-          result.prunedText
-        );
-      } catch (err) {
-        vscode.window.showErrorMessage(`TokenShield: Failed to extract git diff: ${err instanceof Error ? err.message : String(err)}`);
+        diffRaw = execSync('rtk git diff HEAD', { cwd: wsPath, encoding: 'utf-8', timeout: 5000 });
+      } catch {
+        diffRaw = execSync('git diff HEAD', { cwd: wsPath, encoding: 'utf-8', timeout: 5000 });
       }
-    }),
-  );
+      if (!diffRaw || diffRaw.trim().length === 0) {
+        vscode.window.showInformationMessage('TokenSculpt: No git changes detected (working directory clean).');
+        return;
+      }
+      const result = compressGitDiff(diffRaw);
+      await vscode.env.clipboard.writeText(result.prunedText);
+      const tokensSaved = Math.max(0, result.originalTokensEst - result.prunedTokensEst);
+      chatSavingsTracker.recordEvent(
+        'Git Diff Scoping',
+        'rtk git diff HEAD',
+        tokensSaved,
+        `Compressed git diff (-${result.reductionPercent}% tokens saved: ${result.originalTokensEst} ➔ ${result.prunedTokensEst} tok)`,
+        true,
+        result.originalTokensEst,
+        result.prunedTokensEst,
+        result.reductionPercent,
+        diffRaw,
+        result.prunedText
+      );
+    } catch (err) {
+      vscode.window.showErrorMessage(`TokenSculpt: Failed to extract git diff: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  });
 
   // Create unified TokenShield Master Hub and active editor token badge (clean 2-item layout)
   const statusBar = createStatusBar(context);
@@ -162,7 +171,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   // Listen for config changes — hot-swap strategies without restart
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration(e => {
-      if (e.affectsConfiguration('tokenshield')) {
+      if (e.affectsConfiguration('tokensculpt') || e.affectsConfiguration('tokenshield')) {
         updateStatusBar();
         onConfigChanged();
       }
@@ -218,6 +227,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   if (wsPath) {
     const candidatePaths = [
       path.join(wsPath, '.github', 'instructions', 'copilot-instructions.md'),
+      path.join(wsPath, '.github', 'instructions', 'tokensculpt.instructions.md'),
       path.join(wsPath, '.github', 'instructions', 'tokenshield.instructions.md'),
       path.join(wsPath, '.github', 'copilot-instructions.md'),
       path.join(wsPath, 'AGENTS.md'),
@@ -226,20 +236,21 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     ];
 
     const hasAnyInstructions = candidatePaths.some(p => fs.existsSync(p));
-    const alreadyDismissed = context.workspaceState.get<boolean>('tokenshield.initPromptDismissed', false);
+    const alreadyDismissed = context.workspaceState.get<boolean>('tokensculpt.initPromptDismissed', false) ||
+                             context.workspaceState.get<boolean>('tokenshield.initPromptDismissed', false);
 
     if (!hasAnyInstructions && !alreadyDismissed) {
       const detectedToolNames = config.targetTools.map(t => TARGET_TOOL_LABELS[t]).join(', ');
       vscode.window.showInformationMessage(
-        `🛡️ TokenShield: No project instructions found. Detected tools: ${detectedToolNames}. Initialize for this project?`,
+        `🛡️ TokenSculpt: No project instructions found. Detected tools: ${detectedToolNames}. Initialize for this project?`,
         'Initialize Now',
         'Do Not Show Again'
       ).then(async action => {
         if (action === 'Initialize Now') {
-          await context.workspaceState.update('tokenshield.initPromptDismissed', true);
+          await context.workspaceState.update('tokensculpt.initPromptDismissed', true);
           await initializeForProject(config, outputChannel);
         } else if (action === 'Do Not Show Again') {
-          await context.workspaceState.update('tokenshield.initPromptDismissed', true);
+          await context.workspaceState.update('tokensculpt.initPromptDismissed', true);
         }
       });
     }
@@ -262,7 +273,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   }
 
   const activeCount = countActiveStrategies(strategies);
-  outputChannel.appendLine(`[activate] TokenShield ready — ${activeCount}/${TOTAL_STRATEGIES} strategies active`);
+  outputChannel.appendLine(`[activate] TokenSculpt ready — ${activeCount}/${TOTAL_STRATEGIES} strategies active`);
 }
 
 // Starts once per window — elapsed-session stats track from here, not from
@@ -296,7 +307,7 @@ async function autoApply(config: ReturnType<typeof getConfig>): Promise<void> {
     const updated = results.filter(r => r.updated).length;
     if (created > 0 || updated > 0) {
       vscode.window.showInformationMessage(
-        `TokenShield: ${created} instruction files created, ${updated} updated`
+        `TokenSculpt: ${created} instruction files created, ${updated} updated`
       );
     }
   } catch (err) {
@@ -326,8 +337,12 @@ async function autoApply(config: ReturnType<typeof getConfig>): Promise<void> {
 
 export async function deactivateCompletelyCommand(): Promise<void> {
   const config = getConfig();
-  const wsConfig = vscode.workspace.getConfiguration('tokenshield');
+  const wsConfig = vscode.workspace.getConfiguration('tokensculpt');
   await wsConfig.update('enabled', false, vscode.ConfigurationTarget.Workspace);
+  try {
+    const legacyConfig = vscode.workspace.getConfiguration('tokenshield');
+    await legacyConfig.update('enabled', false, vscode.ConfigurationTarget.Workspace);
+  } catch { /* ignore legacy config write error */ }
 
   // 1. Strip all instruction files
   try {
@@ -352,13 +367,17 @@ export async function deactivateCompletelyCommand(): Promise<void> {
   await DashboardPanel.refreshCurrentPanel();
 
   vscode.window.showInformationMessage(
-    '🛡️ TokenShield: Completely deactivated. All optimization directives and exclusions were removed from your workspace.'
+    '🛡️ TokenSculpt: Completely deactivated. All optimization directives and exclusions were removed from your workspace.'
   );
 }
 
 export async function reactivateCommand(): Promise<void> {
-  const wsConfig = vscode.workspace.getConfiguration('tokenshield');
+  const wsConfig = vscode.workspace.getConfiguration('tokensculpt');
   await wsConfig.update('enabled', true, vscode.ConfigurationTarget.Workspace);
+  try {
+    const legacyConfig = vscode.workspace.getConfiguration('tokenshield');
+    await legacyConfig.update('enabled', true, vscode.ConfigurationTarget.Workspace);
+  } catch { /* ignore legacy config write error */ }
   const config = getConfig();
 
   initSessionTracking();
@@ -386,7 +405,7 @@ export async function reactivateCommand(): Promise<void> {
   await DashboardPanel.refreshCurrentPanel();
 
   vscode.window.showInformationMessage(
-    '🛡️ TokenShield: Reactivated! All optimization directives and tools have been restored.'
+    '🛡️ TokenSculpt: Reactivated! All optimization directives and tools have been restored.'
   );
 }
 
@@ -406,21 +425,21 @@ async function regenerateCommand(): Promise<void> {
   const results = await generateAllInstructions(overrideConfig);
   const count = results.filter(r => r.created || r.updated).length;
   vscode.window.showInformationMessage(
-    `TokenShield: Regenerated ${count} instruction files`
+    `TokenSculpt: Regenerated ${count} instruction files`
   );
 }
 
 async function clearCacheCommand(): Promise<void> {
   const workspaceFolders = vscode.workspace.workspaceFolders;
   if (!workspaceFolders) {
-    vscode.window.showWarningMessage('TokenShield: No workspace folder open');
+    vscode.window.showWarningMessage('TokenSculpt: No workspace folder open');
     return;
   }
   const store = new SemanticCacheStore(workspaceFolders[0].uri.fsPath);
   const stats = store.stats();
   store.clear();
   outputChannel.appendLine(`[cache] Cleared semantic cache (${stats.entries} entries, ${stats.totalHits} lifetime hits)`);
-  vscode.window.showInformationMessage(`TokenShield: Semantic cache cleared (${stats.entries} entries removed)`);
+  vscode.window.showInformationMessage(`TokenSculpt: Semantic cache cleared (${stats.entries} entries removed)`);
 }
 
 async function onConfigChanged(): Promise<void> {

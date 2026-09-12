@@ -27,7 +27,7 @@ You are an expert assistant. Always follow these rules:
     test('rates clean static prompts with high cache efficiency score', () => {
       // Repeat static rules to exceed 1,024 tokens (~3,900 chars)
       const staticRules = `# System Instructions
-You are an expert programming assistant operating in TokenShield environment.
+You are an expert programming assistant operating in TokenSculpt environment.
 Follow all user rules precisely. Never include chit-chat.
 Propose edits as unified diffs.
 Maintain 100% on-device execution.
@@ -63,7 +63,7 @@ Turn #5 (User Turn)
       assert.ok(result.volatileElementsExtracted.length >= 1);
       assert.ok(!result.normalizedText.startsWith('The current local time is'));
       assert.ok(result.normalizedText.startsWith('# Antigravity Rules'));
-      assert.ok(result.normalizedText.includes('<!-- TOKENSHIELD:EPHEMERAL_SUFFIX -->'));
+      assert.ok(result.normalizedText.includes('<!-- TOKENSCULPT:EPHEMERAL_SUFFIX -->'));
       assert.ok(result.normalizedText.includes('Ephemeral Turn Metadata'));
       assert.ok(result.normalizedText.includes('The current local time is'));
     });
@@ -91,7 +91,7 @@ Turn #5 (User Turn)
       const padded = padToCacheBoundary(text, 100);
       const paddedTokens = estimateTokens(padded);
       assert.ok(paddedTokens >= 100);
-      assert.ok(padded.includes('TokenShield KV-Cache Boundary Pad'));
+      assert.ok(padded.includes('TokenSculpt KV-Cache Boundary Pad'));
     });
 
     test('does not pad text that already exceeds blockSizeTokens', () => {

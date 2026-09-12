@@ -12,8 +12,8 @@ import {
   COPILOT_INSTRUCTIONS_PATH,
   COPILOT_INSTRUCTIONS_SUBDIR_PATH,
   COPILOT_PROJECT_INSTRUCTIONS_SUBDIR_PATH,
-  TOKENSHIELD_AGENT_PATH,
-  TOKENSHIELD_SKILL_PATH,
+  TOKENSCULPT_AGENT_PATH,
+  TOKENSCULPT_SKILL_PATH,
 } from '../core/constants';
 
 export { BaseInstructionGenerator, GenerationResult } from './base';
@@ -215,54 +215,54 @@ export class InstructionEngine {
    * Scaffolds the TokenShield agent and optimization skill templates into .github/
    */
   private scaffoldAgentAndSkill(wsPath: string): void {
-    // 1. Agent file: .github/agents/tokenshield.agent.md
-    const agentPath = path.join(wsPath, TOKENSHIELD_AGENT_PATH);
+    // 1. Agent file: .github/agents/tokensculpt.agent.md
+    const agentPath = path.join(wsPath, TOKENSCULPT_AGENT_PATH);
     const agentDir = path.dirname(agentPath);
     if (!fs.existsSync(agentPath)) {
       if (!fs.existsSync(agentDir)) {
         fs.mkdirSync(agentDir, { recursive: true });
       }
-      const agentTemplatePath = path.join(__dirname, '..', '..', 'templates', 'tokenshield-agent.md');
+      const agentTemplatePath = path.join(__dirname, '..', '..', 'templates', 'tokensculpt-agent.md');
       let agentContent = '';
       if (fs.existsSync(agentTemplatePath)) {
         agentContent = fs.readFileSync(agentTemplatePath, 'utf-8');
       } else {
         agentContent = `---
-name: "TokenShield Optimizer"
+name: "TokenSculpt Optimizer"
 description: >
-  Token and cost optimization agent. Enforces the 19 optimization features.
+  Token and cost optimization agent. Enforces the 20 optimization features.
 tools:
   - search/codebase
   - terminal
 ---
 
-# TokenShield Optimizer Agent
-Read \`.github/instructions/tokenshield.instructions.md\` for active optimization features.
+# TokenSculpt Optimizer Agent
+Read \`.github/instructions/tokensculpt.instructions.md\` for active optimization features.
 `;
       }
       fs.writeFileSync(agentPath, agentContent, 'utf-8');
     }
 
-    // 2. Skill file: .github/skills/tokenshield-optimize/SKILL.md
-    const skillPath = path.join(wsPath, TOKENSHIELD_SKILL_PATH);
+    // 2. Skill file: .github/skills/tokensculpt-optimize/SKILL.md
+    const skillPath = path.join(wsPath, TOKENSCULPT_SKILL_PATH);
     const skillDir = path.dirname(skillPath);
     if (!fs.existsSync(skillPath)) {
       if (!fs.existsSync(skillDir)) {
         fs.mkdirSync(skillDir, { recursive: true });
       }
-      const skillTemplatePath = path.join(__dirname, '..', '..', 'templates', 'tokenshield-skill.md');
+      const skillTemplatePath = path.join(__dirname, '..', '..', 'templates', 'tokensculpt-skill.md');
       let skillContent = '';
       if (fs.existsSync(skillTemplatePath)) {
         skillContent = fs.readFileSync(skillTemplatePath, 'utf-8');
       } else {
         skillContent = `---
-name: tokenshield-optimize
+name: tokensculpt-optimize
 description: >
-  Analyze current AI interaction patterns and suggest token/cost optimizations using TokenShield's 19 optimization features.
+  Analyze current AI interaction patterns and suggest token/cost optimizations using TokenSculpt's 20 optimization features.
 ---
 
-# TokenShield Optimization Skill
-Read \`.github/instructions/tokenshield.instructions.md\` to apply active features.
+# TokenSculpt Optimization Skill
+Read \`.github/instructions/tokensculpt.instructions.md\` to apply active features.
 `;
       }
       fs.writeFileSync(skillPath, skillContent, 'utf-8');
@@ -295,9 +295,10 @@ Read \`.github/instructions/tokenshield.instructions.md\` to apply active featur
     const results: GenerationResult[] = [];
     const copilotGen = this.generators.get('copilot');
 
-    // 1. Strip Copilot instruction files across all common locations
+    // 1. Strip Copilot instruction files across all common locations (including legacy tokenshield)
     const copilotTargets = [
       path.join(wsPath, COPILOT_INSTRUCTIONS_SUBDIR_PATH),
+      path.join(wsPath, '.github', 'instructions', 'tokenshield.instructions.md'),
       path.join(wsPath, COPILOT_PROJECT_INSTRUCTIONS_SUBDIR_PATH),
       path.join(wsPath, COPILOT_INSTRUCTIONS_PATH),
       path.join(wsPath, '.vscode', 'copilot-instructions.md'),
@@ -322,7 +323,7 @@ Read \`.github/instructions/tokenshield.instructions.md\` to apply active featur
     try {
       const wsConfig = vscode.workspace.getConfiguration('', wsFolders[0].uri);
       const existing = wsConfig.get<any[]>('github.copilot.chat.codeGeneration.instructions') || [];
-      const filtered = existing.filter(e => !(typeof e === 'object' && e.file?.includes('tokenshield.instructions.md')));
+      const filtered = existing.filter(e => !(typeof e === 'object' && (e.file?.includes('tokensculpt.instructions.md') || e.file?.includes('tokenshield.instructions.md'))));
       if (filtered.length !== existing.length) {
         await wsConfig.update('github.copilot.chat.codeGeneration.instructions', filtered, vscode.ConfigurationTarget.Workspace);
       }

@@ -11,8 +11,8 @@ let callLogWatcher: vscode.FileSystemWatcher | undefined;
 
 export function createSessionSavingsWidget(context: vscode.ExtensionContext): vscode.StatusBarItem {
   savingsStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 98);
-  savingsStatusBarItem.name = 'TokenShield Session Savings';
-  savingsStatusBarItem.command = 'tokenshield.sessionBreakdown';
+  savingsStatusBarItem.name = 'TokenSculpt Session Savings';
+  savingsStatusBarItem.command = 'tokensculpt.sessionBreakdown';
 
   // Listen to in-memory tracker changes
   context.subscriptions.push(
@@ -21,9 +21,9 @@ export function createSessionSavingsWidget(context: vscode.ExtensionContext): vs
     })
   );
 
-  // Register the breakdown picker command only — resetSession is owned by extension.ts
-  // to ensure the full handler (archive + statusBar update + dashboard refresh) runs.
+  // Register the breakdown picker command with legacy alias support
   context.subscriptions.push(
+    vscode.commands.registerCommand('tokensculpt.sessionBreakdown', showSessionBreakdownQuickPick),
     vscode.commands.registerCommand('tokenshield.sessionBreakdown', showSessionBreakdownQuickPick)
   );
 
@@ -86,7 +86,7 @@ export async function updateSessionSavingsWidget(): Promise<void> {
   const lifetimeTok = chatSavingsTracker.getLifetimeTokensSaved();
   const lifetimeCost = formatCost(chatSavingsTracker.getLifetimeCostSavedUsd());
 
-  md.appendMarkdown(`### 💎 TokenShield Session #${sessionNum} Savings\n`);
+  md.appendMarkdown(`### 💎 TokenSculpt Session #${sessionNum} Savings\n`);
   md.appendMarkdown(`- **Started At**: \`${sessionStarted.toLocaleTimeString()}\`\n`);
   md.appendMarkdown(`- **Session Tokens Avoided**: ~\`${tokensSaved.toLocaleString()}\` tokens (\`${formattedCost}\`)\n`);
   md.appendMarkdown(`- **All-Time Lifetime Avoided**: ~\`${lifetimeTok.toLocaleString()}\` tokens (\`${lifetimeCost}\`)\n`);
@@ -104,7 +104,7 @@ export async function updateSessionSavingsWidget(): Promise<void> {
     md.appendMarkdown(`\n---\n\n`);
   }
 
-  md.appendMarkdown(`[🔄 New Session](command:tokenshield.newSession) &nbsp;|&nbsp; [💬 Session History](command:tokenshield.sessionBreakdown) &nbsp;|&nbsp; [📊 Dashboard](command:tokenshield.dashboard)`);
+  md.appendMarkdown(`[🔄 New Session](command:tokensculpt.newSession) &nbsp;|&nbsp; [💬 Session History](command:tokensculpt.sessionBreakdown) &nbsp;|&nbsp; [📊 Dashboard](command:tokensculpt.dashboard)`);
 
   savingsStatusBarItem.tooltip = md;
   savingsStatusBarItem.show();
@@ -177,18 +177,18 @@ async function showSessionBreakdownQuickPick(): Promise<void> {
   }
 
   const selected = await vscode.window.showQuickPick(items, {
-    placeHolder: `TokenShield — Session #${sessionNum} Savings Breakdown`,
+    placeHolder: `TokenSculpt — Session #${sessionNum} Savings Breakdown`,
     title: `Session #${sessionNum} Savings: ~${totalTok.toLocaleString()} tokens ($${totalCost.toFixed(4)})`,
   });
 
   if (!selected) { return; }
 
   if (selected.label.includes('Start New Session')) {
-    vscode.commands.executeCommand('tokenshield.newSession');
+    vscode.commands.executeCommand('tokensculpt.newSession');
   } else if (selected.label.includes('Reset Complete Data')) {
-    vscode.commands.executeCommand('tokenshield.resetAllData');
+    vscode.commands.executeCommand('tokensculpt.resetAllData');
   } else if (selected.description === 'Click to open Savings Dashboard') {
-    vscode.commands.executeCommand('tokenshield.dashboard');
+    vscode.commands.executeCommand('tokensculpt.dashboard');
   }
 }
 

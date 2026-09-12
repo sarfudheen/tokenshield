@@ -136,7 +136,7 @@ export async function suggestLighterModel(query: string): Promise<void> {
     );
 
     if (selection === 'Don\'t show again') {
-      const config = vscode.workspace.getConfiguration('tokenshield');
+      const config = vscode.workspace.getConfiguration('tokensculpt');
       await config.update('activeStrategies.smartModelRouting', false, vscode.ConfigurationTarget.Workspace);
     }
   }

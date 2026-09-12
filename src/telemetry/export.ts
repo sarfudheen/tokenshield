@@ -7,7 +7,7 @@ import { getRoiEngine } from './roiEngine';
 export async function exportExecutiveReport(outputChannel: vscode.OutputChannel): Promise<void> {
   const wsFolders = vscode.workspace.workspaceFolders;
   if (!wsFolders || wsFolders.length === 0) {
-    vscode.window.showWarningMessage('TokenShield: No open workspace to export telemetry for.');
+    vscode.window.showWarningMessage('TokenSculpt: No open workspace to export telemetry for.');
     return;
   }
 
@@ -57,7 +57,7 @@ export async function exportExecutiveReport(outputChannel: vscode.OutputChannel)
   fs.writeFileSync(targetUri.fsPath, content, 'utf-8');
   outputChannel.appendLine(`[export] Savings report saved to: ${targetUri.fsPath}`);
   const action = await vscode.window.showInformationMessage(
-    `TokenShield: Savings report saved (${path.basename(targetUri.fsPath)})`,
+    `TokenSculpt: Savings report saved (${path.basename(targetUri.fsPath)})`,
     'Open File'
   );
 
@@ -72,7 +72,7 @@ function generateMarkdownReport(summary: import('../core/types').SessionRoiSumma
     `| ${m.modelFamily} | ${m.tier.toUpperCase()} | ${m.tokensSaved.toLocaleString()} | $${m.costSavedUsd.toFixed(4)} | ${m.queryCount} |`
   ).join('\n');
 
-  return `# TokenShield Savings Report
+  return `# TokenSculpt Savings Report
 
 **Generated**: ${new Date().toLocaleString()}  
 **Active Profile**: ${config.profile.toUpperCase()}  
@@ -103,7 +103,7 @@ ${modelRows || `| ${summary.activeModel.family} | ${summary.activeModel.tier.toU
 
 ---
 
-*Report generated on-device by TokenShield. 100% private, zero telemetry transmission.*
+*Report generated on-device by TokenSculpt. 100% private, zero telemetry transmission.*
 `;
 }
 
@@ -114,4 +114,15 @@ function generateCsvReport(summary: import('../core/types').SessionRoiSummary): 
     return header + `${summary.activeModel.family},${summary.activeModel.tier},${summary.totalTokensSaved},${summary.totalCostSavedUsd.toFixed(4)},1\n`;
   }
   return header + records.map(r => `${r.modelFamily},${r.tier},${r.tokensSaved},${r.costSavedUsd.toFixed(4)},${r.queryCount}`).join('\n') + '\n';
+}
+
+export function exportTelemetry(data: any, format: 'json' | 'csv' | 'markdown'): string {
+  if (format === 'json') {
+    return JSON.stringify({ ...data, note: 'Values are modeled estimates.' });
+  }
+  if (format === 'csv') {
+    const pct = data.estimates?.[0]?.tokenReductionPercent ?? 0;
+    return `timestamp_iso,est_token_reduction_pct\n${new Date().toISOString()},${pct}\n`;
+  }
+  return '# AI Token Optimizer Telemetry Report\n\nSavings are modeled based on code graph reduction.';
 }

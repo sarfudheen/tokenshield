@@ -1,8 +1,8 @@
 {
-  "name": "tokenshield",
-  "displayName": "TokenShield — AI Token & Cost Optimizer (Copilot & Claude)",
+  "name": "tokensculpt",
+  "displayName": "TokenSculpt — AI Token & Cost Optimizer (Copilot & Claude)",
   "description": "Save 60–90% AI token & LLM costs across GitHub Copilot, Claude Code, and Codex. Zero-latency context pruning, AST skeletons, semantic cache, and real-time savings tracking.",
-  "version": "1.0.17",
+  "version": "1.0.18",
   "publisher": "sarfudheen",
   "license": "MIT",
   "repository": {
@@ -18,6 +18,7 @@
     "Other"
   ],
   "keywords": [
+    "tokensculpt",
     "tokenshield",
     "token",
     "token-optimizer",
@@ -45,112 +46,124 @@
   "contributes": {
     "commands": [
       {
+        "command": "tokensculpt.hub",
+        "title": "TokenSculpt: Open Control Hub"
+      },
+      {
+        "command": "tokensculpt.toggle",
+        "title": "TokenSculpt: Toggle On/Off"
+      },
+      {
+        "command": "tokensculpt.toggleFeature",
+        "title": "TokenSculpt: Toggle Feature (1-Click Switch)"
+      },
+      {
+        "command": "tokensculpt.deactivateCompletely",
+        "title": "TokenSculpt: Deactivate Completely (Strip All Directives)"
+      },
+      {
+        "command": "tokensculpt.reactivate",
+        "title": "TokenSculpt: Reactivate All Optimizations"
+      },
+      {
+        "command": "tokensculpt.switchProfile",
+        "title": "TokenSculpt: Switch Profile"
+      },
+      {
+        "command": "tokensculpt.regenerate",
+        "title": "TokenSculpt: Regenerate Directives"
+      },
+      {
+        "command": "tokensculpt.dashboard",
+        "title": "TokenSculpt: Open Savings Dashboard"
+      },
+      {
+        "command": "tokensculpt.reindex",
+        "title": "TokenSculpt: Reindex Code Graph"
+      },
+      {
+        "command": "tokensculpt.setupTools",
+        "title": "TokenSculpt: Setup CLI Tools"
+      },
+      {
+        "command": "tokensculpt.configureMcp",
+        "title": "TokenSculpt: Configure MCP Servers"
+      },
+      {
+        "command": "tokensculpt.healthCheck",
+        "title": "TokenSculpt: Run Health Check"
+      },
+      {
+        "command": "tokensculpt.flushCache",
+        "title": "TokenSculpt: Flush Semantic Cache"
+      },
+      {
+        "command": "tokensculpt.validateGraph",
+        "title": "TokenSculpt: Validate Code Graph"
+      },
+      {
+        "command": "tokensculpt.manageProjects",
+        "title": "TokenSculpt: Manage Graph Projects"
+      },
+      {
+        "command": "tokensculpt.exportReport",
+        "title": "TokenSculpt: Export Savings Report"
+      },
+      {
+        "command": "tokensculpt.exclusions",
+        "title": "TokenSculpt: Edit Context Exclusions"
+      },
+      {
+        "command": "tokensculpt.pruneAndCopy",
+        "title": "TokenSculpt: Prune & Copy to Clipboard"
+      },
+      {
+        "command": "tokensculpt.newSession",
+        "title": "TokenSculpt: Start New Session"
+      },
+      {
+        "command": "tokensculpt.resetAllData",
+        "title": "TokenSculpt: Reset Complete Data (Wipe All History)"
+      },
+      {
+        "command": "tokensculpt.compressDiff",
+        "title": "TokenSculpt: Compress Git Diff"
+      },
+      {
+        "command": "tokensculpt.exportToRepo",
+        "title": "TokenSculpt: Export Directives to Repo"
+      },
+      {
+        "command": "tokensculpt.init",
+        "title": "TokenSculpt: Initialize Project"
+      },
+      {
         "command": "tokenshield.hub",
-        "title": "TokenShield: Open Control Hub"
+        "title": "TokenSculpt: Open Control Hub (Legacy Alias)"
       },
       {
         "command": "tokenshield.toggle",
-        "title": "TokenShield: Toggle On/Off"
-      },
-      {
-        "command": "tokenshield.toggleFeature",
-        "title": "TokenShield: Toggle Feature (1-Click Switch)"
-      },
-      {
-        "command": "tokenshield.deactivateCompletely",
-        "title": "TokenShield: Deactivate Completely (Strip All Directives)"
-      },
-      {
-        "command": "tokenshield.reactivate",
-        "title": "TokenShield: Reactivate All Optimizations"
-      },
-      {
-        "command": "tokenshield.switchProfile",
-        "title": "TokenShield: Switch Profile"
-      },
-      {
-        "command": "tokenshield.regenerate",
-        "title": "TokenShield: Regenerate Directives"
+        "title": "TokenSculpt: Toggle On/Off (Legacy Alias)"
       },
       {
         "command": "tokenshield.dashboard",
-        "title": "TokenShield: Open Savings Dashboard"
-      },
-      {
-        "command": "tokenshield.reindex",
-        "title": "TokenShield: Reindex Code Graph"
-      },
-      {
-        "command": "tokenshield.setupTools",
-        "title": "TokenShield: Setup CLI Tools"
-      },
-      {
-        "command": "tokenshield.configureMcp",
-        "title": "TokenShield: Configure MCP Servers"
-      },
-      {
-        "command": "tokenshield.healthCheck",
-        "title": "TokenShield: Run Health Check"
-      },
-      {
-        "command": "tokenshield.flushCache",
-        "title": "TokenShield: Flush Semantic Cache"
-      },
-      {
-        "command": "tokenshield.validateGraph",
-        "title": "TokenShield: Validate Code Graph"
-      },
-      {
-        "command": "tokenshield.manageProjects",
-        "title": "TokenShield: Manage Graph Projects"
-      },
-      {
-        "command": "tokenshield.exportReport",
-        "title": "TokenShield: Export Savings Report"
-      },
-      {
-        "command": "tokenshield.exclusions",
-        "title": "TokenShield: Edit Context Exclusions"
-      },
-      {
-        "command": "tokenshield.pruneAndCopy",
-        "title": "TokenShield: Prune & Copy to Clipboard"
-      },
-      {
-        "command": "tokenshield.newSession",
-        "title": "TokenShield: Start New Session"
-      },
-      {
-        "command": "tokenshield.resetAllData",
-        "title": "TokenShield: Reset Complete Data (Wipe All History)"
-      },
-      {
-        "command": "tokenshield.compressDiff",
-        "title": "TokenShield: Compress Git Diff"
-      },
-      {
-        "command": "tokenshield.exportToRepo",
-        "title": "TokenShield: Export Directives to Repo"
-      },
-      {
-        "command": "tokenshield.init",
-        "title": "TokenShield: Initialize Project"
+        "title": "TokenSculpt: Open Savings Dashboard (Legacy Alias)"
       }
     ],
     "configuration": {
-      "title": "TokenShield",
+      "title": "TokenSculpt",
       "properties": {
-        "tokenshield.enabled": {
+        "tokensculpt.enabled": {
           "type": "boolean",
           "default": true,
           "description": "Enable or disable all token optimizations."
         },
-        "tokenshield.autoApply": {
+        "tokensculpt.autoApply": {
           "type": "boolean",
           "default": true,
           "description": "Automatically apply token optimization directives when opening a workspace."
         },
-        "tokenshield.targetTools": {
+        "tokensculpt.targetTools": {
           "type": "array",
           "items": {
             "type": "string",
@@ -164,12 +177,12 @@
           "default": [],
           "markdownDescription": "Which AI tools to generate instruction files for. Leave empty (default) to auto-detect based on installed IDE extensions. When set explicitly, only the listed tools will receive instruction files."
         },
-        "tokenshield.autoDetectTools": {
+        "tokensculpt.autoDetectTools": {
           "type": "boolean",
           "default": true,
-          "markdownDescription": "Automatically detect which AI tools are present in the current IDE (Copilot, Claude Code, Codex, Antigravity) and generate only the relevant instruction files. Disable to fall back to `copilot` only or set `#tokenshield.targetTools#` explicitly."
+          "markdownDescription": "Automatically detect which AI tools are present in the current IDE (Copilot, Claude Code, Codex, Antigravity) and generate only the relevant instruction files. Disable to fall back to `copilot` only or set `#tokensculpt.targetTools#` explicitly."
         },
-        "tokenshield.profile": {
+        "tokensculpt.profile": {
           "type": "string",
           "enum": [
             "full",
@@ -188,7 +201,7 @@
             "Use custom strategy combination from activeStrategies setting"
           ]
         },
-        "tokenshield.activeStrategies": {
+        "tokensculpt.activeStrategies": {
           "type": "object",
           "default": {
             "codeGraph": true,
@@ -296,7 +309,7 @@
           },
           "description": "Toggle individual optimization features (used when profile is 'custom')."
         },
-        "tokenshield.verbosityLevel": {
+        "tokensculpt.verbosityLevel": {
           "type": "string",
           "enum": [
             "light",
@@ -306,7 +319,7 @@
           "default": "full",
           "description": "Verbosity reduction level: Light (~20%), Full (~35%), Ultra (~50%)."
         },
-        "tokenshield.commentStrippingMode": {
+        "tokensculpt.commentStrippingMode": {
           "type": "string",
           "enum": [
             "headers-only",
@@ -321,22 +334,22 @@
             "Disable all comment stripping"
           ]
         },
-        "tokenshield.preserveExistingInstructions": {
+        "tokensculpt.preserveExistingInstructions": {
           "type": "boolean",
           "default": true,
           "description": "Preserve existing user content in instruction files when updating."
         },
-        "tokenshield.autoInstallTools": {
+        "tokensculpt.autoInstallTools": {
           "type": "boolean",
           "default": true,
           "description": "Automatically check and install supporting CLI tools."
         },
-        "tokenshield.configureMcpOnActivation": {
+        "tokensculpt.configureMcpOnActivation": {
           "type": "boolean",
           "default": true,
           "description": "Automatically configure 100% on-device MCP servers (token-cache, headroom, CodeGraph) on activation."
         },
-        "tokenshield.pricing": {
+        "tokensculpt.pricing": {
           "type": "object",
           "default": {
             "flagship": { "inputPerMillion": 15.0, "outputPerMillion": 75.0 },
@@ -345,7 +358,7 @@
           },
           "description": "Model pricing table in USD per 1M tokens (used for savings dashboard calculations)."
         },
-        "tokenshield.guardrails": {
+        "tokensculpt.guardrails": {
           "type": "object",
           "default": {
             "maxRetries": 3,
@@ -371,17 +384,17 @@
           },
           "description": "Agent loop guardrail limits to prevent runaway tool usage."
         },
-        "tokenshield.useVscodeStorage": {
+        "tokensculpt.useVscodeStorage": {
           "type": "boolean",
           "default": true,
           "description": "Store instructions cleanly in .vscode/copilot-instructions.md instead of modifying public git tracking. Use 'Export to Repository' command when team-wide repo commit is desired."
         },
-        "tokenshield.githubInstructions": {
+        "tokensculpt.githubInstructions": {
           "type": "boolean",
           "default": true,
           "description": "Write instructions to .github/ (the path VS Code Copilot auto-discovers). Recommended: true. Set false only if you prefer to keep all generated files out of git."
         },
-        "tokenshield.githubStructureMode": {
+        "tokensculpt.githubStructureMode": {
           "type": "string",
           "enum": [
             "auto",
@@ -389,14 +402,14 @@
             "structured"
           ],
           "default": "auto",
-          "description": "How TokenShield integrates with .github/: 'auto' detects structured layout (.github/instructions/), 'flat' writes directly to .github/copilot-instructions.md, 'structured' writes to .github/instructions/tokenshield.instructions.md."
+          "description": "How TokenSculpt integrates with .github/: 'auto' detects structured layout (.github/instructions/), 'flat' writes directly to .github/copilot-instructions.md, 'structured' writes to .github/instructions/tokensculpt.instructions.md."
         },
-        "tokenshield.generateAgentFiles": {
+        "tokensculpt.generateAgentFiles": {
           "type": "boolean",
           "default": false,
-          "description": "Scaffold TokenShield agent (.github/agents/tokenshield.agent.md) and optimization skill (.github/skills/tokenshield-optimize/SKILL.md) in structured .github repositories."
+          "description": "Scaffold TokenSculpt agent (.github/agents/tokensculpt.agent.md) and optimization skill (.github/skills/tokensculpt-optimize/SKILL.md) in structured .github repositories."
         },
-        "tokenshield.telemetry.enabled": {
+        "tokensculpt.telemetry.enabled": {
           "type": "boolean",
           "default": true,
           "description": "Enable 100% on-device token and cost savings tracking."

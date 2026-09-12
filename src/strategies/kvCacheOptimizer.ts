@@ -159,7 +159,7 @@ export function normalizePromptForCache(prompt: string): PromptCacheNormalizatio
   // Construct normalized text: Static Prefix FIRST, Ephemeral Suffix LAST
   let normalizedText = staticLines.join('\n').trim();
   if (extractedVolatile.length > 0) {
-    normalizedText += '\n\n<!-- TOKENSHIELD:EPHEMERAL_SUFFIX -->\n' +
+    normalizedText += '\n\n<!-- TOKENSCULPT:EPHEMERAL_SUFFIX -->\n' +
       '### Ephemeral Turn Metadata\n' +
       extractedVolatile.map(v => `- ${v}`).join('\n');
   }
@@ -192,7 +192,7 @@ export function padToCacheBoundary(text: string, blockSizeTokens: number = 1024)
   if (currentTokens < blockSizeTokens) {
     const tokensNeeded = blockSizeTokens - currentTokens;
     const charsNeeded = Math.ceil(tokensNeeded * 3.8);
-    const paddingLine = `\n<!-- TokenShield KV-Cache Boundary Pad [Target: ${blockSizeTokens} tok]: ${'-'.repeat(Math.max(10, charsNeeded - 60))} -->\n`;
+    const paddingLine = `\n<!-- TokenSculpt KV-Cache Boundary Pad [Target: ${blockSizeTokens} tok]: ${'-'.repeat(Math.max(10, charsNeeded - 60))} -->\n`;
     return text + paddingLine;
   }
   return text;
