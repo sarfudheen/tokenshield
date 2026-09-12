@@ -79,9 +79,9 @@ For detailed step-by-step setup, companion tool installation, and team configura
 
 Download the latest `.vsix` binary from GitHub Releases (under **Assets**):
 
-👉 **[Download Latest VSIX Release](https://github.com/sarfudheen/tokenshield/releases/latest)**
+👉 **[Download Latest VSIX Release](https://github.com/sarfudheen/tokensculpt/releases/latest)**
 
-*(Or download specific versions from [All Releases](https://github.com/sarfudheen/tokenshield/releases).)*
+*(Or download specific versions from [All Releases](https://github.com/sarfudheen/tokensculpt/releases).)*
 
 ### ⚡ Quick Install (VSIX)
 

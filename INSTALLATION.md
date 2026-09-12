@@ -18,7 +18,7 @@ Comprehensive installation, configuration, and verification guide for **TokenScu
 ## 📦 Method 1: Installing the Extension (VSIX)
  
 The extension bundle is distributed as a self-contained `.vsix` archive (e.g. `tokensculpt-1.0.18.vsix`), downloadable directly from:
-👉 **[GitHub Releases (Latest)](https://github.com/sarfudheen/tokenshield/releases/latest)** (expand **Assets** to download `.vsix`)
+👉 **[GitHub Releases (Latest)](https://github.com/sarfudheen/tokensculpt/releases/latest)** (expand **Assets** to download `.vsix`)
 
 ### A. Google Antigravity IDE
 
@@ -86,8 +86,8 @@ If you cloned the repository and wish to compile the latest version from source:
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/sarfudheen/tokenshield.git
-cd tokenshield
+git clone https://github.com/sarfudheen/tokensculpt.git
+cd tokensculpt
 
 # 2. Install development dependencies
 npm install
