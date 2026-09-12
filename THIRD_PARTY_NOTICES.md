@@ -1,6 +1,6 @@
 # Third-Party Notices and Acknowledgements
 
-TokenShield incorporates ideas, patterns, and foundational concepts from the following open-source software:
+TokenSculpt incorporates ideas, patterns, and foundational concepts from the following open-source software:
 
 ---
 
