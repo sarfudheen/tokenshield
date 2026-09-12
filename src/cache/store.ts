@@ -5,6 +5,7 @@ import * as path from 'path';
 import { spawnSync } from 'child_process';
 import { normalizeQuery, cacheKey, buildIdf, similarity, isMatch } from './similarity';
 import { SecretSanitizer } from './sanitizer';
+import { isCacheEntryStale } from './gitInvalidation';
 
 export const CACHE_DIR = '.aicache';
 export const CACHE_FILE = 'semantic-cache.json';
@@ -24,6 +25,7 @@ export interface CacheEntry {
   answer: string;
   scope: CacheScope;
   gitHead: string | null;
+  sourceFiles?: string[];
   createdAt: number;
   lastAccessedAt: number;
   hits: number;
@@ -90,7 +92,7 @@ export class SemanticCacheStore {
     return { hit: false };
   }
 
-  store(query: string, answer: string, scope: CacheScope = 'code'): CacheEntry {
+  store(query: string, answer: string, scope: CacheScope = 'code', sourceFiles?: string[]): CacheEntry {
     const data = this.load();
     const cleanQuery = SecretSanitizer.redact(query);
     const cleanAnswer = SecretSanitizer.redact(answer);
@@ -104,6 +106,9 @@ export class SemanticCacheStore {
       entry.answer = cleanAnswer;
       entry.scope = scope;
       entry.gitHead = this.currentGitHead();
+      if (sourceFiles && sourceFiles.length > 0) {
+        entry.sourceFiles = sourceFiles;
+      }
       entry.lastAccessedAt = timestamp;
     } else {
       entry = {
@@ -113,6 +118,7 @@ export class SemanticCacheStore {
         answer: cleanAnswer,
         scope,
         gitHead: this.currentGitHead(),
+        sourceFiles,
         createdAt: timestamp,
         lastAccessedAt: timestamp,
         hits: 0,
@@ -152,9 +158,8 @@ export class SemanticCacheStore {
       answer: entry.answer,
       exact: match.exact,
       similarity: match.similarity,
-      // Stale entries are flagged, not dropped — a commit shouldn't nuke the
-      // cache; the caller decides whether the answer is still usable.
-      stale: entry.scope === 'code' && entry.gitHead !== head,
+      // Differential git staleness: only marks stale if affected files were modified
+      stale: isCacheEntryStale(entry, head, this.workspaceRoot),
       storedAt: entry.createdAt,
     };
   }

@@ -70,6 +70,7 @@ export interface ExtensionConfig {
   telemetryEnabled: boolean;
   guardrails: GuardrailConfig;
   pricing: PricingTable;
+  customModelPricing?: Record<string, ModelPricing>;
   useVscodeStorage: boolean;
   githubStructureMode: GithubStructureMode;
   generateAgentFiles: boolean;
@@ -180,6 +181,7 @@ export function getConfig(): ExtensionConfig {
       maxFileReads: 2,
     }),
     pricing: getSetting<PricingTable>('pricing', DEFAULT_PRICING),
+    customModelPricing: getSetting<Record<string, ModelPricing>>('customModelPricing', {}),
     useVscodeStorage: getSetting<boolean>('useVscodeStorage', true),
     githubStructureMode: getSetting<GithubStructureMode>('githubStructureMode', 'auto'),
     generateAgentFiles: getSetting<boolean>('generateAgentFiles', false),

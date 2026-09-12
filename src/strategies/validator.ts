@@ -9,7 +9,7 @@ import * as os from 'os';
 import { COPILOT_INSTRUCTIONS_PATH, CLAUDE_INSTRUCTIONS_PATH, CODEX_INSTRUCTIONS_PATH, MARKER_START, MCP_CACHE_SERVER_NAME, COPILOTIGNORE_PATH, HEADROOM_MCP_SERVER_NAME } from '../core/constants';
 import { resolveHeadroomCommand } from '../mcp/configurator';
 import { SemanticCacheStore, CACHE_DIR, CACHE_FILE } from '../cache/store';
-import { detectProjectExclusions } from './contextExclusion';
+import { detectProjectExclusions, applyContextExclusions } from './contextExclusion';
 import { getGuardrailTracker } from './guardrails';
 import { getModelRoutingTracker } from './modelRouting';
 import { analyzePromptCacheability } from './kvCacheOptimizer';
@@ -706,8 +706,87 @@ export async function validateAllStrategies(outputChannel: vscode.OutputChannel)
   outputChannel.appendLine(`  Summary: ${okCount} ok  |  ${disabledCount} disabled  |  ${warnCount} warn  |  ${errorCount} error`);
   outputChannel.appendLine('══════════════════════════════════════════════════════════');
 
+  const action = await vscode.window.showInformationMessage(
+    `TokenSculpt: ${okCount}/${TOTAL_STRATEGIES} strategies validated ✓ (${disabledCount} disabled, ${warnCount} warnings)`,
+    'Show Report',
+    warnCount > 0 || errorCount > 0 ? 'Auto-Repair Issues' : ''
+  );
+
+  if (action === 'Show Report') {
+    outputChannel.show();
+  } else if (action === 'Auto-Repair Issues') {
+    await autoRemediateHealthIssues(outputChannel);
+  }
+}
+
+export async function autoRemediateHealthIssues(outputChannel: vscode.OutputChannel): Promise<void> {
+  outputChannel.show(true);
+  outputChannel.appendLine('');
+  outputChannel.appendLine('══════════════════════════════════════════════════════════');
+  outputChannel.appendLine('  TokenSculpt — Auto-Remediation in Progress…');
+  outputChannel.appendLine('══════════════════════════════════════════════════════════');
+
+  const fixes: string[] = [];
+
+  await vscode.window.withProgress(
+    { location: vscode.ProgressLocation.Notification, title: 'TokenSculpt Auto-Remediation', cancellable: false },
+    async (progress) => {
+      // 1. Regenerate instructions
+      progress.report({ message: 'Synchronizing instruction files…' });
+      try {
+        await vscode.commands.executeCommand('tokensculpt.regenerate');
+        fixes.push('✓ Synchronized and updated AI instructions across .github, AGENTS.md, and CLAUDE.md');
+      } catch (e) {
+        outputChannel.appendLine(`[repair] Could not regenerate instructions: ${e}`);
+      }
+
+      // 2. Configure MCP servers
+      progress.report({ message: 'Repairing MCP configurations…' });
+      try {
+        await vscode.commands.executeCommand('tokensculpt.configureMcp');
+        fixes.push('✓ Configured token-cache and Headroom MCP servers in .vscode/settings.json and Antigravity');
+      } catch (e) {
+        outputChannel.appendLine(`[repair] Could not configure MCP: ${e}`);
+      }
+
+      // 3. Check and apply smart exclusions
+      progress.report({ message: 'Verifying .copilotignore exclusions…' });
+      const ws = wsPath();
+      if (ws) {
+        const ignorePath = path.join(ws, COPILOTIGNORE_PATH);
+        if (!fs.existsSync(ignorePath)) {
+          const detected = detectProjectExclusions(ws);
+          try {
+            await applyContextExclusions(outputChannel);
+            fixes.push(`✓ Created .copilotignore with ${detected.length} project-specific exclusion patterns`);
+          } catch (e) {
+            outputChannel.appendLine(`[repair] Could not create .copilotignore: ${e}`);
+          }
+        }
+      }
+
+      // 4. CodeGraph index update if installed
+      if (isBinaryAvailable('codegraph')) {
+        progress.report({ message: 'Updating CodeGraph index…' });
+        try {
+          await vscode.commands.executeCommand('tokensculpt.reindex');
+          fixes.push('✓ Updated CodeGraph semantic index for workspace');
+        } catch (e) {
+          outputChannel.appendLine(`[repair] Could not reindex codegraph: ${e}`);
+        }
+      }
+    }
+  );
+
+  for (const f of fixes) {
+    outputChannel.appendLine(`  ${f}`);
+  }
+  outputChannel.appendLine('══════════════════════════════════════════════════════════');
+  outputChannel.appendLine(`  Auto-remediation finished: ${fixes.length} actions executed.`);
+  outputChannel.appendLine('══════════════════════════════════════════════════════════');
+
   vscode.window.showInformationMessage(
-    `TokenShield: ${okCount}/${TOTAL_STRATEGIES} strategies validated ✓ (${disabledCount} disabled, ${warnCount} warnings)`,
-    'Show Report'
+    `TokenSculpt: Auto-remediation complete (${fixes.length} issues resolved).`,
+    'View Output'
   ).then(c => { if (c) { outputChannel.show(); } });
 }

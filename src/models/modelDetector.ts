@@ -89,10 +89,13 @@ export async function discoverAvailableModels(): Promise<DiscoveredModel[]> {
 
   if (host === 'antigravity') {
     return [
-      { id: 'antigravity/gemini-3.7-flash', name: 'Gemini 3.7 Flash (High)', vendor: 'google', family: 'gemini-3.7-flash', tier: 'lightweight' },
+      { id: 'antigravity/gemini-3.8-flash-high', name: 'Gemini 3.8 Flash (High)', vendor: 'google', family: 'gemini-3.8-flash', tier: 'lightweight' },
+      { id: 'antigravity/gemini-3.8-pro', name: 'Gemini 3.8 Pro', vendor: 'google', family: 'gemini-3.8-pro', tier: 'standard' },
+      { id: 'antigravity/claude-opus-4.6-thinking', name: 'Claude Opus 4.6 (Thinking)', vendor: 'anthropic', family: 'claude-opus-4.6', tier: 'flagship' },
+      { id: 'antigravity/claude-3.7-sonnet', name: 'Claude 3.7 Sonnet', vendor: 'anthropic', family: 'claude-3.7-sonnet', tier: 'standard' },
+      { id: 'antigravity/claude-3.5-haiku', name: 'Claude 3.5 Haiku', vendor: 'anthropic', family: 'claude-3.5-haiku', tier: 'lightweight' },
+      { id: 'antigravity/gemini-3.7-flash', name: 'Gemini 3.7 Flash', vendor: 'google', family: 'gemini-3.7-flash', tier: 'lightweight' },
       { id: 'antigravity/gemini-2.5-pro', name: 'Gemini 2.5 Pro', vendor: 'google', family: 'gemini-2.5-pro', tier: 'standard' },
-      { id: 'antigravity/gemini-3.7-pro', name: 'Gemini 3.7 Pro', vendor: 'google', family: 'gemini-3.7-pro', tier: 'standard' },
-      { id: 'antigravity/gemini-2.0-flash', name: 'Gemini 2.0 Flash', vendor: 'google', family: 'gemini-2.0-flash', tier: 'lightweight' },
       { id: 'antigravity/gemini-deep-think', name: 'Gemini 3.7 Deep Think', vendor: 'google', family: 'gemini-deep-think', tier: 'flagship' },
     ];
   }
@@ -114,16 +117,38 @@ export async function discoverAvailableModels(): Promise<DiscoveredModel[]> {
   ];
 }
 
+let activeModelOverride: DiscoveredModel | undefined;
+
+export function setActiveModelOverride(model: DiscoveredModel | undefined): void {
+  activeModelOverride = model;
+}
+
 /**
- * Gets the active model for the workspace based on host environment.
+ * Gets the active model for the workspace based on host environment or user selection.
  */
 export async function getActiveModel(): Promise<DiscoveredModel> {
+  if (activeModelOverride) {
+    return activeModelOverride;
+  }
+
   const available = await discoverAvailableModels();
+
+  // Check user settings override
+  try {
+    const configured = vscode.workspace.getConfiguration('tokensculpt').get<string>('activeModel');
+    if (configured) {
+      const match = available.find(m => m.id.toLowerCase() === configured.toLowerCase() || m.name.toLowerCase() === configured.toLowerCase() || m.family.toLowerCase() === configured.toLowerCase());
+      if (match) {
+        return match;
+      }
+    }
+  } catch { /* ignore */ }
+
   const host = detectHostEnvironment();
 
   if (host === 'antigravity') {
-    // In Antigravity IDE, Gemini 3.7 Flash High is the active primary engine
-    return available.find(m => m.id.includes('3.7-flash')) || available[0];
+    // In Antigravity IDE, Gemini 3.8 Flash (High) is the active primary engine
+    return available.find(m => m.id.includes('3.8-flash')) || available.find(m => m.id.includes('flash')) || available[0];
   }
 
   const active = available.find(m => m.tier === 'standard') || available[0];

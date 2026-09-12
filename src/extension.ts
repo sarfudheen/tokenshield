@@ -17,6 +17,12 @@ import { CallLogStore } from './cache/callLog';
 import { startSession } from './session/tracker';
 import { initializeForProject } from './generators/projectInit';
 import { detectActiveTools, TARGET_TOOL_LABELS } from './core/ideDetector';
+import { savePromptTemplateCommand, usePromptTemplateCommand } from './ui/promptTemplateCommands';
+import { createBudgetStatusBarItem, showContextBudgetQuickPick } from './ui/contextBudget';
+import { generateSmartExclusionsCommand } from './strategies/autoExclude';
+import { registerSavingsCodeLens } from './ui/savingsCodeLens';
+import { showCostSimulatorQuickPick } from './ui/costSimulator';
+import { autoRemediateHealthIssues } from './strategies/validator';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -78,6 +84,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   registerCommandWithAlias(context, 'exportReport', () => exportTelemetryCommand(outputChannel));
   registerCommandWithAlias(context, 'exclusions', () => showExclusionPicker(outputChannel));
   registerCommandWithAlias(context, 'init', () => initializeForProject(getConfig(), outputChannel));
+  registerCommandWithAlias(context, 'savePromptTemplate', () => savePromptTemplateCommand(outputChannel));
+  registerCommandWithAlias(context, 'usePromptTemplate', () => usePromptTemplateCommand(outputChannel));
+  registerCommandWithAlias(context, 'showContextBudget', showContextBudgetQuickPick);
+  registerCommandWithAlias(context, 'simulateCosts', showCostSimulatorQuickPick);
+  registerCommandWithAlias(context, 'generateSmartExclusions', () => generateSmartExclusionsCommand(outputChannel));
+  registerCommandWithAlias(context, 'autoRemediateHealth', () => autoRemediateHealthIssues(outputChannel));
+  registerCommandWithAlias(context, 'healthCheckRepair', () => autoRemediateHealthIssues(outputChannel));
   registerCommandWithAlias(context, 'pruneAndCopy', async () => {
     const editor = vscode.window.activeTextEditor;
     if (!editor) { return; }
@@ -162,11 +175,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }
   });
 
-  // Create unified TokenShield Master Hub and active editor token badge (clean 2-item layout)
+  // Create unified TokenSculpt Master Hub, context budget meter, and active editor token badge
   const statusBar = createStatusBar(context);
+  const budgetBar = createBudgetStatusBarItem(context);
   const tokenBadge = createEditorTokenBadge(context);
+  registerSavingsCodeLens(context);
   registerDiffContentProvider(context);
-  context.subscriptions.push(statusBar, tokenBadge);
+  context.subscriptions.push(statusBar, budgetBar, tokenBadge);
 
   // Listen for config changes — hot-swap strategies without restart
   context.subscriptions.push(
@@ -192,8 +207,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         const wsPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || process.cwd();
         const diffRaw = execSync(`git diff HEAD -- "${relPath}"`, { cwd: wsPath, encoding: 'utf-8', timeout: 3000 });
         if (diffRaw && diffRaw.trim().length > 0) {
-          const fileTokens = Math.max(1, Math.ceil(doc.getText().length / 3.8));
-          const diffTokens = Math.max(1, Math.ceil(diffRaw.length / 3.8));
+          const fileTokens = Math.max(1, Math.ceil(doc.getText().length / 4));
+          const diffTokens = Math.max(1, Math.ceil(diffRaw.length / 4));
           const savedTokens = Math.max(0, fileTokens - diffTokens);
           const pct = Math.round((savedTokens / fileTokens) * 100);
           if (savedTokens > 20) {

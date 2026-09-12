@@ -138,6 +138,30 @@
         "title": "TokenSculpt: Initialize Project"
       },
       {
+        "command": "tokensculpt.savePromptTemplate",
+        "title": "TokenSculpt: Save Prompt Template"
+      },
+      {
+        "command": "tokensculpt.usePromptTemplate",
+        "title": "TokenSculpt: Use Prompt Template"
+      },
+      {
+        "command": "tokensculpt.showContextBudget",
+        "title": "TokenSculpt: Show Context Window Budget"
+      },
+      {
+        "command": "tokensculpt.simulateCosts",
+        "title": "TokenSculpt: Run \"What If\" Multi-Model Cost Simulator"
+      },
+      {
+        "command": "tokensculpt.generateSmartExclusions",
+        "title": "TokenSculpt: Generate Smart Exclusions (.copilotignore)"
+      },
+      {
+        "command": "tokensculpt.healthCheckRepair",
+        "title": "TokenSculpt: Auto-Repair Health Issues"
+      },
+      {
         "command": "tokenshield.hub",
         "title": "TokenSculpt: Open Control Hub (Legacy Alias)"
       },
@@ -413,6 +437,17 @@
           "type": "boolean",
           "default": true,
           "description": "Enable 100% on-device token and cost savings tracking."
+        },
+        "tokensculpt.customModelPricing": {
+          "type": "object",
+          "default": {},
+          "description": "Per-model custom pricing overrides (e.g. enterprise discounted rates) keyed by model family or ID.",
+          "examples": [
+            {
+              "gemini-3.7-flash": { "inputPerMillion": 0.10, "outputPerMillion": 0.40 },
+              "gpt-4o": { "inputPerMillion": 2.50, "outputPerMillion": 10.00 }
+            }
+          ]
         }
       }
     }

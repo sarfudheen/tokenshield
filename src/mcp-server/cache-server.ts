@@ -11,6 +11,7 @@ import { getFileSkeleton } from '../strategies/skeleton';
 import { pruneContext, compressGitDiff, isolateTestFailures, stripCommentsAndHeaders } from '../strategies/adaptivePruner';
 import { normalizePromptForCache, padToCacheBoundary } from '../strategies/kvCacheOptimizer';
 import { SecretSanitizer } from '../cache/sanitizer';
+import { PromptTemplateStore } from '../cache/promptTemplates';
 
 const SERVER_NAME = 'token-cache';
 const SERVER_VERSION = '0.5.0';
@@ -55,6 +56,7 @@ const TOOL_DEFINITIONS = [
         query: { type: 'string', description: 'The question being answered' },
         answer: { type: 'string', description: 'The full answer text to cache' },
         scope: { type: 'string', enum: ['code', 'durable'], description: 'Staleness scope (default: code)' },
+        sourceFiles: { type: 'array', items: { type: 'string' }, description: 'Optional file paths associated with this answer for granular git invalidation' },
       },
       required: ['query', 'answer'],
     },
@@ -148,6 +150,24 @@ const TOOL_DEFINITIONS = [
       required: ['text'],
     },
   },
+  {
+    name: 'prompt_template',
+    description:
+      'Retrieve, list, or save token-optimized prompt templates from .aicache/prompt-templates.json. ' +
+      'Allows agents to reuse tested prompts for unit tests, security audits, diff-only refactors, and debugging without generating boilerplate.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: { type: 'string', enum: ['list', 'get', 'save'], description: 'The operation to perform' },
+        id: { type: 'string', description: 'Template ID or name (required for "get" and optional for "save")' },
+        name: { type: 'string', description: 'Template display name (for "save")' },
+        description: { type: 'string', description: 'Brief description of what the prompt accomplishes (for "save")' },
+        prompt: { type: 'string', description: 'The optimized prompt content (for "save")' },
+        tags: { type: 'array', items: { type: 'string' }, description: 'Categorization tags' },
+      },
+      required: ['action'],
+    },
+  },
 ];
 
 // New store per call: re-reads the file from disk so this process stays
@@ -188,7 +208,8 @@ function callTool(name: string, args: Record<string, unknown>): unknown {
       const cleanQuery = SecretSanitizer.redact(args.query);
       const cleanAnswer = SecretSanitizer.redact(args.answer);
       const scope: CacheScope = args.scope === 'durable' ? 'durable' : 'code';
-      const entry = store.store(cleanQuery, cleanAnswer, scope);
+      const sourceFiles = Array.isArray(args.sourceFiles) ? (args.sourceFiles as string[]) : undefined;
+      const entry = store.store(cleanQuery, cleanAnswer, scope, sourceFiles);
       callLog.recordStore();
       const saved = Math.max(1, Math.ceil(cleanAnswer.length / 4));
       recordDiskEvent(workspaceRoot, {
@@ -352,6 +373,41 @@ function callTool(name: string, args: Record<string, unknown>): unknown {
         });
       }
       return result;
+    }
+    case 'prompt_template': {
+      const templateStore = new PromptTemplateStore(workspaceRoot);
+      const action = String(args.action || 'list');
+      if (action === 'list') {
+        return { templates: templateStore.list() };
+      }
+      if (action === 'get') {
+        const id = String(args.id || '');
+        if (!id) {
+          throw new Error('prompt_template action "get" requires "id" string');
+        }
+        const found = templateStore.get(id);
+        if (!found) {
+          return { found: false, error: `Template not found: ${id}` };
+        }
+        return { found: true, template: found };
+      }
+      if (action === 'save') {
+        const prompt = String(args.prompt || '');
+        const name = String(args.name || args.id || 'Custom Template');
+        const description = String(args.description || '');
+        if (!prompt) {
+          throw new Error('prompt_template action "save" requires "prompt" string');
+        }
+        const saved = templateStore.save({
+          id: args.id ? String(args.id) : undefined,
+          name,
+          description,
+          prompt,
+          tags: Array.isArray(args.tags) ? (args.tags as string[]) : undefined,
+        });
+        return { saved: true, template: saved };
+      }
+      throw new Error(`Invalid prompt_template action: ${action}`);
     }
     default:
       throw new Error(`Unknown tool: ${name}`);

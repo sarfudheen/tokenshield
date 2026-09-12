@@ -62,10 +62,16 @@ export class EnterpriseRoiEngine {
     this.downshiftedCostArbitrage += Math.max(0, saved);
   }
 
-  private addModelTokens(model: DiscoveredModel, tokens: number, pricing: PricingTable): void {
+  private addModelTokens(
+    model: DiscoveredModel,
+    tokens: number,
+    pricing: PricingTable,
+    customPricing?: Record<string, { inputPerMillion: number }>
+  ): void {
     const key = model.family;
-    const tierPricing = pricing[model.tier];
-    const cost = (tokens / 1_000_000) * tierPricing.inputPerMillion;
+    const custom = customPricing?.[model.id] || customPricing?.[model.family] || customPricing?.[model.name];
+    const rate = custom ? custom.inputPerMillion : pricing[model.tier].inputPerMillion;
+    const cost = (tokens / 1_000_000) * rate;
 
     const existing = this.modelSavings.get(key) || {
       modelId: model.id,
@@ -85,6 +91,7 @@ export class EnterpriseRoiEngine {
   async getSessionSummary(config: ExtensionConfig): Promise<SessionRoiSummary> {
     const activeModel = await getActiveModel();
     const pricing = config.pricing;
+    const customPricing = config.customModelPricing;
 
     // Total tokens saved = cache + skeleton + diff + rtk + exclusion + guardrail
     const totalTokens = this.cacheTokensSaved +
@@ -101,7 +108,8 @@ export class EnterpriseRoiEngine {
 
     // If no model specific calls yet, estimate using active model rate
     if (totalCost === 0 && totalTokens > 0) {
-      const activeRate = pricing[activeModel.tier].inputPerMillion;
+      const custom = customPricing?.[activeModel.id] || customPricing?.[activeModel.family] || customPricing?.[activeModel.name];
+      const activeRate = custom ? custom.inputPerMillion : pricing[activeModel.tier].inputPerMillion;
       totalCost = (totalTokens / 1_000_000) * activeRate;
     }
 

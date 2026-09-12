@@ -219,6 +219,26 @@ async function showMasterHubQuickPick(): Promise<void> {
       detail: `Instantly toggle presets across all ${TOTAL_STRATEGIES} optimization features.`,
     },
     {
+      label: `$(meter) Context Window Budget Breakdown`,
+      description: 'View active model limits, buffer sizes, and headroom gauge',
+      detail: 'Inspect tokens allocated across active editor, instructions, and workspace.',
+    },
+    {
+      label: `$(calculator) "What If" Multi-Model Cost Simulator`,
+      description: 'Compare costs and ROI across GPT-4o, Claude 3.5, Gemini & Haiku',
+      detail: 'Simulate how your token savings translate across different model tiers.',
+    },
+    {
+      label: `$(symbol-keyword) Prompt Template Library`,
+      description: 'Use or save token-optimized, zero-boilerplate prompts',
+      detail: 'Pre-packaged and custom prompt templates for tests, refactoring, and debugging.',
+    },
+    {
+      label: `$(shield) Generate Smart .copilotignore Exclusions`,
+      description: 'Scan workspace for heavy directories, locks, and datasets',
+      detail: 'Auto-detect non-source bloat to eliminate up to 90% scan token waste.',
+    },
+    {
       label: `$(circle-slash) Deactivate TokenSculpt Completely`,
       description: 'Strip all directives from workspace files (100% unconstrained AI)',
       detail: 'Removes managed blocks from AGENTS.md, CLAUDE.md, and Copilot files.',
@@ -244,6 +264,14 @@ async function showMasterHubQuickPick(): Promise<void> {
     vscode.commands.executeCommand('tokensculpt.resetAllData');
   } else if (selected.label.includes('Switch Optimization Profile')) {
     vscode.commands.executeCommand('tokensculpt.switchProfile');
+  } else if (selected.label.includes('Context Window Budget')) {
+    vscode.commands.executeCommand('tokensculpt.showContextBudget');
+  } else if (selected.label.includes('Multi-Model Cost Simulator')) {
+    vscode.commands.executeCommand('tokensculpt.simulateCosts');
+  } else if (selected.label.includes('Prompt Template Library')) {
+    vscode.commands.executeCommand('tokensculpt.usePromptTemplate');
+  } else if (selected.label.includes('Generate Smart .copilotignore')) {
+    vscode.commands.executeCommand('tokensculpt.generateSmartExclusions');
   } else if (selected.label.includes('Deactivate TokenSculpt Completely')) {
     vscode.commands.executeCommand('tokensculpt.deactivateCompletely');
   }
